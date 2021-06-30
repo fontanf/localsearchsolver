@@ -1,0 +1,136 @@
+#include "examples/roadef2020.hpp"
+#include "localsearchsolver/read_args.hpp"
+
+#include <boost/program_options.hpp>
+
+using namespace localsearchsolver;
+using namespace localsearchsolver::roadef2020;
+
+int main(int argc, char *argv[])
+{
+    namespace po = boost::program_options;
+
+    // Parse program options
+
+    std::string instance_path = "";
+    std::string format = "";
+    std::string output_path = "";
+    std::string i_path = "";
+    std::string c_path = "";
+    std::string certificate_path = "";
+    std::string team_id = "S19";
+    Counter thread_number_1 = 1;
+    Counter thread_number_2 = 4;
+    int seed = 0;
+    double time_limit = std::numeric_limits<double>::infinity();
+
+    po::options_description desc("Allowed options");
+    desc.add_options()
+        ("help,h", "produce help message")
+        ("name", "Team ID")
+        (",p", po::value<std::string>(&instance_path), "set input file (required)")
+        (",o", po::value<std::string>(&certificate_path), "set certificate file")
+        (",t", po::value<double>(&time_limit), "time limit in seconds")
+        (",x", po::value<Counter>(&thread_number_1), "set thread number 1")
+        (",y", po::value<Counter>(&thread_number_2), "set thread number 2")
+        (",s", po::value<int>(&seed), "set seed")
+        (",i", po::value<std::string>(&i_path), "")
+        (",c", po::value<std::string>(&c_path), "")
+        (",e", "Only write output and certificate files at the end")
+        ("verbose", "set verbosity")
+        ;
+    po::variables_map vm;
+    boost::program_options::store(
+            boost::program_options::command_line_parser(argc, argv)
+            .options(desc)
+            .style(
+                boost::program_options::command_line_style::unix_style |
+                boost::program_options::command_line_style::allow_long_disguise)
+            .run(),
+            vm);
+    if (vm.count("name")) {
+        std::cout << team_id << std::endl;;
+        return 1;
+    }
+    if (vm.count("help")) {
+        std::cout << desc << std::endl;;
+        return 1;
+    }
+    try {
+        po::notify(vm);
+    } catch (const po::required_option& e) {
+        std::cout << desc << std::endl;;
+        return 1;
+    }
+
+    // If option -i has been used, then consider that it is not the challenge
+    // configuration.
+    if (!i_path.empty()) {
+        // Get the instance from option -i.
+        instance_path = i_path;
+        // Get the json output form option -o.
+        output_path = certificate_path;
+        // Get the solution file from option -c.
+        certificate_path = c_path;
+    }
+
+    // Run algorithm
+
+    optimizationtools::Info info = optimizationtools::Info()
+        .set_outputfile(output_path)
+        .set_verbose(true)
+        .set_timelimit(time_limit)
+        .set_certfile(certificate_path)
+        .set_onlywriteattheend(false)
+        ;
+
+    std::mt19937_64 generator(0);
+
+    // Read instance.
+    Instance instance(instance_path, format);
+    VER(info, instance << std::endl);
+
+    // Create LocalScheme.
+    LocalScheme::Parameters parameters_local_scheme;
+    parameters_local_scheme.reduced_instance_time =
+        (time_limit == std::numeric_limits<double>::infinity())? 60: time_limit / 15;
+    LocalScheme local_scheme(instance, parameters_local_scheme);
+
+    // Run A*.
+    AStarOptionalParameters<LocalScheme> parameters_a_star;
+    parameters_a_star.info.set_verbose(true);
+    parameters_a_star.info.set_timelimit(info.remaining_time());
+    parameters_a_star.thread_number_1 = thread_number_1;
+    parameters_a_star.thread_number_2 = thread_number_2;
+    parameters_a_star.initial_solution_ids = std::vector<Counter>(thread_number_2, 1);
+    parameters_a_star.new_solution_callback
+        = [&local_scheme, &info](
+                const LocalScheme::Solution& solution)
+        {
+            std::cout << "                " << local_scheme.real_cost(solution) << std::endl;
+
+            if (local_scheme.feasible(solution)) {
+                info.output->sol_number++;
+                double t = info.elapsed_time();
+                std::string sol_str = "Solution" + std::to_string(info.output->sol_number);
+                PUT(info, sol_str, "Value", local_scheme.real_cost(solution));
+                PUT(info, sol_str, "Time", t);
+                if (!info.output->onlywriteattheend) {
+                    info.write_ini();
+                    local_scheme.write(solution, info.output->certfile);
+                }
+            }
+        };
+    auto output = a_star(local_scheme, parameters_a_star);
+
+    const LocalScheme::Solution& solution = output.solution_pool.best();
+    double t = info.elapsed_time();
+    std::string sol_str = "Solution";
+    PUT(info, sol_str, "Time", t);
+    PUT(info, sol_str, "Value", local_scheme.real_cost(solution));
+    info.write_ini();
+    local_scheme.write(solution, info.output->certfile);
+
+    return 0;
+}
+

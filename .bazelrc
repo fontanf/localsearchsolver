@@ -1,0 +1,4 @@
+build --compilation_mode=opt
+
+build --define cplex=true
+#build --define gurobi=true
