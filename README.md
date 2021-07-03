@@ -64,6 +64,12 @@ The algorithms of this repository are designed to get the best performances out 
   * `python3 ../optimizationtools/optimizationtools/bench_run.py --csv ../localsearchdata/quadraticassignment/data.csv -l quadraticassignment -t 60`
   * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../localsearchdata/quadraticassignment/data.csv -l quadraticassignment -b heuristiclong -t 62`
 
+Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https://github.com/fontanf/generalizedassignmentsolver/blob/master/generalizedassignmentsolver/algorithms/localsearch.cpp)
+* Algorithm:
+  * Perturbation: for item `j` to be assigned to agent `i`
+  * Local search neighborhoods:
+    * Shift item `j` to agent `i`
+
 ### Scheduling
 
 [Permutation flow shop scheduling problem, Makespan](examples/permutationflowshopschedulingmakespan.hpp)
