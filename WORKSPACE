@@ -32,22 +32,27 @@ cc_library(
 )
 
 git_repository(
-    name = "optimizationtools_",
+    name = "optimizationtools",
     remote = "https://github.com/fontanf/optimizationtools.git",
-    commit = "09c0a144b914b4aac539120a54d989680fd96663",
-    shallow_since = "1613237666 +0100",
+    commit = "1d164f9fea4f9f775a350da3a72e52e5f259e14a",
+    shallow_since = "1621096312 +0200",
 )
 
 local_repository(
-    name = "optimizationtools",
+    name = "optimizationtools_",
     path = "../optimizationtools/",
 )
 
 git_repository(
     name = "treesearchsolver",
     remote = "https://github.com/fontanf/treesearchsolver.git",
-    commit = "6d888ea8fd028a52247fe6f2a7dc3d0e270c61da",
-    shallow_since = "1618735993 +0200",
+    commit = "3ef795b87d0677c4ddfce575f1f7a0b9fb05ad83",
+    shallow_since = "1625325947 +0200",
+)
+
+local_repository(
+    name = "treesearchsolver_",
+    path = "../treesearchsolver/",
 )
 
 git_repository(
