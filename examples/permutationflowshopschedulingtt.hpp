@@ -184,7 +184,9 @@ public:
 
     inline MoveHasher move_hasher() const { return MoveHasher(); }
 
-    inline std::vector<Move> perturbations(const Solution& solution)
+    inline std::vector<Move> perturbations(
+            const Solution& solution,
+            std::mt19937_64&)
     {
         std::vector<Move> moves;
         for (JobPos pos = 0; pos < instance_.job_number(); ++pos) {

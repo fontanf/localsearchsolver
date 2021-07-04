@@ -196,7 +196,9 @@ public:
 
     inline MoveHasher move_hasher() const { return MoveHasher(); }
 
-    inline std::vector<Move> perturbations(const Solution& solution)
+    inline std::vector<Move> perturbations(
+            const Solution& solution,
+            std::mt19937_64& generator)
     {
         MachineId m = instance_.machine_number();
         std::vector<Move> moves;

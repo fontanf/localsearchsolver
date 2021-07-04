@@ -1253,7 +1253,8 @@ std::pair<int, LocalScheme::Solution> LocalScheme::repair(
 /******************************** Local search *******************************/
 
 std::vector<LocalScheme::Move> LocalScheme::perturbations(
-        Solution& solution)
+        Solution& solution,
+        std::mt19937_64&)
 {
     std::vector<Move> moves;
     for (InterventionId j = 0; j < instance_.intervention_number(); ++j) {

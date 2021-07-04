@@ -138,6 +138,7 @@ template <typename LocalScheme>
 std::vector<typename LocalScheme::Move> update_children(
         LocalScheme& local_scheme,
         typename LocalScheme::Solution& solution,
+        std::mt19937_64& generator,
         Counter next_child_pos = 0)
 {
     typedef typename LocalScheme::Move Move;
@@ -148,7 +149,7 @@ std::vector<typename LocalScheme::Move> update_children(
     };
 
     // Get perturbation moves.
-    auto moves_0 = local_scheme.perturbations(solution);
+    auto moves_0 = local_scheme.perturbations(solution, generator);
     if (next_child_pos >= (Counter)moves_0.size())
         return {};
     // Update move costs.
@@ -203,13 +204,13 @@ inline void a_star_worker(
         }
 
         // Get perturbation moves.
-        auto moves = update_children(local_scheme, solution);
+        auto moves = update_children(local_scheme, solution, generator);
         auto compact_solution = std::shared_ptr<CompactSolution>(
                 new CompactSolution(local_scheme.solution2compact(solution)));
 
         data.mutex.lock();
         if (data.perturbation_number == -1)
-            data.perturbation_number = local_scheme.perturbations(solution).size();
+            data.perturbation_number = local_scheme.perturbations(solution, generator).size();
         if (data.history.find(compact_solution) == data.history.end()
                 && moves.size() > 0) {
             AStarNode<LocalScheme> root;
@@ -291,6 +292,7 @@ inline void a_star_worker(
                     node_cur->perturbations = update_children(
                             local_scheme,
                             solution_tmp,
+                            generator,
                             node_cur->next_child_pos);
                 }
             }
@@ -327,6 +329,7 @@ inline void a_star_worker(
                 node_cur->perturbations = update_children(
                         local_scheme,
                         solution,
+                        generator,
                         node_cur->next_child_pos);
         }
         // Apply perturbation and local search.
@@ -347,7 +350,7 @@ inline void a_star_worker(
         }
 
         // Get perturbation moves.
-        auto moves = update_children(local_scheme, solution);
+        auto moves = update_children(local_scheme, solution, generator);
         auto compact_solution = std::shared_ptr<CompactSolution>(
                     new CompactSolution(local_scheme.solution2compact(solution)));
 

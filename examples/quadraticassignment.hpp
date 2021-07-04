@@ -325,7 +325,9 @@ public:
 
     inline MoveHasher move_hasher() const { return MoveHasher(); }
 
-    inline std::vector<Move> perturbations(const Solution& solution) const
+    inline std::vector<Move> perturbations(
+            const Solution& solution,
+            std::mt19937_64& generator)
     {
         std::vector<Move> moves;
         for (FacilityId facility_id_1 = 0;

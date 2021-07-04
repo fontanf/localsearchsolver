@@ -432,7 +432,9 @@ public:
 
     inline MoveHasher move_hasher() const { return MoveHasher(); }
 
-    std::vector<Move> perturbations(Solution& solution);
+    std::vector<Move> perturbations(
+            Solution& solution,
+            std::mt19937_64&);
 
     inline void apply_move(Solution& solution, const Move& move) const
     {

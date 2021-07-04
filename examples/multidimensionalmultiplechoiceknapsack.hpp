@@ -410,7 +410,9 @@ public:
 
     inline MoveHasher move_hasher() const { return MoveHasher(); }
 
-    inline std::vector<Move> perturbations(Solution& solution) const
+    inline std::vector<Move> perturbations(
+            Solution& solution,
+            std::mt19937_64&)
     {
         std::vector<Move> moves;
         for (GroupId group_id = 0; group_id < instance_.group_number(); ++group_id) {

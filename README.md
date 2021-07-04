@@ -107,11 +107,13 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
 </details>
 
 * Algorithm:
-  * Perturbation: force job `j` to start first or right after job `j_prev`
+  * The algorithm is mainly based on the Iterated Local Search from "Efficient local search limitation strategy for single machine total weighted tardiness scheduling with sequence-dependent setup times" (Subramanian et Farias., 2017)
+  * Perturbation: swap two blocs (double-bridge)
   * Local search neighborhoods:
-    * Move `k` consecutive jobs, `k = 1..4`
+    * Shift a bloc of `k` consecutive jobs, `k = 1..13`
+    * Swap job `j1` and job `j2`
 * Benchmarks:
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --csv ../treesearchdata/schedulingwithsdsttwt/data.csv -l schedulingwithsdsttwt -t 30`
+  * `python3 ../optimizationtools/optimizationtools/bench_run.py --csv ../treesearchdata/schedulingwithsdsttwt/data.csv -l schedulingwithsdsttwt -t 60`
   * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../treesearchdata/schedulingwithsdsttwt/data.csv -l schedulingwithsdsttwt -b heuristiclong -t 31`
 
 #### Flow shop scheduling
