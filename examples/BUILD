@@ -30,6 +30,16 @@ cc_library(
 )
 
 cc_library(
+        name = "schedulingwithsdsttwt",
+        hdrs = ["schedulingwithsdsttwt.hpp"],
+        deps = [
+                "//localsearchsolver:localsearchsolver",
+                "@treesearchsolver//examples:schedulingwithsdsttwt",
+        ],
+        visibility = ["//visibility:public"],
+)
+
+cc_library(
         name = "permutationflowshopschedulingmakespan",
         hdrs = ["permutationflowshopschedulingmakespan.hpp"],
         deps = [
@@ -103,6 +113,7 @@ cc_binary(
                 ":knapsackwithconflicts",
                 ":multidimensionalmultiplechoiceknapsack",
                 ":quadraticassignment",
+                ":schedulingwithsdsttwt",
                 ":permutationflowshopschedulingmakespan",
                 ":permutationflowshopschedulingtt",
                 "@boost//:program_options",
@@ -120,6 +131,7 @@ cc_binary(
                 ":knapsackwithconflicts",
                 ":multidimensionalmultiplechoiceknapsack",
                 ":quadraticassignment",
+                ":schedulingwithsdsttwt",
                 ":permutationflowshopschedulingmakespan",
                 ":permutationflowshopschedulingtt",
                 "@boost//:program_options",
