@@ -306,6 +306,8 @@ public:
     {
         std::hash<FacilityId> hasher;
 
+        inline bool hashable(const Move&) const { return true; }
+
         inline bool operator()(
                 const Move& move_1,
                 const Move& move_2) const
@@ -327,7 +329,7 @@ public:
 
     inline std::vector<Move> perturbations(
             const Solution& solution,
-            std::mt19937_64& generator)
+            std::mt19937_64&)
     {
         std::vector<Move> moves;
         for (FacilityId facility_id_1 = 0;

@@ -268,7 +268,8 @@ inline void a_star_worker(
         data.q.erase(data.q.begin());
         auto move = node_cur->perturbations.back();
         // Check if the perturbation is tabu.
-        while (data.move_nodes.find(move) != data.move_nodes.end()
+        while (data.move_hasher.hashable(move)
+                && data.move_nodes.find(move) != data.move_nodes.end()
                 && data.move_nodes[move] > data.node_number - tabu_tenure) {
             // Add a new node for this perturbation to the tabu node set.
             AStarNode<LocalScheme> node_tmp;
@@ -311,7 +312,8 @@ inline void a_star_worker(
             data.mutex.unlock();
             continue;
         }
-        data.move_nodes[move] = data.node_number;
+        if (data.move_hasher.hashable(move))
+            data.move_nodes[move] = data.node_number;
         data.working_thread_number++;
         //std::cout << "node " << data.node_number
         //    << " depth " << node_cur->depth

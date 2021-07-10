@@ -28,6 +28,10 @@ The algorithms of this repository are designed to get the best performances out 
   * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../treesearchdata/knapsackwithconflicts/data.csv -l knsapsackwithconflicts -b heuristiclong -t 62`
 
 [Multidimensional Multiple-choice Knapsack Problem](examples/multidimensionalmultiplechoiceknapsack.hpp)
+
+<details><summary>Literature</summary>
+<p>
+
 * Literature:
   * "Heuristic algorithms for the multiple-choice multidimensional knapsack problem" (Hifi et al., 2004) [DOI](https://doi.org/10.1057/palgrave.jors.2601796)
   * "A Reactive Local Search-Based Algorithm for the Multiple-Choice Multi-Dimensional Knapsack Problem" (Hifi et al., 2005) [DOI](https://doi.org/10.1007/s10589-005-3057-0)
@@ -40,6 +44,10 @@ The algorithms of this repository are designed to get the best performances out 
   * "A set partitioning reformulation for the multiple-choice multidimensional knapsack problem" (Voß et Lalla-Ruiz, 2015) [DOI](https://doi.org/10.1080/0305215X.2015.1062094)
   * "A Core-Based Exact Algorithm for the Multidimensional Multiple Choice Knapsack Problem" (Mansini et Zanotti, 2020) [DOI](https://doi.org/10.1287/ijoc.2019.0909) 
   * "A two-phase kernel search variant for the multidimensional multiple-choice knapsack problem" (Lamanna et al., 2021) [DOI](https://doi.org/10.1016/j.ejor.2021.05.007)
+
+</p>
+</details>
+
 * Algorithm:
   * Perturbation: force item `j` in the knapsack
   * Local search neighborhoods:
@@ -49,13 +57,24 @@ The algorithms of this repository are designed to get the best performances out 
   * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../localsearchdata/multidimensionalmultiplechoiceknapsack/data.csv -l multidimensionalmultiplechoiceknapsack -b heuristiclong -t 62`
 
 [Quadratic Assignment Problem](examples/quadraticassignment.hpp)
+
+<details><summary>Literature</summary>
+<p>
+
 * Literature:
   * "Iterated local search for the quadratic assignment problem" (Stützle, 2006) [DOI](https://doi.org/10.1016/j.ejor.2005.01.066)
+  * "A survey for the quadratic assignment problem" (Loiola et al., 2007) [DOI](https://doi.org/10.1016/j.ejor.2005.09.032)
+  * "A branch-and-cut algorithm for quadratic assignment problems based on linearizations" (Erdoğan et Tansel, 2007) [DOI](https://doi.org/10.1016/j.cor.2005.05.027)
+  * "Extensive experiments with hybrid genetic algorithms for the solution of the quadratic assignment problem" (Drezner, 2008) [DOI](https://doi.org/10.1016/j.cor.2006.05.004)
   * "A cooperative parallel tabu search algorithm for the quadratic assignment problem" (James et al., 2009) [DOI](https://doi.org/10.1016/j.ejor.2007.06.061)
   * "Multistart Tabu Search and Diversification Strategies for the Quadratic Assignment Problem" (James et al., 2009) [DOI](https://doi.org/10.1109/TSMCA.2009.2014556)
   * "An ejection chain algorithm for the quadratic assignment problem" (Rego et al., 2009) [DOI](https://doi.org/10.1002/net.20360)
   * "Breakout local search for the quadratic assignment problem" (Benlic et Hao, 2013) [DOI](https://doi.org/10.1016/j.amc.2012.10.106)
   * "Memetic search for the quadratic assignment problem" (Benlic et Hao, 2015) [DOI](https://doi.org/10.1016/j.eswa.2014.08.011)
+
+</p>
+</details>
+
 * Algorithm:
   * Perturbation: swap two assignments
   * Local search neighborhoods:
@@ -66,7 +85,7 @@ The algorithms of this repository are designed to get the best performances out 
 
 Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https://github.com/fontanf/generalizedassignmentsolver/blob/master/generalizedassignmentsolver/algorithms/localsearch.cpp)
 * Algorithm:
-  * Perturbation: for item `j` to be assigned to agent `i`
+  * Perturbation: force item `j` to be assigned to agent `i`
   * Local search neighborhoods:
     * Shift item `j` to agent `i`
 
@@ -129,7 +148,7 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
   * "A memetic algorithm with novel semi-constructive evolution operators for permutation flowshop scheduling problem" (Kurdi, 2020) [DOI](https://doi.org/10.1016/j.asoc.2020.106458)
   * "Iterative beam search algorithms for the permutation flowshop" (Libralesso et al., 2020)
 * Algorithm:
-  * Perturbation: force job `j` to start first or right after job `j_prev`
+  * Perturbation: swap two blocs (double-bridge)
   * Local search neighborhoods:
     * Move `k` consecutive jobs, `k = 1..4`
 * Benchmarks:

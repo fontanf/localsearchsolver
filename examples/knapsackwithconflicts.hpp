@@ -158,6 +158,8 @@ public:
     {
         std::hash<ItemId> hasher;
 
+        inline bool hashable(const Move&) const { return true; }
+
         inline bool operator()(
                 const Move& move_1,
                 const Move& move_2) const

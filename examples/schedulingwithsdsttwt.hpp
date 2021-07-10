@@ -169,18 +169,9 @@ public:
 
     struct MoveHasher
     {
-        std::hash<JobPos> hasher;
-
+        inline bool hashable(const Move&) const { return false; }
         inline bool operator()(const Move&, const Move&) const { return false; }
-
-        inline std::size_t operator()(const Move& move) const
-        {
-            size_t hash = hasher(move.pos_1);
-            optimizationtools::hash_combine(hash, hasher(move.pos_2));
-            optimizationtools::hash_combine(hash, hasher(move.pos_3));
-            optimizationtools::hash_combine(hash, hasher(move.pos_4));
-            return hash;
-        }
+        inline std::size_t operator()(const Move&) const { return 0; }
     };
 
     inline MoveHasher move_hasher() const { return MoveHasher(); }
@@ -229,8 +220,6 @@ public:
             std::mt19937_64& generator,
             const Move& = move_null())
     {
-        //if (tabu.pos_1 != -1)
-        //    std::cout << tabu.pos_1  << " " << tabu.pos_2 << " " << tabu.pos_3 << " " << tabu.pos_4 << std::endl;
         //print(std::cout, solution);
         //std::cout << to_string(global_cost(solution)) << std::endl;
 
@@ -339,15 +328,15 @@ public:
                         }
                         compute(solution, jobs);
 
-                        if (solution.total_weighted_tardiness != total_weighted_tardiness(c_best)) {
-                            std::cout << "pos_best " << pos_best
-                                << " pos_new_best " << pos_new_best
-                                << " size " << bloc_size
-                                << std::endl;
-                            std::cout << total_weighted_tardiness(c_best) << std::endl;
-                            std::cout << solution.total_weighted_tardiness << std::endl;
-                            print(std::cout, solution);
-                        }
+                        //if (solution.total_weighted_tardiness != total_weighted_tardiness(c_best)) {
+                        //    std::cout << "pos_best " << pos_best
+                        //        << " pos_new_best " << pos_new_best
+                        //        << " size " << bloc_size
+                        //        << std::endl;
+                        //    std::cout << total_weighted_tardiness(c_best) << std::endl;
+                        //    std::cout << solution.total_weighted_tardiness << std::endl;
+                        //    print(std::cout, solution);
+                        //}
                         assert(solution.total_weighted_tardiness == total_weighted_tardiness(c_best));
                     }
                     break;
@@ -449,7 +438,7 @@ private:
                 j_prev = j;
             }
 
-            // Add remaining jobs to times_.
+            // Add remaining jobs.
             JobPos p0 = (pos_new < pos)? pos_new: pos_new + size;
             for (JobPos p = p0; p < (JobPos)solution.jobs.size(); ++p) {
                 if (total_weighted_tardinesses_shift_[pos_new] > solution.total_weighted_tardiness)
@@ -466,7 +455,7 @@ private:
                 j_prev = j;
             }
 
-            // Add j1 to heads_.
+            // Add job j1.
             if (pos_new == (JobPos)solution.jobs.size() - size)
                 break;
             assert(p0 < (JobPos)solution.jobs.size());
@@ -509,7 +498,7 @@ private:
                     j_prev = j;
                 }
             }
-            // Add j1.
+            // Add job j1.
             JobId j1 = solution.jobs[pos_1];
             t_cur += instance_.setup_time(j_prev_cur, j1);
             t_cur += instance_.job(j1).processing_time;

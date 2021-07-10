@@ -97,6 +97,7 @@ public:
     {
         JobPos bloc_size_max = 8;
         bool shuffle_neighborhood_order = true;
+        Counter perturbation_number = 10;
     };
 
     LocalScheme(
@@ -164,10 +165,10 @@ public:
 
     struct Move
     {
-        JobPos pos;
-        JobPos pos_new;
-        JobId j;
-        JobId j_prev;
+        JobPos pos_1;
+        JobPos pos_2;
+        JobPos pos_3;
+        JobPos pos_4;
         GlobalCost global_cost;
     };
 
@@ -175,23 +176,9 @@ public:
 
     struct MoveHasher
     {
-        std::hash<JobId> hasher;
-
-        inline bool operator()(
-                const Move& move_1,
-                const Move& move_2) const
-        {
-            return move_1.j == move_2.j
-                && move_1.j_prev == move_2.j_prev;
-        }
-
-        inline std::size_t operator()(
-                const Move& move) const
-        {
-            size_t hash = hasher(move.j);
-            optimizationtools::hash_combine(hash, hasher(move.j_prev));
-            return hash;
-        }
+        inline bool hashable(const Move&) const { return false; }
+        inline bool operator()(const Move&, const Move&) const { return false; }
+        inline std::size_t operator()(const Move&) const { return 0; }
     };
 
     inline MoveHasher move_hasher() const { return MoveHasher(); }
@@ -200,46 +187,45 @@ public:
             const Solution& solution,
             std::mt19937_64& generator)
     {
-        MachineId m = instance_.machine_number();
         std::vector<Move> moves;
-        for (JobPos pos = 0; pos < (JobPos)solution.jobs.size(); ++pos) {
-            JobId j = solution.jobs[pos];
-            compute_structures(solution, pos, 1);
-            for (JobPos pos_new = 0; pos_new < (JobPos)solution.jobs.size(); ++pos_new) {
-                if (pos_new == pos)
-                    continue;
-                JobId j_prev = -1;
-                if (pos_new > 0) {
-                    JobPos p = (pos_new < pos)? pos_new - 1: pos_new;
-                    j_prev = solution.jobs[p];
-                }
-                Time makespan = 0;
-                for (MachineId i = 0; i < m; ++i)
-                    makespan = std::max(makespan,
-                            completion_times_[pos_new][i]
-                                     + tails_[pos_new][i]);
-                Move move;
-                move.pos = pos;
-                move.pos_new = pos_new;
-                move.j = j;
-                move.j_prev = j_prev;
-                move.global_cost = {-solution.jobs.size(), makespan};
-                moves.push_back(move);
-            }
+        for (Counter perturbation = 0; perturbation < parameters_.perturbation_number; ++perturbation) {
+            std::vector<JobPos> edges = optimizationtools::bob_floyd<JobPos>(
+                    4, solution.jobs.size() + 1, generator);
+            std::sort(edges.begin(), edges.end());
+            Move move;
+            move.pos_1 = edges[0];
+            move.pos_2 = edges[1];
+            move.pos_3 = edges[2];
+            move.pos_4 = edges[3];
+            assert(move.pos_1 >= 0);
+            assert(move.pos_4 <= (JobPos)solution.jobs.size());
+            move.global_cost = global_cost(solution);
+            moves.push_back(move);
         }
         return moves;
     }
 
     inline void apply_move(Solution& solution, const Move& move)
     {
-        insert(solution, move.pos, 1, move.pos_new);
-        assert(solution.makespan == makespan(move.global_cost));
+        std::vector<JobId> jobs;
+        for (JobPos pos = 0; pos < move.pos_1; ++pos)
+            jobs.push_back(solution.jobs[pos]);
+        for (JobPos pos = move.pos_3; pos < move.pos_4; ++pos)
+            jobs.push_back(solution.jobs[pos]);
+        for (JobPos pos = move.pos_2; pos < move.pos_3; ++pos)
+            jobs.push_back(solution.jobs[pos]);
+        for (JobPos pos = move.pos_1; pos < move.pos_2; ++pos)
+            jobs.push_back(solution.jobs[pos]);
+        for (JobPos pos = move.pos_4; pos < (JobPos)solution.jobs.size(); ++pos)
+            jobs.push_back(solution.jobs[pos]);
+        assert((JobPos)jobs.size() <= instance_.job_number());
+        compute(solution, jobs);
     }
 
     inline void local_search(
             Solution& solution,
             std::mt19937_64& generator,
-            const Move& tabu = move_null())
+            const Move& = move_null())
     {
         MachineId m = instance_.machine_number();
         Counter it = 0;
@@ -265,32 +251,9 @@ public:
                 for (JobPos pos: positions1_) {
                     if (pos > (JobPos)solution.jobs.size() - bloc_size)
                         continue;
-                    // We insert neither tabu.j nor tabu.j_prev.
-                    JobId j_cur = solution.jobs[pos];
-                    if (j_cur == tabu.j)
-                        continue;
-                    if (bloc_size == 1 && j_cur == tabu.j_prev)
-                        continue;
-
                     compute_structures(solution, pos, bloc_size);
                     for (JobPos pos_new: positions2_) {
                         if (pos == pos_new || pos_new > (JobPos)solution.jobs.size() - bloc_size)
-                            continue;
-                        JobId j_prev = -1;
-                        if (pos_new > 0) {
-                            JobPos p = (pos_new < pos)? pos_new - 1: pos_new + bloc_size - 1;
-                            //std::cout
-                            //    << "pos " << pos
-                            //    << " bloc_size " << bloc_size
-                            //    << " pos_new " << pos_new
-                            //    << " p " << p
-                            //    << std::endl;
-                            assert(p >= 0);
-                            assert(p < (JobPos)solution.jobs.size());
-                            j_prev = solution.jobs[p];
-                        }
-                        // We don't put anything between tabu.j_prev and tabu.j.
-                        if (tabu.j_prev != -1 && j_prev == tabu.j_prev)
                             continue;
                         Time makespan = 0;
                         for (MachineId i = 0; i < m; ++i)
@@ -315,7 +278,28 @@ public:
                     //    << " pos_new_best " << pos_new_best
                     //    << " size " << bloc_size
                     //    << std::endl;
-                    insert(solution, pos_best, bloc_size, pos_new_best);
+                    std::vector<JobId> jobs;
+                    if (pos_best > pos_new_best) {
+                        for (JobPos p = 0; p < pos_new_best; ++p)
+                            jobs.push_back(solution.jobs[p]);
+                        for (JobPos p = pos_best; p < pos_best + bloc_size; ++p)
+                            jobs.push_back(solution.jobs[p]);
+                        for (JobPos p = pos_new_best; p < pos_best; ++p)
+                            jobs.push_back(solution.jobs[p]);
+                        for (JobPos p = pos_best + bloc_size; p < (JobPos)solution.jobs.size(); ++p)
+                            jobs.push_back(solution.jobs[p]);
+                    } else {
+                        for (JobPos p = 0; p < pos_best; ++p)
+                            jobs.push_back(solution.jobs[p]);
+                        for (JobPos p = pos_best + bloc_size; p < pos_new_best + bloc_size; ++p)
+                            jobs.push_back(solution.jobs[p]);
+                        for (JobPos p = pos_best; p < pos_best + bloc_size; ++p)
+                            jobs.push_back(solution.jobs[p]);
+                        for (JobPos p = pos_new_best + bloc_size; p < (JobPos)solution.jobs.size(); ++p)
+                            jobs.push_back(solution.jobs[p]);
+                    }
+                    assert((JobPos)jobs.size() <= instance_.job_number());
+                    compute(solution, jobs);
                     if (solution.makespan != makespan(c_best)) {
                         std::cout << "pos_best " << pos_best
                             << " pos_new_best " << pos_new_best
@@ -399,42 +383,6 @@ private:
             }
         }
         solution.makespan = times_[m - 1];
-    }
-
-    inline void insert(
-            Solution& solution,
-            JobPos pos,
-            JobPos size,
-            JobPos pos_new)
-    {
-        assert(pos != pos_new);
-        assert(pos >= 0);
-        assert(pos <= (JobPos)instance_.job_number() - size);
-        assert(pos_new <= (JobPos)instance_.job_number() - size);
-        assert(pos_new <= (JobPos)instance_.job_number() - size);
-
-        std::vector<JobId> jobs;
-        if (pos > pos_new) {
-            for (JobPos p = 0; p < pos_new; ++p)
-                jobs.push_back(solution.jobs[p]);
-            for (JobPos p = pos; p < pos + size; ++p)
-                jobs.push_back(solution.jobs[p]);
-            for (JobPos p = pos_new; p < pos; ++p)
-                jobs.push_back(solution.jobs[p]);
-            for (JobPos p = pos + size; p < (JobPos)solution.jobs.size(); ++p)
-                jobs.push_back(solution.jobs[p]);
-        } else {
-            for (JobPos p = 0; p < pos; ++p)
-                jobs.push_back(solution.jobs[p]);
-            for (JobPos p = pos + size; p < pos_new + size; ++p)
-                jobs.push_back(solution.jobs[p]);
-            for (JobPos p = pos; p < pos + size; ++p)
-                jobs.push_back(solution.jobs[p]);
-            for (JobPos p = pos_new + size; p < (JobPos)solution.jobs.size(); ++p)
-                jobs.push_back(solution.jobs[p]);
-        }
-        assert((JobPos)jobs.size() <= instance_.job_number());
-        compute(solution, jobs);
     }
 
     /*

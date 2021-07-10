@@ -414,6 +414,8 @@ public:
         std::hash<InterventionId> hasher_1;
         std::hash<Time> hasher_2;
 
+        inline bool hashable(const Move&) const { return true; }
+
         inline bool operator()(
                 const Move& move_1,
                 const Move& move_2) const
