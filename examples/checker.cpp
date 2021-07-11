@@ -1,6 +1,7 @@
 #include "examples/knapsackwithconflicts.hpp"
 #include "examples/multidimensionalmultiplechoiceknapsack.hpp"
 #include "examples/quadraticassignment.hpp"
+#include "examples/travellingsalesman.hpp"
 #include "examples/schedulingwithsdsttwt.hpp"
 #include "examples/permutationflowshopschedulingmakespan.hpp"
 #include "examples/permutationflowshopschedulingtt.hpp"
@@ -59,6 +60,12 @@ int main(int argc, char *argv[])
 
     } else if (problem == "quadraticassignment") {
         quadraticassignment::Instance instance(instance_path, format);
+        if (vm.count("print-instance"))
+            std::cout << instance << std::endl;
+        instance.check(certificate_path);
+
+    } else if (problem == "travellingsalesman") {
+        travellingsalesman::Instance instance(instance_path, format);
         if (vm.count("print-instance"))
             std::cout << instance << std::endl;
         instance.check(certificate_path);

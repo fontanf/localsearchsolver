@@ -202,8 +202,6 @@ public:
                     JobPos p = (pos_new < pos)? pos_new - 1: pos_new;
                     j_prev = solution.jobs[p];
                 }
-                //if (total_tardinesses_[pos] == solution.total_tardiness)
-                //    continue;
                 Move move;
                 move.pos = pos;
                 move.pos_new = pos_new;

@@ -128,6 +128,17 @@ int main(int argc, char *argv[])
         if (vm.count("print-solution"))
             local_scheme.print(std::cout, solution_pool.best());
 
+    } else if (problem == "travellingsalesman") {
+        travellingsalesman::Instance instance(instance_path, format);
+        if (vm.count("print-instance"))
+            std::cout << instance << std::endl;
+        auto parameters_local_scheme = read_travellingsalesman_args(local_scheme_argv);
+        travellingsalesman::LocalScheme local_scheme(instance, parameters_local_scheme);
+        auto solution_pool = run(algorithm, local_scheme, info);
+        local_scheme.write(solution_pool.best(), certificate_path);
+        if (vm.count("print-solution"))
+            local_scheme.print(std::cout, solution_pool.best());
+
     } else if (problem == "schedulingwithsdsttwt") {
         schedulingwithsdsttwt::Instance instance(instance_path, format);
         if (vm.count("print-instance"))

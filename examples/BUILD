@@ -30,6 +30,16 @@ cc_library(
 )
 
 cc_library(
+        name = "travellingsalesman",
+        hdrs = ["travellingsalesman.hpp"],
+        deps = [
+                "//localsearchsolver:localsearchsolver",
+                "@treesearchsolver//examples:travellingsalesman",
+        ],
+        visibility = ["//visibility:public"],
+)
+
+cc_library(
         name = "schedulingwithsdsttwt",
         hdrs = ["schedulingwithsdsttwt.hpp"],
         deps = [
@@ -113,6 +123,7 @@ cc_binary(
                 ":knapsackwithconflicts",
                 ":multidimensionalmultiplechoiceknapsack",
                 ":quadraticassignment",
+                ":travellingsalesman",
                 ":schedulingwithsdsttwt",
                 ":permutationflowshopschedulingmakespan",
                 ":permutationflowshopschedulingtt",
@@ -131,6 +142,7 @@ cc_binary(
                 ":knapsackwithconflicts",
                 ":multidimensionalmultiplechoiceknapsack",
                 ":quadraticassignment",
+                ":travellingsalesman",
                 ":schedulingwithsdsttwt",
                 ":permutationflowshopschedulingmakespan",
                 ":permutationflowshopschedulingtt",

@@ -89,6 +89,20 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
   * Local search neighborhoods:
     * Shift item `j` to agent `i`
 
+### Routing
+
+[Travelling Salesman Problem](examples/travellingsalesman.hpp)
+* Three field classification: `1 | sᵢⱼ | Cₘₐₓ`
+* Algorithm:
+  * Perturbation: swap two blocs (double-bridge)
+  * Local search neighborhoods:
+    * Shift a bloc of `k` consecutive vertices, `k = 1..3` (or-opt)
+    * Swap vertex `j1` with vertex `j2`
+    * Replace edges `(j1, j2)` and `(j3, j4)` by edges `(j1, j3)` and `(j2, j4)` (2-opt)
+* Benchmarks:
+  * `python3 ../optimizationtools/optimizationtools/bench_run.py --csv ../treesearchdata/travellingsalesman/data.csv -l travellingsalesman -t 60`
+  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../treesearchdata/travellingsalesman/data.csv -l travellingsalesman -b heuristiclong -t 62`
+
 ### Scheduling
 
 #### Single machine scheduling
