@@ -179,9 +179,10 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
   * "Matheuristic algorithms for minimizing total tardiness in the m-machine flow-shop scheduling problem" (Ta et al., 2015) [DOI](https://doi.org/10.1007/s10845-015-1046-4)
   * "Iterated-greedy-based algorithms with beam search initialization for the permutation flowshop to minimise total tardiness" (Fernandez-Viagas et al., 2018) [DOI](https://doi.org/10.1016/j.eswa.2017.10.050)
 * Algorithm:
-  * Perturbation: force job `j` to start first or right after job `j_prev`
+  * Perturbation: swap two blocs (double-bridge)
   * Local search neighborhoods:
-    * Move `k` consecutive jobs, `k = 1..4`
+    * Shift a bloc of `k` consecutive jobs, `k = 1..3`
+    * Swap job `j1` and job `j2`
 * Benchmarks:
   * `python3 ../optimizationtools/optimizationtools/bench_run.py --csv ../treesearchdata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt --timelimitfield "Time limit"`
   * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../treesearchdata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt -b heuristiclong -t 500`
