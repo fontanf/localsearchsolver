@@ -1,8 +1,17 @@
 #pragma once
 
+/**
+ * Permutation flow shop scheduling problem, Makespan.
+ *
+ * Problem description:
+ * See https://github.com/fontanf/orproblems/blob/main/orproblems/permutationflowshopschedulingmakespan.hpp
+ *
+ * TODO
+ */
+
 #include "localsearchsolver/common.hpp"
 
-#include "external/treesearchsolver/examples/permutationflowshopschedulingmakespan.hpp"
+#include "orproblems/permutationflowshopschedulingmakespan.hpp"
 
 namespace localsearchsolver
 {
@@ -10,11 +19,7 @@ namespace localsearchsolver
 namespace permutationflowshopschedulingmakespan
 {
 
-using JobId = treesearchsolver::permutationflowshopschedulingmakespan::JobId;
-using JobPos = treesearchsolver::permutationflowshopschedulingmakespan::JobPos;
-using MachineId = treesearchsolver::permutationflowshopschedulingmakespan::MachineId;
-using Time = treesearchsolver::permutationflowshopschedulingmakespan::Time;
-using Instance = treesearchsolver::permutationflowshopschedulingmakespan::Instance;
+using namespace orproblems::permutationflowshopschedulingmakespan;
 
 class LocalScheme
 {

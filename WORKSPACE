@@ -44,22 +44,15 @@ local_repository(
 )
 
 git_repository(
-    name = "treesearchsolver",
-    remote = "https://github.com/fontanf/treesearchsolver.git",
-    commit = "5bb11bc15d7100dd0be62d8fd255385c9882c0c5",
-    shallow_since = "1626028358 +0200",
+    name = "orproblems",
+    remote = "https://github.com/fontanf/orproblems.git",
+    commit = "1f5dad25bcce6d58f7f8f296b4dc60fe704b0d7f",
+    shallow_since = "1626595195 +0200",
 )
 
 local_repository(
-    name = "treesearchsolver_",
-    path = "../treesearchsolver/",
-)
-
-git_repository(
-    name = "columngenerationsolver",
-    remote = "https://github.com/fontanf/columngenerationsolver.git",
-    commit = "9a88d013fb4ea0efa415bf2dba51e07f567e8839",
-    shallow_since = "1618162186 +0200",
+    name = "orproblems_",
+    path = "../orproblems/",
 )
 
 http_archive(

@@ -1,8 +1,20 @@
 #pragma once
 
+/**
+ * Single machine scheduling problem with sequence-dependent setup times, Total
+ * weighted Tardiness.
+ *
+ * Problem description:
+ * See https://github.com/fontanf/orproblems/blob/main/orproblems/schedulingwithsdsttwt.hpp
+ *
+ * TODO
+ *
+ */
+
+
 #include "localsearchsolver/common.hpp"
 
-#include "external/treesearchsolver/examples/schedulingwithsdsttwt.hpp"
+#include "orproblems/schedulingwithsdsttwt.hpp"
 
 namespace localsearchsolver
 {
@@ -10,11 +22,7 @@ namespace localsearchsolver
 namespace schedulingwithsdsttwt
 {
 
-using JobId = treesearchsolver::schedulingwithsdsttwt::JobId;
-using JobPos = treesearchsolver::schedulingwithsdsttwt::JobPos;
-using Time = treesearchsolver::schedulingwithsdsttwt::Time;
-using Weight = treesearchsolver::schedulingwithsdsttwt::Weight;
-using Instance = treesearchsolver::schedulingwithsdsttwt::Instance;
+using namespace orproblems::schedulingwithsdsttwt;
 
 class LocalScheme
 {

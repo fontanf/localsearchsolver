@@ -1,8 +1,18 @@
 #pragma once
 
+/**
+ * Travelling Salesman Problem.
+ *
+ * Problem description:
+ * See https://github.com/fontanf/orproblems/blob/main/orproblems/travellingsalesman.hpp
+ *
+ * TODO
+ *
+ */
+
 #include "localsearchsolver/common.hpp"
 
-#include "external/treesearchsolver/examples/travellingsalesman.hpp"
+#include "orproblems/travellingsalesman.hpp"
 
 namespace localsearchsolver
 {
@@ -10,10 +20,7 @@ namespace localsearchsolver
 namespace travellingsalesman
 {
 
-using VertexId = treesearchsolver::travellingsalesman::VertexId;
-using VertexPos = treesearchsolver::travellingsalesman::VertexPos;
-using Distance = treesearchsolver::travellingsalesman::Distance;
-using Instance = treesearchsolver::travellingsalesman::Instance;
+using namespace orproblems::travellingsalesman;
 
 class LocalScheme
 {

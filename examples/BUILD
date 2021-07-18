@@ -10,7 +10,7 @@ cc_library(
         hdrs = ["knapsackwithconflicts.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@treesearchsolver//examples:knapsackwithconflicts",
+                "@orproblems//orproblems:knapsackwithconflicts",
         ],
         visibility = ["//visibility:public"],
 )
@@ -18,14 +18,20 @@ cc_library(
 cc_library(
         name = "multidimensionalmultiplechoiceknapsack",
         hdrs = ["multidimensionalmultiplechoiceknapsack.hpp"],
-        deps = ["//localsearchsolver:localsearchsolver"],
+        deps = [
+                "//localsearchsolver:localsearchsolver",
+                "@orproblems//orproblems:multidimensionalmultiplechoiceknapsack",
+        ],
         visibility = ["//visibility:public"],
 )
 
 cc_library(
         name = "quadraticassignment",
         hdrs = ["quadraticassignment.hpp"],
-        deps = ["//localsearchsolver:localsearchsolver"],
+        deps = [
+                "//localsearchsolver:localsearchsolver",
+                "@orproblems//orproblems:quadraticassignment",
+        ],
         visibility = ["//visibility:public"],
 )
 
@@ -34,7 +40,7 @@ cc_library(
         hdrs = ["travellingsalesman.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@treesearchsolver//examples:travellingsalesman",
+                "@orproblems//orproblems:travellingsalesman",
         ],
         visibility = ["//visibility:public"],
 )
@@ -44,7 +50,7 @@ cc_library(
         hdrs = ["schedulingwithsdsttwt.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@treesearchsolver//examples:schedulingwithsdsttwt",
+                "@orproblems//orproblems:schedulingwithsdsttwt",
         ],
         visibility = ["//visibility:public"],
 )
@@ -54,7 +60,7 @@ cc_library(
         hdrs = ["permutationflowshopschedulingmakespan.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@treesearchsolver//examples:permutationflowshopschedulingmakespan",
+                "@orproblems//orproblems:permutationflowshopschedulingmakespan",
         ],
         visibility = ["//visibility:public"],
 )
@@ -64,7 +70,7 @@ cc_library(
         hdrs = ["permutationflowshopschedulingtt.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@treesearchsolver//examples:permutationflowshopschedulingtt",
+                "@orproblems//orproblems:permutationflowshopschedulingtt",
         ],
         visibility = ["//visibility:public"],
 )
@@ -75,7 +81,7 @@ cc_library(
         srcs = ["roadef2020.cpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@simdjson//:simdjson",
+                "@orproblems//orproblems:roadef2020",
                 "@optimizationtools//optimizationtools:indexed_collections",
         ] + CPLEX_DEP + GUROBI_DEP,
         copts = [
@@ -134,20 +140,4 @@ cc_binary(
                 "//conditions:default":                 ["-lpthread"],
         }),
 )
-
-cc_binary(
-        name = "checker",
-        srcs = ["checker.cpp"],
-        deps = [
-                ":knapsackwithconflicts",
-                ":multidimensionalmultiplechoiceknapsack",
-                ":quadraticassignment",
-                ":travellingsalesman",
-                ":schedulingwithsdsttwt",
-                ":permutationflowshopschedulingmakespan",
-                ":permutationflowshopschedulingtt",
-                "@boost//:program_options",
-        ],
-)
-
 

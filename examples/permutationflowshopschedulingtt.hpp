@@ -1,8 +1,17 @@
 #pragma once
 
+/**
+ * Permutation flow shop scheduling problem, Total tardiness.
+ *
+ * Problem description:
+ * See https://github.com/fontanf/orproblems/blob/main/orproblems/permutationflowshopschedulingtt.hpp
+ *
+ * TODO
+ */
+
 #include "localsearchsolver/common.hpp"
 
-#include "external/treesearchsolver/examples/permutationflowshopschedulingtt.hpp"
+#include "orproblems/permutationflowshopschedulingtt.hpp"
 
 namespace localsearchsolver
 {
@@ -10,11 +19,7 @@ namespace localsearchsolver
 namespace permutationflowshopschedulingtt
 {
 
-using JobId = treesearchsolver::permutationflowshopschedulingtt::JobId;
-using JobPos = treesearchsolver::permutationflowshopschedulingtt::JobPos;
-using MachineId = treesearchsolver::permutationflowshopschedulingtt::MachineId;
-using Time = treesearchsolver::permutationflowshopschedulingtt::Time;
-using Instance = treesearchsolver::permutationflowshopschedulingtt::Instance;
+using namespace orproblems::permutationflowshopschedulingtt;
 
 class LocalScheme
 {

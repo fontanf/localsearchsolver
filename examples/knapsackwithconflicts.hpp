@@ -1,8 +1,18 @@
 #pragma once
 
+/**
+ * Knapsack Problem with Conflicts.
+ *
+ * Problem description:
+ * See https://github.com/fontanf/orproblems/blob/main/orproblems/knapsackwithconflicts.hpp
+ *
+ * TODO
+ *
+ */
+
 #include "localsearchsolver/common.hpp"
 
-#include "external/treesearchsolver/examples/knapsackwithconflicts.hpp"
+#include "orproblems/knapsackwithconflicts.hpp"
 
 namespace localsearchsolver
 {
@@ -10,11 +20,7 @@ namespace localsearchsolver
 namespace knapsackwithconflicts
 {
 
-using ItemId = treesearchsolver::knapsackwithconflicts::ItemId;
-using ItemPos = treesearchsolver::knapsackwithconflicts::ItemPos;
-using Profit = treesearchsolver::knapsackwithconflicts::Profit;
-using Weight = treesearchsolver::knapsackwithconflicts::Weight;
-using Instance = treesearchsolver::knapsackwithconflicts::Instance;
+using namespace orproblems::knapsackwithconflicts;
 
 class LocalScheme
 {
