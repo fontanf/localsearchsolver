@@ -9,6 +9,10 @@ The goal of this repository is to provide a simple framework to quickly implemen
 For complex and evolving problems, implementing and extending local search algorithms based on complex neighborhoods quickly becomes cumbersome and time consuming. This often makes them unsuitable for practical use.
 The algorithms of this repository are designed to get the best performances out of the simplest neighborhoods. Thus making them easier to implement and extend.
 
+Still, more complex neighborhoods can be implemented if better performances are needed.
+
+In addition, the algorithms don't require parameter tuning.
+
 ## Examples
 
 Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orproblems)
@@ -19,10 +23,14 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
 * Algorithm:
   * Perturbation: force item `j` in/out of the solution
   * Local search neighborhoods:
-    * Move item `j` in/out of the solution
+    * Move item `j` in/out of the solution (and remove conflicting items)
+    * Swap two non-conflicting items
+    * Remove one item and add two non-conflicting items from its neighbors
 * Benchmarks:
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --csv ../ordata/knapsackwithconflicts/data.csv -l knsapsackwithconflicts -t 60`
-  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -l knsapsackwithconflicts -b heuristiclong -t 62`
+  * `python3 ../optimizationtools/optimizationtools/bench_run.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'hifi2006'" -l knapsackwithconflicts -t 300`
+  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'hifi2006'" -l knapsackwithconflicts -b heuristiclong -t 310`
+  * `python3 ../optimizationtools/optimizationtools/bench_run.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -t 5`
+  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -b heuristiclong -t 6`
 
 [Multidimensional Multiple-choice Knapsack Problem](examples/multidimensionalmultiplechoiceknapsack.hpp)
 * Algorithm:
@@ -106,7 +114,7 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
   * Local search neighborhoods:
     * Shift intervention `j` to time `t_start`
 * Benchmarks:
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main "./bazel-bin/examples/roadef2020_main" --csv "../ordata/roadef2020/data.csv" -f "'A' not in row['Dataset']" -l roadef2020 -t 900`
+  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main "./bazel-bin/examples/roadef2020_main -w 0 -y 1 " --csv ../ordata/roadef2020/data/data.csv -l roadef2020 -t 900 -f "'A' not in row['Dataset']"`
   * `python3 ../optimizationtools/optimizationtools/bench_process.py -b heuristiclong --csv ../ordata/roadef2020/data.csv -l roadef2020 -t 920 -f "'A' not in row['Dataset']"`
 
 ## Usage, running examples from command line

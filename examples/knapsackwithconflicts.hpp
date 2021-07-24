@@ -6,7 +6,25 @@
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/knapsackwithconflicts.hpp
  *
- * TODO
+ * Local Search:
+ *
+ * Three neighborhoods are implemented:
+ * - Toggle: remove an item from the knapsack or add an item into the knapsack
+ *   and remove its neighbors from the knapsack
+ *   Complexity: O(n)
+ * - Swap: swap an item from the knapsack with an item out of the knapsack
+ *   which is not one of its neighbors (this is already considered by the
+ *   Toggle neighborhood).
+ *   Complexity: O(number of non-conflicts)
+ * - (2-1)-swap: remove an item from the knapsack and add two of its neighbors
+ *   which are not neighbors.
+ *   This neighborhood has originaly been proposed for the Maximum Independent
+ *   Set Problem and for the Maximum-Weight Independent Set Problem.
+ *   Complexity: O(number of conflicts)
+ *   "Fast local search for the maximum independent set problem" (Andrade et al., 2012)
+ *   https://doi.org/10.1007/s10732-012-9196-4
+ *   "A hybrid iterated local search heuristic for the maximum weight independent set problem" (Nogueira et al., 2018)
+ *   https://doi.org/10.1007/s11590-017-1128-7
  *
  */
 
@@ -69,16 +87,40 @@ public:
 
     inline CompactSolutionHasher compact_solution_hasher() const { return CompactSolutionHasher(); }
 
+    struct SolutionItem
+    {
+        /**
+         * in == true iff item j is in the solution.
+         */
+        bool in = false;
+
+        /**
+         * neighbor_weight = w iff the sum of the weights of the neighbors of j
+         * which are in the solution is equal to w.
+         */
+        Weight neighbor_weight = 0;
+
+        /**
+         * neighbor_profit = p iff the sum of the profits of the neighbors of j
+         * which are in the solution is equal to p.
+         */
+        Profit neighbor_profit = 0;
+    };
+
     struct Solution
     {
-        std::vector<bool> items;
+        std::vector<SolutionItem> items;
         Profit profit = 0;
         Weight weight = 0;
     };
 
     CompactSolution solution2compact(const Solution& solution)
     {
-        return solution.items;
+        std::vector<bool> items(instance_.item_number(), false);
+        for (ItemId j = 0; j < instance_.item_number(); ++j)
+            if (solution.items[j].in)
+                items[j] = true;
+        return items;
     }
 
     Solution compact2solution(const CompactSolution& compact_solution)
@@ -96,6 +138,11 @@ public:
 
     struct Parameters
     {
+        /** Enable Swap neighborhood. */
+        bool swap = true;
+        /** Enable (2-1)-swap neighborhood. */
+        bool swap_2_1 = true;
+        bool shuffle_neighborhood_order = true;
     };
 
     LocalScheme(
@@ -103,8 +150,12 @@ public:
             Parameters parameters):
         instance_(instance),
         parameters_(parameters),
-        items_(instance.item_number())
+        items_(instance.item_number()),
+        neighbors_(instance_.item_number()),
+        free_items_(instance_.item_number()),
+        free_items_2_(instance_.item_number())
     {
+        // Initialize items_.
         std::iota(items_.begin(), items_.end(), 0);
     }
 
@@ -120,18 +171,18 @@ public:
     inline Solution empty_solution() const
     {
         Solution solution;
-        solution.items.resize(instance_.item_number(), false);
+        solution.items.resize(instance_.item_number());
         return solution;
     }
 
     inline Solution initial_solution(
             Counter,
-            std::mt19937_64& generator) const
+            std::mt19937_64& generator)
     {
         Solution solution = empty_solution();
-        std::uniform_int_distribution<int> d(0, 1);
-        for (ItemId j = 0; j < instance_.item_number(); ++j)
-            if (d(generator) == 0)
+        std::shuffle(items_.begin(), items_.end(), generator);
+        for (ItemId j: items_)
+            if (solution.items[j].neighbor_profit == 0)
                 add(solution, j);
         return solution;
     }
@@ -214,31 +265,176 @@ public:
             std::mt19937_64& generator,
             const Move& tabu = move_null())
     {
-        for (;;) {
-            std::shuffle(items_.begin(), items_.end(), generator);
-            ItemId j_best = -1;
-            GlobalCost c_best = global_cost(solution);
-            for (ItemId j: items_) {
-                if (j == tabu.j)
-                    continue;
-                GlobalCost c = (contains(solution, j))?
-                    cost_remove(solution, j, c_best):
-                    cost_add(solution, j, c_best);
-                if (c >= c_best)
-                    continue;
-                if (j_best != -1 && !dominates(c, c_best))
-                    continue;
-                j_best = j;
-                c_best = c;
+        // Get neighborhoods.
+        std::vector<Counter> neighborhoods = {0};
+        if (parameters_.swap)
+            neighborhoods.push_back(1);
+        if (parameters_.swap_2_1)
+            neighborhoods.push_back(2);
+
+        Counter it = 0;
+        for (;; ++it) {
+            //std::cout << "it " << it
+            //    << " c " << to_string(global_cost(solution))
+            //    << std::endl;
+            //print(std::cout, solution);
+
+            if (parameters_.shuffle_neighborhood_order)
+                std::shuffle(neighborhoods.begin(), neighborhoods.end(), generator);
+
+            bool improved = false;
+            // Loop through neighborhoods.
+            for (Counter neighborhood: neighborhoods) {
+                switch (neighborhood) {
+                case 0: { // Toggle neighborhood.
+                    std::shuffle(items_.begin(), items_.end(), generator);
+                    ItemId j_best = -1;
+                    GlobalCost c_best = global_cost(solution);
+                    for (ItemId j: items_) {
+                        if (j == tabu.j)
+                            continue;
+                        GlobalCost c = (contains(solution, j))?
+                            cost_remove(solution, j, c_best):
+                            cost_add(solution, j, c_best);
+                        if (c >= c_best)
+                            continue;
+                        if (j_best != -1 && !dominates(c, c_best))
+                            continue;
+                        j_best = j;
+                        c_best = c;
+                    }
+                    if (j_best != -1) {
+                        improved = true;
+                        // Apply move.
+                        if (contains(solution, j_best)) {
+                            remove(solution, j_best);
+                        } else {
+                            add(solution, j_best);
+                        }
+                        assert(global_cost(solution) == c_best);
+                    }
+                    break;
+                } case 1: { // Swap neighborhood.
+                    std::shuffle(items_.begin(), items_.end(), generator);
+                    items_in_.clear();
+                    items_out_.clear();
+                    for (ItemId j: items_) {
+                        if (j == tabu.j)
+                            continue;
+                        if (contains(solution, j)) {
+                            items_in_.push_back(j);
+                        } else {
+                            items_out_.push_back(j);
+                        }
+                    }
+
+                    ItemId j_in_best = -1;
+                    ItemId j_out_best = -1;
+                    GlobalCost c_best = global_cost(solution);
+                    for (ItemId j_in: items_in_) {
+                        neighbors_.clear();
+                        for (ItemId j_neighbor: instance_.item(j_in).neighbors)
+                            neighbors_.add(j_neighbor);
+                        for (ItemId j_out: items_out_) {
+                            if (neighbors_.contains(j_out))
+                                continue;
+                            GlobalCost c = cost_swap(solution, j_in, j_out, c_best);
+                            if (c >= c_best)
+                                continue;
+                            if (j_in_best != -1 && !dominates(c, c_best))
+                                continue;
+                            j_in_best = j_in;
+                            j_out_best = j_out;
+                            c_best = c;
+                        }
+                    }
+                    if (j_in_best != -1) {
+                        improved = true;
+                        // Apply move.
+                        remove(solution, j_in_best);
+                        assert(!contains(solution, j_out_best));
+                        add(solution, j_out_best);
+                        assert(global_cost(solution) == c_best);
+                    }
+                    break;
+                } case 2: { // (2-1)-swap neighborhood.
+                    std::shuffle(items_.begin(), items_.end(), generator);
+                    // Get items inside the knapsack.
+                    items_in_.clear();
+                    for (ItemId j: items_) {
+                        if (j == tabu.j)
+                            continue;
+                        if (contains(solution, j))
+                            items_in_.push_back(j);
+                    }
+
+                    ItemId j_in_best = -1;
+                    ItemId j_out_1_best = -1;
+                    ItemId j_out_2_best = -1;
+                    GlobalCost c_best = global_cost(solution);
+                    for (ItemId j_in: items_in_) {
+                        // Update free_items_
+                        free_items_.clear();
+                        for (ItemId j_neighbor: instance_.item(j_in).neighbors)
+                            if (solution.items[j_neighbor].neighbor_profit
+                                    == instance_.item(j_in).profit)
+                                free_items_.add(j_neighbor);
+                        if (free_items_.size() <= 2)
+                            continue;
+                        free_items_.shuffle_in(generator);
+                        remove(solution, j_in);
+                        for (ItemId j_out_1: free_items_) {
+                            assert(j_out_1 != j_in);
+                            free_items_2_.clear();
+                            for (ItemId j: free_items_)
+                                free_items_2_.add(j);
+                            free_items_2_.remove(j_out_1);
+                            for (ItemId j_neighbor: instance_.item(j_out_1).neighbors)
+                                if (free_items_2_.contains(j_neighbor))
+                                    free_items_2_.remove(j_neighbor);
+                            if (free_items_2_.empty())
+                                continue;
+                            free_items_2_.shuffle_in(generator);
+                            assert(!contains(solution, j_out_1));
+                            add(solution, j_out_1);
+                            for (ItemId j_out_2: free_items_2_) {
+                                assert(j_out_2 != j_in);
+                                assert(j_out_2 != j_out_1);
+                                GlobalCost c = cost_add(solution, j_out_2, c_best);
+                                if (c >= c_best)
+                                    continue;
+                                if (j_in_best != -1 && !dominates(c, c_best))
+                                    continue;
+                                j_in_best = j_in;
+                                j_out_1_best = j_out_1;
+                                j_out_2_best = j_out_2;
+                                c_best = c;
+                            }
+                            remove(solution, j_out_1);
+                        }
+                        assert(!contains(solution, j_in));
+                        add(solution, j_in);
+                    }
+                    if (j_in_best != -1) {
+                        improved = true;
+                        // Apply move.
+                        remove(solution, j_in_best);
+                        assert(!contains(solution, j_out_1_best));
+                        add(solution, j_out_1_best);
+                        assert(!contains(solution, j_out_2_best));
+                        add(solution, j_out_2_best);
+                        assert(global_cost(solution) == c_best);
+                    }
+                    break;
+                }
+                }
+                if (improved)
+                    break;
             }
-            if (j_best == -1)
+            if (!improved)
                 break;
-            if (contains(solution, j_best)) {
-                remove(solution, j_best);
-            } else {
-                add(solution, j_best);
-            }
         }
+        //print(std::cout, solution);
     }
 
     /*
@@ -284,7 +480,7 @@ private:
 
     inline bool contains(const Solution& solution, ItemId j) const
     {
-        return solution.items[j];
+        return solution.items[j].in;
     }
 
     inline Weight overweight(const Solution& solution) const
@@ -294,19 +490,34 @@ private:
 
     inline void add(Solution& solution, ItemId j) const
     {
-        solution.items[j] = true;
-        solution.weight += instance_.item(j).weight;
-        solution.profit += instance_.item(j).profit;
-        for (ItemId j_neighbor: instance_.item(j).neighbors)
+        assert(j >= 0);
+        assert(!contains(solution, j));
+        solution.items[j].in = true;
+        Weight w = instance_.item(j).weight;
+        Profit p = instance_.item(j).profit;
+        solution.weight += w;
+        solution.profit += p;
+        for (ItemId j_neighbor: instance_.item(j).neighbors) {
             if (contains(solution, j_neighbor))
                 remove(solution, j_neighbor);
+            solution.items[j_neighbor].neighbor_weight += w;
+            solution.items[j_neighbor].neighbor_profit += p;
+        }
     }
 
     inline void remove(Solution& solution, ItemId j) const
     {
-        solution.items[j] = false;
-        solution.weight -= instance_.item(j).weight;
-        solution.profit -= instance_.item(j).profit;
+        assert(j >= 0);
+        assert(contains(solution, j));
+        solution.items[j].in = false;
+        Weight w = instance_.item(j).weight;
+        Profit p = instance_.item(j).profit;
+        solution.weight -= w;
+        solution.profit -= p;
+        for (ItemId j_neighbor: instance_.item(j).neighbors) {
+            solution.items[j_neighbor].neighbor_weight -= w;
+            solution.items[j_neighbor].neighbor_profit -= p;
+        }
     }
 
     /*
@@ -323,17 +534,28 @@ private:
 
     inline GlobalCost cost_add(const Solution& solution, ItemId j, GlobalCost) const
     {
-        Profit profit = solution.profit + instance_.item(j).profit;
-        Weight weight = solution.weight + instance_.item(j).weight;
-        for (ItemId j_neighbor: instance_.item(j).neighbors) {
-            if (contains(solution, j_neighbor)) {
-                profit -= instance_.item(j_neighbor).profit;
-                weight -= instance_.item(j_neighbor).weight;
-            }
-        }
         return {
-            std::max((Weight)0, weight - instance_.capacity()),
-            -profit,
+            std::max((Weight)0, solution.weight + instance_.item(j).weight - solution.items[j].neighbor_weight - instance_.capacity()),
+            -(solution.profit + instance_.item(j).profit - solution.items[j].neighbor_profit),
+        };
+    }
+
+    inline GlobalCost cost_swap(
+            const Solution& solution,
+            ItemId j_in,
+            ItemId j_out,
+            GlobalCost) const
+    {
+        return {
+            std::max((Weight)0,
+                    solution.weight
+                    - instance_.item(j_in).weight
+                    + instance_.item(j_out).weight
+                    - solution.items[j_out].neighbor_weight - instance_.capacity()),
+                -(solution.profit
+                        - instance_.item(j_in).profit
+                        + instance_.item(j_out).profit
+                        - solution.items[j_out].neighbor_profit),
         };
     }
 
@@ -345,6 +567,11 @@ private:
     Parameters parameters_;
 
     std::vector<ItemId> items_;
+    std::vector<ItemId> items_in_;
+    std::vector<ItemId> items_out_;
+    optimizationtools::IndexedSet neighbors_;
+    optimizationtools::IndexedSet free_items_;
+    optimizationtools::IndexedSet free_items_2_;
 
 };
 
