@@ -117,6 +117,15 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
   * `python3 ../optimizationtools/optimizationtools/bench_run.py --main "./bazel-bin/examples/roadef2020_main -w 0 -y 1 " --csv ../ordata/roadef2020/data/data.csv -l roadef2020 -t 900 -f "'A' not in row['Dataset']"`
   * `python3 ../optimizationtools/optimizationtools/bench_process.py -b heuristiclong --csv ../ordata/roadef2020/data.csv -l roadef2020 -t 920 -f "'A' not in row['Dataset']"`
 
+### Graphs
+
+Maximum-Weight Independent Set Problem from [fontanf/stablesolver](https://github.com/fontanf/stablesolver/blob/master/stablesolver/algorithms/localsearch.cpp)
+* Algorithm:
+  * Perturbation: force vertex `v` in/out of the solution
+  * Local search neighborhoods:
+    * Move vertex `v` in/out of the solution (and remove conflicting vertices)
+    * Remove one vertex and add two non-conflicting vertices from its neighbors
+
 ## Usage, running examples from command line
 
 Compile:
