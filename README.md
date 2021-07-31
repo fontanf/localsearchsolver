@@ -43,12 +43,12 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
 
 [Quadratic Assignment Problem](examples/quadraticassignment.hpp)
 * Algorithm:
-  * Perturbation: swap two assignments
+  * Perturbation: ejection chain
   * Local search neighborhoods:
     * Swap two assignments
 * Benchmarks:
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --csv ../ordata/quadraticassignment/data.csv -l quadraticassignment -t 60`
-  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/quadraticassignment/data.csv -l quadraticassignment -b heuristiclong -t 62`
+  * `python3 ../optimizationtools/optimizationtools/bench_run.py --csv ../ordata/quadraticassignment/data.csv -l quadraticassignment --timelimitfield "Time limit" -a "astarlocalsearch -x 6"`
+  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/quadraticassignment/data.csv -l quadraticassignment -b heuristiclong -t 185`
 
 Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https://github.com/fontanf/generalizedassignmentsolver/blob/master/generalizedassignmentsolver/algorithms/localsearch.cpp)
 * Algorithm:

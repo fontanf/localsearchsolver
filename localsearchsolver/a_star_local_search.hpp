@@ -9,37 +9,55 @@ namespace localsearchsolver
 {
 
 template <typename LocalScheme>
-using AStarCallback = std::function<void(const typename LocalScheme::Solution&)>;
+using AStarLocalSearchCallback = std::function<void(const typename LocalScheme::Solution&)>;
 
 template <typename LocalScheme>
-struct AStarOptionalParameters
+struct AStarLocalSearchOptionalParameters
 {
     typedef typename LocalScheme::Solution Solution;
 
+    /** Maximum number of nodes. */
     Counter node_number_max = -1;
+    /** Number of threads running the algorithm independently in parallel. */
     Counter thread_number_1 = 1;
+    /** Number of threads running on the same node pool in parallel. */
     Counter thread_number_2 = 1;
+    /** Ids of generated initial solutions. */
     std::vector<Counter> initial_solution_ids = {0};
+    /** User-provided initial solutions. */
+    std::vector<Solution> initial_solutions;
+    /** Seed. */
     Seed seed = 0;
-
-    AStarCallback<LocalScheme> new_solution_callback
+    /** Callback function called when a new best solution is found. */
+    AStarLocalSearchCallback<LocalScheme> new_solution_callback
         = [](const Solution& solution) { (void)solution; };
 
     optimizationtools::Info info;
 };
 
 template <typename LocalScheme>
-struct AStarOutput
+struct AStarLocalSearchOutput
 {
-    AStarOutput(
+    /** Constructor. */
+    AStarLocalSearchOutput(
             const LocalScheme& local_scheme):
         solution_pool(local_scheme, 1) { }
 
+    /** Solution pool. */
     SolutionPool<LocalScheme> solution_pool;
 };
 
 template <typename LocalScheme>
-struct AStarNode
+inline AStarLocalSearchOutput<LocalScheme> a_star_local_search(
+        LocalScheme& local_scheme,
+        AStarLocalSearchOptionalParameters<LocalScheme> parameters = {});
+
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////// Template implementations //////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+template <typename LocalScheme>
+struct AStarLocalSearchNode
 {
     typedef typename LocalScheme::CompactSolution CompactSolution;
     typedef typename LocalScheme::Move Move;
@@ -52,16 +70,16 @@ struct AStarNode
 };
 
 template <typename LocalScheme>
-struct AStarNodeComparator
+struct AStarLocalSearchNodeComparator
 {
-    AStarNodeComparator(const LocalScheme& branching_scheme):
+    AStarLocalSearchNodeComparator(const LocalScheme& branching_scheme):
         branching_scheme(branching_scheme) {  }
 
     const LocalScheme& branching_scheme;
 
     bool operator()(
-            const std::shared_ptr<AStarNode<LocalScheme>>& node_1,
-            const std::shared_ptr<AStarNode<LocalScheme>>& node_2) const {
+            const std::shared_ptr<AStarLocalSearchNode<LocalScheme>>& node_1,
+            const std::shared_ptr<AStarLocalSearchNode<LocalScheme>>& node_2) const {
         return node_1->perturbations.back().global_cost
             < node_2->perturbations.back().global_cost;
     }
@@ -75,8 +93,8 @@ using CompactSolutionSet = std::unordered_set<
 
 template <typename LocalScheme>
 using NodeSet = std::multiset<
-        std::shared_ptr<AStarNode<LocalScheme>>,
-        const AStarNodeComparator<LocalScheme>&>;
+        std::shared_ptr<AStarLocalSearchNode<LocalScheme>>,
+        const AStarLocalSearchNodeComparator<LocalScheme>&>;
 
 template <typename LocalScheme>
 using MoveMap = std::unordered_map<
@@ -86,16 +104,16 @@ using MoveMap = std::unordered_map<
         typename LocalScheme::MoveHasher&>;
 
 template <typename LocalScheme>
-struct AStarData
+struct AStarLocalSearchData
 {
     typedef typename LocalScheme::CompactSolutionHasher CompactSolutionHasher;
     typedef typename LocalScheme::MoveHasher MoveHasher;
     typedef typename LocalScheme::Move Move;
 
-    AStarData(
+    AStarLocalSearchData(
             LocalScheme& local_scheme,
-            AStarOptionalParameters<LocalScheme>& parameters,
-            AStarOutput<LocalScheme>& output):
+            AStarLocalSearchOptionalParameters<LocalScheme>& parameters,
+            AStarLocalSearchOutput<LocalScheme>& output):
         local_scheme(local_scheme),
         parameters(parameters),
         output(output),
@@ -107,14 +125,13 @@ struct AStarData
         {  }
 
     LocalScheme& local_scheme;
-    AStarOptionalParameters<LocalScheme>& parameters;
-    AStarOutput<LocalScheme>& output;
+    AStarLocalSearchOptionalParameters<LocalScheme>& parameters;
+    AStarLocalSearchOutput<LocalScheme>& output;
     CompactSolutionHasher compact_solution_hasher;
     CompactSolutionSet<LocalScheme> history;
     NodeSet<LocalScheme> q;
     Counter working_thread_number = 0;
     Counter initial_solution_pos = 0;
-    Counter node_number = 0;
     Counter perturbation_number = -1;
 
     MoveHasher move_hasher;
@@ -129,7 +146,10 @@ struct AStarData
      * tabu_nodes[node_number] is a vector a nodes which are currently tabu
      * and should be released at node "node_number".
      */
-    std::unordered_map<Counter, std::vector<std::shared_ptr<AStarNode<LocalScheme>>>> tabu_nodes;
+    std::unordered_map<Counter, std::vector<std::shared_ptr<AStarLocalSearchNode<LocalScheme>>>> tabu_nodes;
+
+    /** Number of nodes explored. */
+    Counter node_number = 0;
 
     std::mutex mutex;
 };
@@ -168,39 +188,48 @@ std::vector<typename LocalScheme::Move> update_children(
 }
 
 template <typename LocalScheme>
-inline void a_star_worker(
-        AStarData<LocalScheme>& data,
+inline void a_star_local_search_worker(
+        AStarLocalSearchData<LocalScheme>& data,
         Counter thread_id)
 {
     typedef typename LocalScheme::CompactSolution CompactSolution;
 
     LocalScheme local_scheme(data.local_scheme);
-    std::mt19937_64 generator(data.parameters.seed + thread_id);
+    Seed seed = data.parameters.seed + thread_id;
+    std::mt19937_64 generator(seed);
 
+    // Generate initial solutions.
     for (;;) {
         data.mutex.lock();
+        // Store initial_solution_pos to use it after releasing the mutex.
+        Counter initial_solution_pos = data.initial_solution_pos;
         // No more initial solutions to generate.
-        if (data.initial_solution_pos >= (Counter)data.parameters.initial_solution_ids.size()) {
+        if (initial_solution_pos
+                >= (Counter)data.parameters.initial_solution_ids.size()
+                + (Counter)data.parameters.initial_solutions.size()) {
             data.mutex.unlock();
             break;
         }
-        Counter initial_solution_id = data.parameters.initial_solution_ids[data.initial_solution_pos];
         data.initial_solution_pos++;
         data.working_thread_number++;
         data.mutex.unlock();
 
-        auto solution = local_scheme.initial_solution(initial_solution_id, generator);
+        auto solution = (initial_solution_pos < (Counter)data.parameters.initial_solution_ids.size())?
+            local_scheme.initial_solution(data.parameters.initial_solution_ids[initial_solution_pos], generator):
+            data.parameters.initial_solutions[initial_solution_pos - (Counter)data.parameters.initial_solution_ids.size()];
         local_scheme.local_search(solution, generator);
 
         // Check for a new best solution.
-        if (local_scheme.global_cost(data.output.solution_pool.best())
+        if (local_scheme.global_cost(data.output.solution_pool.worst())
                 > local_scheme.global_cost(solution)) {
             std::stringstream ss;
-            ss << "initial solution " << initial_solution_id
+            ss << "initial solution " << initial_solution_pos
                 << " (thread " << thread_id << ")";
-            data.output.solution_pool.add(solution, ss, data.parameters.info);
-            data.output.solution_pool.display(ss, data.parameters.info);
-            data.parameters.new_solution_callback(solution);
+            int res = data.output.solution_pool.add(solution, ss, data.parameters.info);
+            if (res == 2) {
+                data.output.solution_pool.display(ss, data.parameters.info);
+                data.parameters.new_solution_callback(solution);
+            }
         }
 
         // Get perturbation moves.
@@ -213,20 +242,18 @@ inline void a_star_worker(
             data.perturbation_number = local_scheme.perturbations(solution, generator).size();
         if (data.history.find(compact_solution) == data.history.end()
                 && moves.size() > 0) {
-            AStarNode<LocalScheme> root;
+            AStarLocalSearchNode<LocalScheme> root;
             root.compact_solution = compact_solution;
             root.perturbations = moves;
             root.child_id = 0;
             root.depth = 1;
             data.history.insert(compact_solution);
-            data.q.insert(std::shared_ptr<AStarNode<LocalScheme>>(
-                        new AStarNode<LocalScheme>(root)));
+            data.q.insert(std::shared_ptr<AStarLocalSearchNode<LocalScheme>>(
+                        new AStarLocalSearchNode<LocalScheme>(root)));
         }
         data.working_thread_number--;
         data.mutex.unlock();
     }
-
-    Counter tabu_tenure = data.perturbation_number / 10;
 
     for (;;) {
 
@@ -246,13 +273,24 @@ inline void a_star_worker(
         Counter node_id = data.node_number;
         data.node_number++;
 
-        // Add back nodes which are not tabu anymore.
-        if (data.tabu_nodes.find(data.node_number) != data.tabu_nodes.end()) {
-            for (auto node: data.tabu_nodes[data.node_number])
-                data.q.insert(node);
-            data.tabu_nodes.erase(data.node_number);
+        // Compute tabu tenure.
+        Counter tabu_tenure = -1;
+        if (node_id < data.perturbation_number) {
+            tabu_tenure = data.perturbation_number / 10;
+        } else if (node_id < 10 * data.perturbation_number) {
+            tabu_tenure = data.perturbation_number / 2;
+        } else {
+            tabu_tenure = data.perturbation_number;
         }
 
+        // Add back nodes which are not tabu anymore.
+        if (data.tabu_nodes.find(node_id) != data.tabu_nodes.end()) {
+            for (auto node: data.tabu_nodes[node_id])
+                data.q.insert(node);
+            data.tabu_nodes.erase(node_id);
+        }
+
+        // Check for algorithm end.
         if (data.q.empty() && data.working_thread_number == 0) {
             data.mutex.unlock();
             break;
@@ -270,9 +308,9 @@ inline void a_star_worker(
         // Check if the perturbation is tabu.
         while (data.move_hasher.hashable(move)
                 && data.move_nodes.find(move) != data.move_nodes.end()
-                && data.move_nodes[move] > data.node_number - tabu_tenure) {
+                && data.move_nodes[move] > node_id - tabu_tenure) {
             // Add a new node for this perturbation to the tabu node set.
-            AStarNode<LocalScheme> node_tmp;
+            AStarLocalSearchNode<LocalScheme> node_tmp;
             node_tmp.compact_solution = node_cur->compact_solution;
             node_tmp.perturbations = {move};
             node_tmp.depth = node_cur->depth;
@@ -281,8 +319,8 @@ inline void a_star_worker(
             if (data.tabu_nodes.find(data.move_nodes[move] + tabu_tenure) == data.tabu_nodes.end())
                 data.tabu_nodes[data.move_nodes[move] + tabu_tenure] = {};
             data.tabu_nodes[data.move_nodes[move] + tabu_tenure].push_back(
-                    std::shared_ptr<AStarNode<LocalScheme>>(
-                        new AStarNode<LocalScheme>(node_tmp)));
+                    std::shared_ptr<AStarLocalSearchNode<LocalScheme>>(
+                        new AStarLocalSearchNode<LocalScheme>(node_tmp)));
 
             // Remove the perturbation from the father's children.
             node_cur->perturbations.pop_back();
@@ -313,9 +351,9 @@ inline void a_star_worker(
             continue;
         }
         if (data.move_hasher.hashable(move))
-            data.move_nodes[move] = data.node_number;
+            data.move_nodes[move] = node_id;
         data.working_thread_number++;
-        //std::cout << "node " << data.node_number
+        //std::cout << "node " << node_id
         //    << " depth " << node_cur->depth
         //    << " cost " << to_string(move.global_cost)
         //    << " thread " << thread_id
@@ -339,16 +377,18 @@ inline void a_star_worker(
         local_scheme.local_search(solution, generator, move);
 
         // Check for a new best solution.
-        if (local_scheme.global_cost(data.output.solution_pool.best())
+        if (local_scheme.global_cost(data.output.solution_pool.worst())
                 > local_scheme.global_cost(solution)) {
             std::stringstream ss;
             ss << "node " << node_id
                 << " depth " << node_cur->depth
                 << " child " << node_cur->next_child_pos - 1
                 << " (thread " << thread_id << ")";
-            data.output.solution_pool.add(solution, ss, data.parameters.info);
-            data.output.solution_pool.display(ss, data.parameters.info);
-            data.parameters.new_solution_callback(solution);
+            int res = data.output.solution_pool.add(solution, ss, data.parameters.info);
+            if (res == 2) {
+                data.output.solution_pool.display(ss, data.parameters.info);
+                data.parameters.new_solution_callback(solution);
+            }
         }
 
         // Get perturbation moves.
@@ -360,14 +400,14 @@ inline void a_star_worker(
 
         if (data.history.find(compact_solution) == data.history.end()
                 && !moves.empty()) {
-            AStarNode<LocalScheme> child;
+            AStarLocalSearchNode<LocalScheme> child;
             child.compact_solution = compact_solution;
             child.perturbations = moves;
             child.depth = node_cur->depth + 1;
             child.child_id = node_cur->next_child_pos - 1;
             data.history.insert(compact_solution);
-            data.q.insert(std::shared_ptr<AStarNode<LocalScheme>>(
-                        new AStarNode<LocalScheme>(child)));
+            data.q.insert(std::shared_ptr<AStarLocalSearchNode<LocalScheme>>(
+                        new AStarLocalSearchNode<LocalScheme>(child)));
         }
 
         if (!node_cur->perturbations.empty())
@@ -379,21 +419,21 @@ inline void a_star_worker(
 }
 
 template <typename LocalScheme>
-inline AStarOutput<LocalScheme> a_star(
+inline AStarLocalSearchOutput<LocalScheme> a_star_local_search(
         LocalScheme& local_scheme,
-        AStarOptionalParameters<LocalScheme> parameters = {})
+        AStarLocalSearchOptionalParameters<LocalScheme> parameters)
 {
-    AStarOutput<LocalScheme> output(local_scheme);
+    AStarLocalSearchOutput<LocalScheme> output(local_scheme);
     output.solution_pool.display_init(parameters.info);
     std::vector<std::thread> threads;
-    std::vector<std::shared_ptr<AStarData<LocalScheme>>> datas;
+    std::vector<std::shared_ptr<AStarLocalSearchData<LocalScheme>>> datas;
     Counter thread_id = 0;
     for (Counter thread_id_1 = 0; thread_id_1 < parameters.thread_number_1; ++thread_id_1) {
-        datas.push_back(std::shared_ptr<AStarData<LocalScheme>>(
-                    new AStarData<LocalScheme>(local_scheme, parameters, output)));
+        datas.push_back(std::shared_ptr<AStarLocalSearchData<LocalScheme>>(
+                    new AStarLocalSearchData<LocalScheme>(local_scheme, parameters, output)));
         for (Counter thread_id_2 = 0; thread_id_2 < parameters.thread_number_2; ++thread_id_2) {
             threads.push_back(std::thread(
-                        a_star_worker<LocalScheme>,
+                        a_star_local_search_worker<LocalScheme>,
                         std::ref(*datas[thread_id_1]),
                         thread_id));
             thread_id++;

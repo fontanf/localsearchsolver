@@ -187,6 +187,32 @@ public:
         return solution;
     }
 
+    inline Solution crossover(
+            const Solution& solution_parent_1,
+            const Solution& solution_parent_2,
+            std::mt19937_64& generator)
+    {
+        Solution solution = empty_solution();
+        std::vector<ItemId> items;
+        for (ItemId j = 0; j < instance_.item_number(); ++j) {
+            // Add items which are in both parents.
+            if (contains(solution_parent_1, j)
+                    && contains(solution_parent_2, j)) {
+                add(solution, j);
+            // Store items which are in one parent.
+            } else if (contains(solution_parent_1, j)
+                    || contains(solution_parent_2, j)) {
+                items.push_back(j);
+            }
+        }
+        // Add some of the items which are in one parent.
+        std::shuffle(items.begin(), items.end(), generator);
+        for (ItemId j: items)
+            if (solution.items[j].neighbor_profit == 0)
+                add(solution, j);
+        return solution;
+    }
+
     /*
      * Solution properties.
      */
@@ -197,6 +223,17 @@ public:
             overweight(solution),
             -solution.profit,
         };
+    }
+
+    inline ItemId distance(
+            const Solution& solution_1,
+            const Solution& solution_2) const
+    {
+        ItemId d = 0;
+        for (ItemId j = 0; j < instance_.item_number(); ++j)
+            if (contains(solution_1, j) != contains(solution_2, j))
+                d++;
+        return d;
     }
 
     /*
@@ -319,8 +356,6 @@ public:
                     items_in_.clear();
                     items_out_.clear();
                     for (ItemId j: items_) {
-                        if (j == tabu.j)
-                            continue;
                         if (contains(solution, j)) {
                             items_in_.push_back(j);
                         } else {
@@ -332,10 +367,14 @@ public:
                     ItemId j_out_best = -1;
                     GlobalCost c_best = global_cost(solution);
                     for (ItemId j_in: items_in_) {
+                        if (j_in == tabu.j)
+                            continue;
                         neighbors_.clear();
                         for (ItemId j_neighbor: instance_.item(j_in).neighbors)
                             neighbors_.add(j_neighbor);
                         for (ItemId j_out: items_out_) {
+                            if (j_out == tabu.j)
+                                continue;
                             if (neighbors_.contains(j_out))
                                 continue;
                             GlobalCost c = cost_swap(solution, j_in, j_out, c_best);
@@ -362,8 +401,6 @@ public:
                     // Get items inside the knapsack.
                     items_in_.clear();
                     for (ItemId j: items_) {
-                        if (j == tabu.j)
-                            continue;
                         if (contains(solution, j))
                             items_in_.push_back(j);
                     }
@@ -373,10 +410,13 @@ public:
                     ItemId j_out_2_best = -1;
                     GlobalCost c_best = global_cost(solution);
                     for (ItemId j_in: items_in_) {
+                        if (j_in == tabu.j)
+                            continue;
                         // Update free_items_
                         free_items_.clear();
                         for (ItemId j_neighbor: instance_.item(j_in).neighbors)
-                            if (solution.items[j_neighbor].neighbor_profit
+                            if (j_neighbor != tabu.j
+                                    && solution.items[j_neighbor].neighbor_profit
                                     == instance_.item(j_in).profit)
                                 free_items_.add(j_neighbor);
                         if (free_items_.size() <= 2)

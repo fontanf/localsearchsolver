@@ -8,29 +8,35 @@ using namespace localsearchsolver;
 namespace po = boost::program_options;
 
 template <typename LocalScheme>
-SolutionPool<LocalScheme> run(
-        std::string algorithm,
+SolutionPool<LocalScheme> run_astarlocalsearch(
+        const std::vector<std::string>& algorithm_args,
         LocalScheme& local_scheme,
         const optimizationtools::Info& info)
 {
-    std::vector<std::string> algorithm_args
-        = boost::program_options::split_unix(algorithm);
     std::vector<char*> algorithm_argv;
     for (Counter i = 0; i < (Counter)algorithm_args.size(); ++i)
         algorithm_argv.push_back(const_cast<char*>(algorithm_args[i].c_str()));
 
-    if (algorithm_args[0] == "astar") {
-        auto parameters = read_astar_args<LocalScheme>(algorithm_argv);
-        parameters.info = info;
-        if (parameters.initial_solution_ids.empty())
-            parameters.initial_solution_ids = std::vector<Counter>(parameters.thread_number_2, 0);
-        return a_star(local_scheme, parameters).solution_pool;
+    auto parameters = read_astar_args<LocalScheme>(algorithm_argv);
+    parameters.info = info;
+    if (parameters.initial_solution_ids.empty())
+        parameters.initial_solution_ids = std::vector<Counter>(parameters.thread_number_2, 0);
+    return a_star_local_search(local_scheme, parameters).solution_pool;
+}
 
-    } else {
-        std::cerr << "\033[31m" << "ERROR, unknown algorithm: '" << algorithm_args[0] << "'.\033[0m" << std::endl;
-    }
+template <typename LocalScheme>
+SolutionPool<LocalScheme> run_geneticlocalsearch(
+        const std::vector<std::string>& algorithm_args,
+        LocalScheme& local_scheme,
+        const optimizationtools::Info& info)
+{
+    std::vector<char*> algorithm_argv;
+    for (Counter i = 0; i < (Counter)algorithm_args.size(); ++i)
+        algorithm_argv.push_back(const_cast<char*>(algorithm_args[i].c_str()));
 
-    return SolutionPool<LocalScheme>(local_scheme, 1);
+    auto parameters = read_genetic_args<LocalScheme>(algorithm_argv);
+    parameters.info = info;
+    return genetic_local_search(local_scheme, parameters).solution_pool;
 }
 
 int main(int argc, char *argv[])
@@ -43,7 +49,7 @@ int main(int argc, char *argv[])
     std::string output_path = "";
     std::string certificate_path = "";
     std::string format = "";
-    std::string algorithm = "astar";
+    std::string algorithm = "astarlocalsearch";
     std::string local_scheme_parameters = "";
     double time_limit = std::numeric_limits<double>::infinity();
     Seed seed = 0;
@@ -56,7 +62,7 @@ int main(int argc, char *argv[])
         ("format,f", po::value<std::string>(&format), "set input file format")
         ("output,o", po::value<std::string>(&output_path), "set JSON output path")
         ("certificate,c", po::value<std::string>(&certificate_path), "set certificate path")
-        ("algorithm,a", po::value<std::string>(&algorithm), "set algorithm")
+        ("algorithm_args,a", po::value<std::string>(&algorithm), "set algorithm")
         ("localscheme,l", po::value<std::string>(&local_scheme_parameters), "set local scheme parameters")
         ("time-limit,t", po::value<double>(&time_limit), "set time limit in seconds")
         ("seed,s", po::value<Seed>(&seed), "set seed")
@@ -77,6 +83,9 @@ int main(int argc, char *argv[])
         std::cout << desc << std::endl;;
         return 1;
     }
+
+    std::vector<std::string> algorithm_args
+        = boost::program_options::split_unix(algorithm);
 
     optimizationtools::Info info = optimizationtools::Info()
         .set_verbose(vm.count("verbose"))
@@ -101,7 +110,9 @@ int main(int argc, char *argv[])
             std::cout << instance << std::endl;
         auto parameters_local_scheme = read_knapsackwithconflicts_args(local_scheme_argv);
         knapsackwithconflicts::LocalScheme local_scheme(instance, parameters_local_scheme);
-        auto solution_pool = run(algorithm, local_scheme, info);
+        auto solution_pool = (algorithm_args[0] == "astarlocalsearch")?
+            run_astarlocalsearch(algorithm_args, local_scheme, info):
+            run_geneticlocalsearch(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))
             local_scheme.print(std::cout, solution_pool.best());
@@ -112,7 +123,7 @@ int main(int argc, char *argv[])
             std::cout << instance << std::endl;
         auto parameters_local_scheme = read_multidimensionalmultiplechoiceknapsack_args(local_scheme_argv);
         multidimensionalmultiplechoiceknapsack::LocalScheme local_scheme(instance, parameters_local_scheme);
-        auto solution_pool = run(algorithm, local_scheme, info);
+        auto solution_pool = run_astarlocalsearch(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))
             local_scheme.print(std::cout, solution_pool.best());
@@ -123,7 +134,9 @@ int main(int argc, char *argv[])
             std::cout << instance << std::endl;
         auto parameters_local_scheme = read_quadraticassignment_args(local_scheme_argv);
         quadraticassignment::LocalScheme local_scheme(instance, parameters_local_scheme);
-        auto solution_pool = run(algorithm, local_scheme, info);
+        auto solution_pool = (algorithm_args[0] == "astarlocalsearch")?
+            run_astarlocalsearch(algorithm_args, local_scheme, info):
+            run_geneticlocalsearch(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))
             local_scheme.print(std::cout, solution_pool.best());
@@ -134,7 +147,7 @@ int main(int argc, char *argv[])
             std::cout << instance << std::endl;
         auto parameters_local_scheme = read_travellingsalesman_args(local_scheme_argv);
         travellingsalesman::LocalScheme local_scheme(instance, parameters_local_scheme);
-        auto solution_pool = run(algorithm, local_scheme, info);
+        auto solution_pool = run_astarlocalsearch(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))
             local_scheme.print(std::cout, solution_pool.best());
@@ -145,7 +158,7 @@ int main(int argc, char *argv[])
             std::cout << instance << std::endl;
         auto parameters_local_scheme = read_schedulingwithsdsttwt_args(local_scheme_argv);
         schedulingwithsdsttwt::LocalScheme local_scheme(instance, parameters_local_scheme);
-        auto solution_pool = run(algorithm, local_scheme, info);
+        auto solution_pool = run_astarlocalsearch(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))
             local_scheme.print(std::cout, solution_pool.best());
@@ -156,7 +169,7 @@ int main(int argc, char *argv[])
             std::cout << instance << std::endl;
         auto parameters_local_scheme = read_permutationflowshopschedulingmakespan_args(local_scheme_argv);
         permutationflowshopschedulingmakespan::LocalScheme local_scheme(instance, parameters_local_scheme);
-        auto solution_pool = run(algorithm, local_scheme, info);
+        auto solution_pool = run_astarlocalsearch(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))
             local_scheme.print(std::cout, solution_pool.best());
@@ -167,7 +180,7 @@ int main(int argc, char *argv[])
             std::cout << instance << std::endl;
         auto parameters_local_scheme = read_permutationflowshopschedulingtt_args(local_scheme_argv);
         permutationflowshopschedulingtt::LocalScheme local_scheme(instance, parameters_local_scheme);
-        auto solution_pool = run(algorithm, local_scheme, info);
+        auto solution_pool = run_astarlocalsearch(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))
             local_scheme.print(std::cout, solution_pool.best());

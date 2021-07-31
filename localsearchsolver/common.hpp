@@ -109,6 +109,42 @@ bool dominates(
 }
 
 
+template <typename ... Ts, std::size_t ... Is>
+std::tuple<Ts...> sum_t(
+        std::tuple<Ts...> const & t1,
+        std::tuple<Ts...> const & t2,
+        integer_sequence<std::size_t, Is...> const &)
+{
+     return { (std::get<Is>(t1) + std::get<Is>(t2))... };
+}
+
+template <typename ... Ts>
+std::tuple<Ts...> operator+(
+        std::tuple<Ts...> const & t1,
+        std::tuple<Ts...> const & t2)
+{
+    return sum_t(t1, t2, gen_indices<sizeof...(Ts)>{});
+}
+
+
+template <typename ... Ts, std::size_t ... Is>
+std::tuple<Ts...> diff_t(
+        std::tuple<Ts...> const & t1,
+        std::tuple<Ts...> const & t2,
+        integer_sequence<std::size_t, Is...> const &)
+{
+     return { (std::get<Is>(t1) - std::get<Is>(t2))... };
+}
+
+template <typename ... Ts>
+std::tuple<Ts...> operator-(
+        std::tuple<Ts...> const & t1,
+        std::tuple<Ts...> const & t2)
+{
+    return diff_t(t1, t2, gen_indices<sizeof...(Ts)>{});
+}
+
+
 template <typename Scheme>
 struct SolutionPoolComparator
 {
@@ -149,20 +185,28 @@ public:
 
     virtual ~SolutionPool() { }
 
-    const std::set<Solution, SolutionPoolComparator<Scheme>>& solutions() const { return solutions_; };
+    const std::multiset<Solution, SolutionPoolComparator<Scheme>>& solutions() const { return solutions_; };
     const Solution& best() { return best_; }
     const Solution& worst() { return worst_; }
+    Counter size() const { return solutions_.size(); }
 
     int add(
             const Solution& solution,
             const std::stringstream& ss,
             optimizationtools::Info& info)
     {
-        // If the solution is worse than the worst solution of the pool, stop.
-        if ((Counter)solutions_.size() >= size_max_)
-            if (scheme_.global_cost(solution) > scheme_.global_cost(worst_))
-                return 0;
         info.output->mutex_sol.lock();
+        // If the solution is worse than the worst solution of the pool, stop.
+        if ((Counter)solutions_.size() >= size_max_) {
+            if (scheme_.global_cost(solution)
+                    > scheme_.global_cost(*std::prev(solutions_.end()))) {
+                info.output->mutex_sol.unlock();
+                return 0;
+            }
+        }
+        //for (const auto& solution_tmp: solutions_)
+        //    if (solution == solution_tmp)
+        //        return 0;
         // If new best solution, display.
         bool new_best = scheme_.global_cost(solution) < scheme_.global_cost(*solutions_.begin());
         // Add new solution to solution pool.

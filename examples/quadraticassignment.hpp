@@ -91,16 +91,21 @@ public:
         Solution solution;
         solution.locations = compact_solution;
         for (FacilityId facility_id_1 = 0; facility_id_1 < instance_.facility_number(); ++facility_id_1) {
-            if (solution.locations[facility_id_1] == -1)
+            LocationId location_id_1 = solution.locations[facility_id_1];
+            if (location_id_1 == -1)
                 continue;
             solution.facility_number++;
-            for (FacilityId facility_id_2 = 0; facility_id_2 < instance_.facility_number(); ++facility_id_2) {
-                if (solution.locations[facility_id_2] == -1)
+            solution.cost += instance_.flow(facility_id_1, facility_id_1)
+                * instance_.distance(location_id_1, location_id_1);
+            for (FacilityId facility_id_2 = facility_id_1 + 1;
+                    facility_id_2 < instance_.facility_number(); ++facility_id_2) {
+                LocationId location_id_2 = solution.locations[facility_id_2];
+                if (location_id_2 == -1)
                     continue;
                 solution.cost += instance_.flow(facility_id_1, facility_id_2)
-                    * instance_.distance(
-                            solution.locations[facility_id_1],
-                            solution.locations[facility_id_2]);
+                    * instance_.distance(location_id_1, location_id_2);
+                solution.cost += instance_.flow(facility_id_2, facility_id_1)
+                    * instance_.distance(location_id_2, location_id_1);
             }
         }
         return solution;
@@ -119,11 +124,15 @@ public:
             Parameters parameters):
         instance_(instance),
         parameters_(parameters),
-        facilities_(instance.facility_number())
+        facilities_(instance.facility_number()),
+        facility_pairs_(instance.facility_number())
     {
+        // Initialize facilities_.
+        std::iota(facilities_.begin(), facilities_.end(), 0);
+        // Initialize facility_pairs_.
         for (FacilityId facility_id_1 = 0; facility_id_1 < instance.facility_number(); ++facility_id_1)
             for (FacilityId facility_id_2 = facility_id_1 + 1; facility_id_2 < instance.facility_number(); ++facility_id_2)
-                facilities_.push_back({facility_id_1, facility_id_2});
+                facility_pairs_.push_back({facility_id_1, facility_id_2});
     }
 
     LocalScheme(const LocalScheme& local_scheme):
@@ -155,6 +164,71 @@ public:
         return solution;
     }
 
+    inline Solution crossover(
+            const Solution& solution_parent_1,
+            const Solution& solution_parent_2,
+            std::mt19937_64& generator)
+    {
+        Solution solution = empty_solution();
+
+        std::shuffle(facilities_.begin(), facilities_.end(), generator);
+        optimizationtools::IndexedSet free_locations(instance_.facility_number());
+        for (LocationId location_id = 0;
+                location_id < instance_.facility_number();
+                ++location_id)
+            free_locations.add(location_id);
+
+        // If a facility is assigned to the same location in both parent
+        // solutions, kepp it assigned to the same location in the child
+        // solution.
+        for (FacilityId facility_id: facilities_) {
+            LocationId location_id_1 = solution_parent_1.locations[facility_id];
+            LocationId location_id_2 = solution_parent_2.locations[facility_id];
+            if (location_id_1 == location_id_2) {
+                add(solution, facility_id, location_id_1);
+                free_locations.remove(location_id_1);
+            }
+        }
+
+        // If a location to which a facility is assigned in one of the parent
+        // solution is still free, assign the facility to it in the child
+        // solution.
+        for (FacilityId facility_id: facilities_) {
+            if (solution.locations[facility_id] != -1)
+                continue;
+            LocationId location_id_1 = solution_parent_1.locations[facility_id];
+            LocationId location_id_2 = solution_parent_2.locations[facility_id];
+            if (!free_locations.contains(location_id_1)
+                    && !free_locations.contains(location_id_2))
+                continue;
+            LocationId location_id = -1;
+            if (free_locations.contains(location_id_1)
+                    && free_locations.contains(location_id_2)) {
+                std::uniform_int_distribution<LocationId> d(0, 1);
+                LocationId pos = d(generator);
+                location_id = (pos == 0)? location_id_1: location_id_2;
+            } else if (free_locations.contains(location_id_1)) {
+                location_id = location_id_1;
+            } else {
+                location_id = location_id_2;
+            }
+            add(solution, facility_id, location_id);
+            free_locations.remove(location_id);
+        }
+
+        // Assign a random location to the remaining facilities.
+        for (FacilityId facility_id: facilities_) {
+            if (solution.locations[facility_id] != -1)
+                continue;
+            free_locations.shuffle_in(generator);
+            LocationId location_id = *free_locations.begin();
+            add(solution, facility_id, location_id);
+            free_locations.remove(location_id);
+        }
+
+        return solution;
+    }
+
     /*
      * Solution properties.
      */
@@ -167,18 +241,32 @@ public:
         };
     }
 
+    inline FacilityId distance(
+            const Solution& solution_1,
+            const Solution& solution_2) const
+    {
+        FacilityId d = 0;
+        for (FacilityId facility_id = 0;
+                facility_id < instance_.facility_number();
+                ++facility_id) {
+            if (solution_1.locations[facility_id]
+                    != solution_2.locations[facility_id])
+                d++;
+        }
+        return d;
+    }
+
     /*
      * Local search.
      */
 
     struct Move
     {
-        FacilityId facility_id_1;
-        FacilityId facility_id_2;
+        std::vector<FacilityId> facilities;
         GlobalCost global_cost;
     };
 
-    static Move move_null() { return {-1, -1, global_cost_worst()}; }
+    static Move move_null() { return {{}, global_cost_worst()}; }
 
     struct MoveHasher
     {
@@ -190,15 +278,13 @@ public:
                 const Move& move_1,
                 const Move& move_2) const
         {
-            return move_1.facility_id_1 == move_2.facility_id_1
-                && move_1.facility_id_2 == move_2.facility_id_2;
+            return move_1.facilities[0] == move_2.facilities[0];
         }
 
         inline std::size_t operator()(
                 const Move& move) const
         {
-            size_t hash = hasher(move.facility_id_1);
-            optimizationtools::hash_combine(hash, hasher(move.facility_id_2));
+            size_t hash = hasher(move.facilities[0]);
             return hash;
         }
     };
@@ -207,55 +293,84 @@ public:
 
     inline std::vector<Move> perturbations(
             const Solution& solution,
-            std::mt19937_64&)
+            std::mt19937_64& generator)
     {
         std::vector<Move> moves;
-        for (FacilityId facility_id_1 = 0;
-                facility_id_1 < instance_.facility_number();
-                ++facility_id_1) {
-            for (FacilityId facility_id_2 = facility_id_1 + 1;
-                    facility_id_2 < instance_.facility_number();
-                    ++facility_id_2) {
-                Move move;
-                move.facility_id_1 = facility_id_1;
-                move.facility_id_2 = facility_id_2;
-                move.global_cost = cost_swap(solution, facility_id_1, facility_id_2);
-                moves.push_back(move);
+        for (FacilityId facility_id = 0;
+                facility_id < instance_.facility_number();
+                ++facility_id) {
+            Solution solution_tmp = solution;
+            std::vector<FacilityId> facility_ids = {facility_id};
+            FacilityId facility_id_1 = facility_id;
+            for (Counter c = 0; c < 16; ++c) {
+                FacilityId facility_id_2_best = -1;
+                GlobalCost c_best = global_cost_worst();
+                std::shuffle(facilities_.begin(), facilities_.end(), generator);
+                for (FacilityId facility_id_2: facilities_) {
+                    if (std::find(facility_ids.begin(), facility_ids.end(), facility_id_2)
+                            != facility_ids.end())
+                        continue;
+                    GlobalCost c = cost_swap(
+                            solution_tmp,
+                            facility_id_1,
+                            facility_id_2);
+                    if (c >= c_best)
+                        continue;
+                    facility_id_2_best = facility_id_2;
+                    c_best = c;
+                }
+                if (facility_id_2_best == -1)
+                    break;
+                LocationId location_id_1 = solution_tmp.locations[facility_id_1];
+                LocationId location_id_2 = solution_tmp.locations[facility_id_2_best];
+                remove(solution_tmp, facility_id_1);
+                remove(solution_tmp, facility_id_2_best);
+                add(solution_tmp, facility_id_1, location_id_2);
+                add(solution_tmp, facility_id_2_best, location_id_1);
+                facility_ids.push_back(facility_id_2_best);
+                facility_id_1 = facility_id_2_best;
             }
+
+            Move move;
+            move.facilities = facility_ids;
+            move.global_cost = global_cost(solution_tmp);
+            moves.push_back(move);
         }
         return moves;
     }
 
     inline void apply_move(Solution& solution, const Move& move) const
     {
-        LocationId location_id_1 = solution.locations[move.facility_id_1];
-        LocationId location_id_2 = solution.locations[move.facility_id_2];
-        remove(solution, move.facility_id_1);
-        remove(solution, move.facility_id_2);
-        add(solution, move.facility_id_1, location_id_2);
-        add(solution, move.facility_id_2, location_id_1);
+        LocationId location_id_1 = solution.locations[move.facilities[0]];
+        remove(solution, move.facilities[0]);
+        for (FacilityId facility_pos = 0;
+                facility_pos < (Counter)move.facilities.size() - 1;
+                ++facility_pos) {
+            LocationId location_id = solution.locations[move.facilities[facility_pos + 1]];
+            remove(solution, move.facilities[facility_pos + 1]);
+            add(solution, move.facilities[facility_pos], location_id);
+        }
+        add(solution, move.facilities.back(), location_id_1);
+        assert(global_cost(solution) == move.global_cost);
     }
 
     inline void local_search(
             Solution& solution,
             std::mt19937_64& generator,
-            const Move& tabu = move_null())
+            const Move& = move_null())
     {
         Counter it = 0;
         for (;; ++it) {
-            //std::cout << "it " << it << " cost " << to_string(global_cost(solution)) << std::endl;
-            std::shuffle(facilities_.begin(), facilities_.end(), generator);
+            //std::cout << "it " << it
+            //    << " cost " << to_string(global_cost(solution))
+            //    << std::endl;
+            std::shuffle(facility_pairs_.begin(), facility_pairs_.end(), generator);
             FacilityId facility_id_1_best = -1;
             FacilityId facility_id_2_best = -1;
             GlobalCost c_best = global_cost(solution);
-            for (auto p: facilities_) {
+            for (auto p: facility_pairs_) {
                 FacilityId facility_id_1 = p.first;
                 FacilityId facility_id_2 = p.second;
-                if (facility_id_1 == tabu.facility_id_1
-                        || facility_id_1 == tabu.facility_id_2
-                        || facility_id_2 == tabu.facility_id_1
-                        || facility_id_2 == tabu.facility_id_2)
-                    continue;
                 GlobalCost c = cost_swap(
                         solution,
                         facility_id_1,
@@ -320,36 +435,36 @@ private:
     inline void add(Solution& solution, FacilityId facility_id, LocationId location_id) const
     {
         assert(solution.locations[facility_id] == -1);
+        assert(std::find(solution.locations.begin(), solution.locations.end(), location_id) == solution.locations.end());
         solution.locations[facility_id] = location_id;
+        solution.cost += instance_.flow(facility_id, facility_id)
+            * instance_.distance(location_id, location_id);
         for (FacilityId facility_id_2 = 0; facility_id_2 < instance_.facility_number(); facility_id_2++) {
-            if (solution.locations[facility_id_2] == -1)
+            LocationId location_id_2 = solution.locations[facility_id_2];
+            if (location_id_2 == -1 || location_id_2 == location_id)
                 continue;
             solution.cost += instance_.flow(facility_id, facility_id_2)
-                * instance_.distance(
-                        solution.locations[facility_id],
-                        solution.locations[facility_id_2]);
+                * instance_.distance(location_id, location_id_2);
             solution.cost += instance_.flow(facility_id_2, facility_id)
-                * instance_.distance(
-                        solution.locations[facility_id_2],
-                        solution.locations[facility_id]);
+                * instance_.distance(location_id_2, location_id);
         }
         solution.facility_number++;
     }
 
     inline void remove(Solution& solution, FacilityId facility_id) const
     {
-        assert(solution.locations[facility_id] != -1);
+        LocationId location_id = solution.locations[facility_id];
+        assert(location_id != -1);
+        solution.cost -= instance_.flow(facility_id, facility_id)
+            * instance_.distance(location_id, location_id);
         for (FacilityId facility_id_2 = 0; facility_id_2 < instance_.facility_number(); facility_id_2++) {
-            if (solution.locations[facility_id_2] == -1)
+            LocationId location_id_2 = solution.locations[facility_id_2];
+            if (location_id_2 == -1 || location_id_2 == location_id)
                 continue;
             solution.cost -= instance_.flow(facility_id, facility_id_2)
-                * instance_.distance(
-                        solution.locations[facility_id],
-                        solution.locations[facility_id_2]);
+                * instance_.distance(location_id, location_id_2);
             solution.cost -= instance_.flow(facility_id_2, facility_id)
-                * instance_.distance(
-                        solution.locations[facility_id_2],
-                        solution.locations[facility_id]);
+                * instance_.distance(location_id_2, location_id);
         }
         solution.locations[facility_id] = -1;
         solution.facility_number--;
@@ -414,7 +529,8 @@ private:
     const Instance& instance_;
     Parameters parameters_;
 
-    std::vector<std::pair<FacilityId, FacilityId>> facilities_;
+    std::vector<FacilityId> facilities_;
+    std::vector<std::pair<FacilityId, FacilityId>> facility_pairs_;
 
 };
 
