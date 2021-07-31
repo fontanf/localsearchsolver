@@ -34,8 +34,8 @@ cc_library(
 git_repository(
     name = "optimizationtools",
     remote = "https://github.com/fontanf/optimizationtools.git",
-    commit = "3cd4a85aeaedc3e23c7fb884ad0c2808fc1aa99d",
-    shallow_since = "1627113356 +0200",
+    commit = "fba8babde8cc5c5029f1496cced2d9fd8936673e",
+    shallow_since = "1627731577 +0200",
 )
 
 local_repository(

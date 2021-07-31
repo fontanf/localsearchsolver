@@ -195,12 +195,12 @@ public:
             const std::stringstream& ss,
             optimizationtools::Info& info)
     {
-        info.output->mutex_sol.lock();
+        info.output->mutex_solutions.lock();
         // If the solution is worse than the worst solution of the pool, stop.
         if ((Counter)solutions_.size() >= size_max_) {
             if (scheme_.global_cost(solution)
                     > scheme_.global_cost(*std::prev(solutions_.end()))) {
-                info.output->mutex_sol.unlock();
+                info.output->mutex_solutions.unlock();
                 return 0;
             }
         }
@@ -212,15 +212,15 @@ public:
         // Add new solution to solution pool.
         solutions_.insert(solution);
         if (new_best) {
-            info.output->sol_number++;
+            info.output->number_of_solutions++;
             double t = info.elapsed_time();
-            std::string sol_str = "Solution" + std::to_string(info.output->sol_number);
+            std::string sol_str = "Solution" + std::to_string(info.output->number_of_solutions);
             PUT(info, sol_str, "Value", to_string(scheme_.global_cost(solution)));
             PUT(info, sol_str, "Time", t);
             PUT(info, sol_str, "Comment", ss.str());
-            if (!info.output->onlywriteattheend) {
-                info.write_ini();
-                scheme_.write(*solutions_.begin(), info.output->certfile);
+            if (!info.output->only_write_at_the_end) {
+                info.write_json_output();
+                scheme_.write(*solutions_.begin(), info.output->certificate_path);
             }
         }
         // If the pool size is now above its maximum allowed size, remove worst
@@ -229,7 +229,7 @@ public:
             solutions_.erase(std::prev(solutions_.end()));
         best_ = *solutions_.begin();
         worst_ = *std::prev(solutions_.end());
-        info.output->mutex_sol.unlock();
+        info.output->mutex_solutions.unlock();
         return (new_best)? 2: 1;
     }
 
@@ -265,8 +265,8 @@ public:
                 << "Value: " << to_string(scheme_.global_cost(*solutions_.begin())) << std::endl);
         PUT(info, sol_str, "Time", t);
         PUT(info, sol_str, "Value", to_string(scheme_.global_cost(*solutions_.begin())));
-        info.write_ini();
-        scheme_.write(best_, info.output->certfile);
+        info.write_json_output();
+        scheme_.write(best_, info.output->certificate_path);
     }
 
 private:

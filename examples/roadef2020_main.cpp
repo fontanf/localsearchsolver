@@ -79,11 +79,11 @@ int main(int argc, char *argv[])
     // Run algorithm
 
     optimizationtools::Info info = optimizationtools::Info()
-        .set_outputfile(output_path)
+        .set_json_output_path(output_path)
         .set_verbose(true)
-        .set_timelimit(time_limit)
-        .set_certfile(certificate_path)
-        .set_onlywriteattheend(false)
+        .set_time_limit(time_limit)
+        .set_certificate_path(certificate_path)
+        .set_only_write_at_the_end(false)
         ;
 
     std::mt19937_64 generator(0);
@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
     // Run A*.
     AStarLocalSearchOptionalParameters<LocalScheme> parameters_a_star;
     parameters_a_star.info.set_verbose(true);
-    parameters_a_star.info.set_timelimit(info.remaining_time());
+    parameters_a_star.info.set_time_limit(info.remaining_time());
     parameters_a_star.number_of_threads_1 = number_of_threads_1;
     parameters_a_star.number_of_threads_2 = number_of_threads_2;
     parameters_a_star.initial_solution_ids = std::vector<Counter>(
@@ -111,14 +111,14 @@ int main(int argc, char *argv[])
             std::cout << "                " << local_scheme.real_cost(solution) << std::endl;
 
             if (local_scheme.feasible(solution)) {
-                info.output->sol_number++;
+                info.output->number_of_solutions++;
                 double t = info.elapsed_time();
-                std::string sol_str = "Solution" + std::to_string(info.output->sol_number);
+                std::string sol_str = "Solution" + std::to_string(info.output->number_of_solutions);
                 PUT(info, sol_str, "Value", local_scheme.real_cost(solution));
                 PUT(info, sol_str, "Time", t);
-                if (!info.output->onlywriteattheend) {
-                    info.write_ini();
-                    local_scheme.write(solution, info.output->certfile);
+                if (!info.output->only_write_at_the_end) {
+                    info.write_json_output();
+                    local_scheme.write(solution, info.output->certificate_path);
                 }
             }
         };
@@ -129,8 +129,8 @@ int main(int argc, char *argv[])
     std::string sol_str = "Solution";
     PUT(info, sol_str, "Time", t);
     PUT(info, sol_str, "Value", local_scheme.real_cost(solution));
-    info.write_ini();
-    local_scheme.write(solution, info.output->certfile);
+    info.write_json_output();
+    local_scheme.write(solution, info.output->certificate_path);
 
     return 0;
 }
