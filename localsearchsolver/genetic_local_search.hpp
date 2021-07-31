@@ -14,11 +14,11 @@ struct GeneticLocalSearchOptionalParameters
     typedef typename LocalScheme::Solution Solution;
 
     /** Number of threads. */
-    Counter thread_number = 1;
+    Counter number_of_threads = 1;
     /** Maximum number of genetic iterations. */
-    Counter genetic_iteration_number_max = -1;
+    Counter maximum_number_of_genetic_iterations = -1;
     /** Number of nodes of internal A* Local Search calls. */
-    Counter local_search_node_number_max = 1000;
+    Counter maximum_number_of_local_search_nodes = 1000;
     /** Maximum size of the population. */
     Counter population_size_max = 10;
     /** Ids of generated initial solutions. */
@@ -44,7 +44,7 @@ struct GeneticLocalSearchOutput
     /** Solution pool. */
     SolutionPool<LocalScheme> solution_pool;
     /** Number of genetic iterations. */
-    Counter genetic_iteration_number = 0;
+    Counter number_of_genetic_iterations = 0;
 };
 
 template <typename LocalScheme>
@@ -318,7 +318,7 @@ inline void genetic_local_search_worker(
         AStarLocalSearchOptionalParameters<LocalScheme> parameters_astar;
         parameters_astar.initial_solution_ids = {};
         parameters_astar.initial_solutions.push_back(solution_initial);
-        parameters_astar.node_number_max = data.parameters.local_search_node_number_max;
+        parameters_astar.maximum_number_of_nodes = data.parameters.maximum_number_of_local_search_nodes;
         auto output_astar = a_star_local_search(local_scheme, parameters_astar);
         auto solution = output_astar.solution_pool.best();
         //std::cout << to_string(local_scheme.global_cost(solution)) << std::endl;
@@ -352,9 +352,9 @@ inline void genetic_local_search_worker(
         data.mutex.lock();
 
         // Check genetic iteration limit.
-        if (data.parameters.genetic_iteration_number_max != -1
-                && data.output.genetic_iteration_number
-                >= data.parameters.genetic_iteration_number_max) {
+        if (data.parameters.maximum_number_of_genetic_iterations != -1
+                && data.output.number_of_genetic_iterations
+                >= data.parameters.maximum_number_of_genetic_iterations) {
             data.mutex.unlock();
             return;
         }
@@ -365,8 +365,8 @@ inline void genetic_local_search_worker(
             continue;
         }
 
-        Counter genetic_iteration_number = data.output.genetic_iteration_number;
-        data.output.genetic_iteration_number++;
+        Counter number_of_genetic_iterations = data.output.number_of_genetic_iterations;
+        data.output.number_of_genetic_iterations++;
 
         // Draw parent solutions.
         auto p = data.population.get_parents(generator);
@@ -383,7 +383,7 @@ inline void genetic_local_search_worker(
         AStarLocalSearchOptionalParameters<LocalScheme> parameters_astar;
         parameters_astar.initial_solution_ids = {};
         parameters_astar.initial_solutions.push_back(solution_child);
-        parameters_astar.node_number_max = data.parameters.local_search_node_number_max;
+        parameters_astar.maximum_number_of_nodes = data.parameters.maximum_number_of_local_search_nodes;
         auto output_astar = a_star_local_search(local_scheme, parameters_astar);
         auto solution = output_astar.solution_pool.best();
         //std::cout << to_string(local_scheme.global_cost(solution)) << std::endl;
@@ -396,7 +396,7 @@ inline void genetic_local_search_worker(
         if (local_scheme.global_cost(data.output.solution_pool.worst())
                 > local_scheme.global_cost(solution)) {
             std::stringstream ss;
-            ss << "iteration " << genetic_iteration_number
+            ss << "iteration " << number_of_genetic_iterations
                 << " (thread " << thread_id << ")";
             int res = data.output.solution_pool.add(solution, ss, data.parameters.info);
             if (res == 2) {
@@ -419,7 +419,7 @@ inline GeneticLocalSearchOutput<LocalScheme> genetic_local_search(
     output.solution_pool.display_init(parameters.info);
     std::vector<std::thread> threads;
     GeneticLocalSearchData<LocalScheme> data(local_scheme, parameters, output);
-    for (Counter thread_id = 0; thread_id < parameters.thread_number; ++thread_id) {
+    for (Counter thread_id = 0; thread_id < parameters.number_of_threads; ++thread_id) {
         threads.push_back(std::thread(
                     genetic_local_search_worker<LocalScheme>,
                     std::ref(data),

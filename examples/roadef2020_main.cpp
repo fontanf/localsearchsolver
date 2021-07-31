@@ -19,8 +19,9 @@ int main(int argc, char *argv[])
     std::string c_path = "";
     std::string certificate_path = "";
     std::string team_id = "S19";
-    Counter thread_number_1 = 1;
-    Counter thread_number_2 = 4;
+    Counter number_of_threads_1 = 1;
+    Counter number_of_threads_2 = 1;
+    Counter initial_solution_id = 0;
     int seed = 0;
     double time_limit = std::numeric_limits<double>::infinity();
 
@@ -31,8 +32,9 @@ int main(int argc, char *argv[])
         (",p", po::value<std::string>(&instance_path), "set input file (required)")
         (",o", po::value<std::string>(&certificate_path), "set certificate file")
         (",t", po::value<double>(&time_limit), "time limit in seconds")
-        (",x", po::value<Counter>(&thread_number_1), "set thread number 1")
-        (",y", po::value<Counter>(&thread_number_2), "set thread number 2")
+        (",w", po::value<Counter>(&initial_solution_id), "set initial solution id")
+        (",x", po::value<Counter>(&number_of_threads_1), "set thread number 1")
+        (",y", po::value<Counter>(&number_of_threads_2), "set thread number 2")
         (",s", po::value<int>(&seed), "set seed")
         (",i", po::value<std::string>(&i_path), "")
         (",c", po::value<std::string>(&c_path), "")
@@ -92,17 +94,16 @@ int main(int argc, char *argv[])
 
     // Create LocalScheme.
     LocalScheme::Parameters parameters_local_scheme;
-    parameters_local_scheme.reduced_instance_time =
-        (time_limit == std::numeric_limits<double>::infinity())? 60: time_limit / 15;
     LocalScheme local_scheme(instance, parameters_local_scheme);
 
     // Run A*.
-    AStarOptionalParameters<LocalScheme> parameters_a_star;
+    AStarLocalSearchOptionalParameters<LocalScheme> parameters_a_star;
     parameters_a_star.info.set_verbose(true);
     parameters_a_star.info.set_timelimit(info.remaining_time());
-    parameters_a_star.thread_number_1 = thread_number_1;
-    parameters_a_star.thread_number_2 = thread_number_2;
-    parameters_a_star.initial_solution_ids = std::vector<Counter>(thread_number_2, 1);
+    parameters_a_star.number_of_threads_1 = number_of_threads_1;
+    parameters_a_star.number_of_threads_2 = number_of_threads_2;
+    parameters_a_star.initial_solution_ids = std::vector<Counter>(
+            number_of_threads_2, initial_solution_id);
     parameters_a_star.new_solution_callback
         = [&local_scheme, &info](
                 const LocalScheme::Solution& solution)
@@ -121,7 +122,7 @@ int main(int argc, char *argv[])
                 }
             }
         };
-    auto output = a_star(local_scheme, parameters_a_star);
+    auto output = a_star_local_search(local_scheme, parameters_a_star);
 
     const LocalScheme::Solution& solution = output.solution_pool.best();
     double t = info.elapsed_time();

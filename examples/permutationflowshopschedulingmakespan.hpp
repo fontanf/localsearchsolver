@@ -29,9 +29,9 @@ public:
     /** Global cost: <Job number, Makespan>; */
     using GlobalCost = std::tuple<JobId, Time>;
 
-    inline JobId&       job_number(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline JobId&       number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
     inline Time&          makespan(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline JobId  job_number(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline JobId  number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
     inline Time     makespan(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
 
     static GlobalCost global_cost_worst()
@@ -102,7 +102,7 @@ public:
     {
         JobPos bloc_size_max = 8;
         bool shuffle_neighborhood_order = true;
-        Counter perturbation_number = 10;
+        Counter number_of_perturbations = 10;
     };
 
     LocalScheme(
@@ -110,19 +110,19 @@ public:
             Parameters parameters):
         instance_(instance),
         parameters_(parameters),
-        positions1_(instance.job_number()),
-        positions2_(instance.job_number()),
-        times_(instance_.machine_number(), 0),
-        heads_(instance.job_number() + 1),
-        tails_(instance.job_number() + 1),
-        completion_times_(instance.job_number() + 1)
+        positions1_(instance.number_of_jobs()),
+        positions2_(instance.number_of_jobs()),
+        times_(instance_.number_of_machines(), 0),
+        heads_(instance.number_of_jobs() + 1),
+        tails_(instance.number_of_jobs() + 1),
+        completion_times_(instance.number_of_jobs() + 1)
     {
         std::iota(positions1_.begin(), positions1_.end(), 0);
         std::iota(positions2_.begin(), positions2_.end(), 0);
-        for (JobId j = 0; j < instance_.job_number() + 1; ++j) {
-            heads_[j] = std::vector<Time>(instance_.machine_number(), 0);
-            tails_[j] = std::vector<Time>(instance_.machine_number(), 0);
-            completion_times_[j] = std::vector<Time>(instance_.machine_number(), 0);
+        for (JobId j = 0; j < instance_.number_of_jobs() + 1; ++j) {
+            heads_[j] = std::vector<Time>(instance_.number_of_machines(), 0);
+            tails_[j] = std::vector<Time>(instance_.number_of_machines(), 0);
+            completion_times_[j] = std::vector<Time>(instance_.number_of_machines(), 0);
         }
     }
 
@@ -146,7 +146,7 @@ public:
             std::mt19937_64& generator)
     {
         Solution solution = empty_solution();
-        std::vector<JobId> jobs(instance_.job_number());
+        std::vector<JobId> jobs(instance_.number_of_jobs());
         std::iota(jobs.begin(), jobs.end(), 0);
         std::shuffle(jobs.begin(), jobs.end(), generator);
         return compact2solution(jobs);
@@ -193,7 +193,7 @@ public:
             std::mt19937_64& generator)
     {
         std::vector<Move> moves;
-        for (Counter perturbation = 0; perturbation < parameters_.perturbation_number; ++perturbation) {
+        for (Counter perturbation = 0; perturbation < parameters_.number_of_perturbations; ++perturbation) {
             std::vector<JobPos> edges = optimizationtools::bob_floyd<JobPos>(
                     4, solution.jobs.size() + 1, generator);
             std::sort(edges.begin(), edges.end());
@@ -223,7 +223,7 @@ public:
             jobs.push_back(solution.jobs[pos]);
         for (JobPos pos = move.pos_4; pos < (JobPos)solution.jobs.size(); ++pos)
             jobs.push_back(solution.jobs[pos]);
-        assert((JobPos)jobs.size() <= instance_.job_number());
+        assert((JobPos)jobs.size() <= instance_.number_of_jobs());
         compute(solution, jobs);
     }
 
@@ -232,7 +232,7 @@ public:
             std::mt19937_64& generator,
             const Move& = move_null())
     {
-        MachineId m = instance_.machine_number();
+        MachineId m = instance_.number_of_machines();
         Counter it = 0;
         std::vector<Counter> neighborhoods;
         for (JobPos bloc_size = 1; bloc_size <= parameters_.bloc_size_max; ++bloc_size)
@@ -303,7 +303,7 @@ public:
                         for (JobPos p = pos_new_best + bloc_size; p < (JobPos)solution.jobs.size(); ++p)
                             jobs.push_back(solution.jobs[p]);
                     }
-                    assert((JobPos)jobs.size() <= instance_.job_number());
+                    assert((JobPos)jobs.size() <= instance_.number_of_jobs());
                     compute(solution, jobs);
                     if (solution.makespan != makespan(c_best)) {
                         std::cout << "pos_best " << pos_best
@@ -374,7 +374,7 @@ private:
             Solution& solution,
             const std::vector<JobId>& jobs)
     {
-        MachineId m = instance_.machine_number();
+        MachineId m = instance_.number_of_machines();
         solution.jobs = jobs;
         std::fill(times_.begin(), times_.end(), 0);
         for (JobId j: solution.jobs) {
@@ -399,7 +399,7 @@ private:
             JobPos pos,
             JobPos size)
     {
-        MachineId m = instance_.machine_number();
+        MachineId m = instance_.number_of_machines();
 
         // Compute heads_.
         for (JobPos pos_new = 0; pos_new < (JobPos)solution.jobs.size() - size; ++pos_new) {
@@ -443,7 +443,7 @@ private:
         for (JobPos pos_new = solution.jobs.size() - size - 1; pos_new >= 0; --pos_new) {
             JobId j = solution.jobs[((pos_new < pos)? pos_new: pos_new + size)];
             assert(j >= 0);
-            assert(j < instance_.job_number());
+            assert(j < instance_.number_of_jobs());
             tails_[pos_new][m - 1] = tails_[pos_new + 1][m - 1]
                 + instance_.processing_time(j, m - 1);
             for (MachineId i = m - 2; i >= 0; --i) {

@@ -32,10 +32,10 @@ public:
     /** Global cost: <Group number, Overweight, Profit>; */
     using GlobalCost = std::tuple<GroupId, Weight, Profit>;
 
-    inline GroupId&       group_number(GlobalCost& global_cost) const { return std::get<0>(global_cost); }
+    inline GroupId&       number_of_groups(GlobalCost& global_cost) const { return std::get<0>(global_cost); }
     inline Weight&          overweight(GlobalCost& global_cost) const { return std::get<1>(global_cost); }
     inline Profit&              profit(GlobalCost& global_cost) const { return std::get<2>(global_cost); }
-    inline GroupId  group_number(const GlobalCost& global_cost) const { return std::get<0>(global_cost); }
+    inline GroupId  number_of_groups(const GlobalCost& global_cost) const { return std::get<0>(global_cost); }
     inline Weight     overweight(const GlobalCost& global_cost) const { return std::get<1>(global_cost); }
     inline Profit         profit(const GlobalCost& global_cost) const { return std::get<2>(global_cost); }
 
@@ -81,7 +81,7 @@ public:
     {
         std::vector<ItemId> items;
         std::vector<Weight> weights;
-        GroupId group_number = 0;
+        GroupId number_of_groups = 0;
         Weight overweight = 0;
         Profit profit = 0;
     };
@@ -113,9 +113,9 @@ public:
             Parameters parameters):
         instance_(instance),
         parameters_(parameters),
-        items_(instance.group_number())
+        items_(instance.number_of_groups())
     {
-        for (GroupId group_id = 0; group_id < instance.group_number(); ++group_id)
+        for (GroupId group_id = 0; group_id < instance.number_of_groups(); ++group_id)
             items_[group_id] = instance.items(group_id);
     }
 
@@ -131,8 +131,8 @@ public:
     inline Solution empty_solution() const
     {
         Solution solution;
-        solution.items.resize(instance_.group_number(), -1);
-        solution.weights.resize(instance_.resource_number(), 0);
+        solution.items.resize(instance_.number_of_groups(), -1);
+        solution.weights.resize(instance_.number_of_resources(), 0);
         return solution;
     }
 
@@ -141,7 +141,7 @@ public:
             std::mt19937_64& generator) const
     {
         Solution solution = empty_solution();
-        for (GroupId group_id = 0; group_id < instance_.group_number(); ++group_id) {
+        for (GroupId group_id = 0; group_id < instance_.number_of_groups(); ++group_id) {
             std::uniform_int_distribution<ItemId> d(0, instance_.items(group_id).size() - 1);
             ItemId j = instance_.items(group_id)[d(generator)];
             add(solution, j);
@@ -156,7 +156,7 @@ public:
     inline GlobalCost global_cost(const Solution& solution) const
     {
         return {
-            -solution.group_number,
+            -solution.number_of_groups,
             solution.overweight,
             -solution.profit,
         };
@@ -201,7 +201,7 @@ public:
             std::mt19937_64&)
     {
         std::vector<Move> moves;
-        for (GroupId group_id = 0; group_id < instance_.group_number(); ++group_id) {
+        for (GroupId group_id = 0; group_id < instance_.number_of_groups(); ++group_id) {
             ItemId j_old = solution.items[group_id];
             remove(solution, j_old);
             for (ItemId j: instance_.items(group_id)) {
@@ -271,7 +271,7 @@ public:
             std::ostream &os,
             const Solution& solution) const
     {
-        os << "group number: " << solution.group_number << std::endl;
+        os << "group number: " << solution.number_of_groups << std::endl;
         os << "items:";
         for (ItemId j: solution.items)
             os << " " << j;
@@ -310,13 +310,13 @@ private:
     inline void add(Solution& solution, ItemId j) const
     {
         assert(j >= 0);
-        assert(j < instance_.item_number());
+        assert(j < instance_.number_of_items());
         GroupId group_id = instance_.item(j).group_id;
         assert(solution.items[group_id] == -1);
-        // Update group_number.
-        solution.group_number++;
+        // Update number_of_groups.
+        solution.number_of_groups++;
         // Update weights.
-        for (ResourceId r = 0; r < instance_.resource_number(); ++r) {
+        for (ResourceId r = 0; r < instance_.number_of_resources(); ++r) {
             Weight w_max = instance_.capacity(r);
             Weight w = instance_.item(j).weights[r];
             if (solution.weights[r] >= w_max) {
@@ -337,10 +337,10 @@ private:
     {
         GroupId group_id = instance_.item(j).group_id;
         assert(solution.items[group_id] == j);
-        // Update group_number.
-        solution.group_number--;
+        // Update number_of_groups.
+        solution.number_of_groups--;
         // Update weights.
-        for (ResourceId r = 0; r < instance_.resource_number(); ++r) {
+        for (ResourceId r = 0; r < instance_.number_of_resources(); ++r) {
             Weight w_max = instance_.capacity(r);
             Weight w = instance_.item(j).weights[r];
             if (solution.weights[r] - w >= w_max) {
@@ -367,10 +367,10 @@ private:
     {
         GlobalCost gc = global_cost(solution);
         assert(solution.items[instance_.item(j).group_id] == -1);
-        // Update group_number.
-        group_number(gc)--;
+        // Update number_of_groups.
+        number_of_groups(gc)--;
         // Update overweigt.
-        for (ResourceId r = 0; r < instance_.resource_number(); ++r) {
+        for (ResourceId r = 0; r < instance_.number_of_resources(); ++r) {
             Weight w_max = instance_.capacity(r);
             Weight w = instance_.item(j).weights[r];
             if (solution.weights[r] >= w_max) {

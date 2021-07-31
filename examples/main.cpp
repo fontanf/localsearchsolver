@@ -20,7 +20,7 @@ SolutionPool<LocalScheme> run_astarlocalsearch(
     auto parameters = read_astar_args<LocalScheme>(algorithm_argv);
     parameters.info = info;
     if (parameters.initial_solution_ids.empty())
-        parameters.initial_solution_ids = std::vector<Counter>(parameters.thread_number_2, 0);
+        parameters.initial_solution_ids = std::vector<Counter>(parameters.number_of_threads_2, 0);
     return a_star_local_search(local_scheme, parameters).solution_pool;
 }
 

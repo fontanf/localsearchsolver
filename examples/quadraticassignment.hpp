@@ -32,9 +32,9 @@ public:
     /** Global cost: <Facility number, Cost>; */
     using GlobalCost = std::tuple<FacilityId, Cost>;
 
-    inline FacilityId&       facility_number(GlobalCost& global_cost) const { return std::get<0>(global_cost); }
+    inline FacilityId&       number_of_facilities(GlobalCost& global_cost) const { return std::get<0>(global_cost); }
     inline Cost&                        cost(GlobalCost& global_cost) const { return std::get<1>(global_cost); }
-    inline FacilityId  facility_number(const GlobalCost& global_cost) const { return std::get<0>(global_cost); }
+    inline FacilityId  number_of_facilities(const GlobalCost& global_cost) const { return std::get<0>(global_cost); }
     inline Cost                   cost(const GlobalCost& global_cost) const { return std::get<1>(global_cost); }
 
     static GlobalCost global_cost_worst()
@@ -77,7 +77,7 @@ public:
     struct Solution
     {
         std::vector<LocationId> locations;
-        FacilityId facility_number = 0;
+        FacilityId number_of_facilities = 0;
         Cost cost = 0;
     };
 
@@ -90,15 +90,15 @@ public:
     {
         Solution solution;
         solution.locations = compact_solution;
-        for (FacilityId facility_id_1 = 0; facility_id_1 < instance_.facility_number(); ++facility_id_1) {
+        for (FacilityId facility_id_1 = 0; facility_id_1 < instance_.number_of_facilities(); ++facility_id_1) {
             LocationId location_id_1 = solution.locations[facility_id_1];
             if (location_id_1 == -1)
                 continue;
-            solution.facility_number++;
+            solution.number_of_facilities++;
             solution.cost += instance_.flow(facility_id_1, facility_id_1)
                 * instance_.distance(location_id_1, location_id_1);
             for (FacilityId facility_id_2 = facility_id_1 + 1;
-                    facility_id_2 < instance_.facility_number(); ++facility_id_2) {
+                    facility_id_2 < instance_.number_of_facilities(); ++facility_id_2) {
                 LocationId location_id_2 = solution.locations[facility_id_2];
                 if (location_id_2 == -1)
                     continue;
@@ -124,14 +124,14 @@ public:
             Parameters parameters):
         instance_(instance),
         parameters_(parameters),
-        facilities_(instance.facility_number()),
-        facility_pairs_(instance.facility_number())
+        facilities_(instance.number_of_facilities()),
+        facility_pairs_(instance.number_of_facilities())
     {
         // Initialize facilities_.
         std::iota(facilities_.begin(), facilities_.end(), 0);
         // Initialize facility_pairs_.
-        for (FacilityId facility_id_1 = 0; facility_id_1 < instance.facility_number(); ++facility_id_1)
-            for (FacilityId facility_id_2 = facility_id_1 + 1; facility_id_2 < instance.facility_number(); ++facility_id_2)
+        for (FacilityId facility_id_1 = 0; facility_id_1 < instance.number_of_facilities(); ++facility_id_1)
+            for (FacilityId facility_id_2 = facility_id_1 + 1; facility_id_2 < instance.number_of_facilities(); ++facility_id_2)
                 facility_pairs_.push_back({facility_id_1, facility_id_2});
     }
 
@@ -147,7 +147,7 @@ public:
     inline Solution empty_solution() const
     {
         Solution solution;
-        solution.locations.resize(instance_.facility_number(), -1);
+        solution.locations.resize(instance_.number_of_facilities(), -1);
         return solution;
     }
 
@@ -156,10 +156,10 @@ public:
             std::mt19937_64& generator) const
     {
         Solution solution = empty_solution();
-        std::vector<LocationId> locations(instance_.facility_number(), -1);
+        std::vector<LocationId> locations(instance_.number_of_facilities(), -1);
         std::iota(locations.begin(), locations.end(), 0);
         std::shuffle(locations.begin(), locations.end(), generator);
-        for (FacilityId facility_id = 0; facility_id < instance_.facility_number(); ++facility_id)
+        for (FacilityId facility_id = 0; facility_id < instance_.number_of_facilities(); ++facility_id)
             add(solution, facility_id, locations[facility_id]);
         return solution;
     }
@@ -172,9 +172,9 @@ public:
         Solution solution = empty_solution();
 
         std::shuffle(facilities_.begin(), facilities_.end(), generator);
-        optimizationtools::IndexedSet free_locations(instance_.facility_number());
+        optimizationtools::IndexedSet free_locations(instance_.number_of_facilities());
         for (LocationId location_id = 0;
-                location_id < instance_.facility_number();
+                location_id < instance_.number_of_facilities();
                 ++location_id)
             free_locations.add(location_id);
 
@@ -236,7 +236,7 @@ public:
     inline GlobalCost global_cost(const Solution& solution) const
     {
         return {
-            -solution.facility_number,
+            -solution.number_of_facilities,
             solution.cost,
         };
     }
@@ -247,7 +247,7 @@ public:
     {
         FacilityId d = 0;
         for (FacilityId facility_id = 0;
-                facility_id < instance_.facility_number();
+                facility_id < instance_.number_of_facilities();
                 ++facility_id) {
             if (solution_1.locations[facility_id]
                     != solution_2.locations[facility_id])
@@ -297,7 +297,7 @@ public:
     {
         std::vector<Move> moves;
         for (FacilityId facility_id = 0;
-                facility_id < instance_.facility_number();
+                facility_id < instance_.number_of_facilities();
                 ++facility_id) {
             Solution solution_tmp = solution;
             std::vector<FacilityId> facility_ids = {facility_id};
@@ -439,7 +439,7 @@ private:
         solution.locations[facility_id] = location_id;
         solution.cost += instance_.flow(facility_id, facility_id)
             * instance_.distance(location_id, location_id);
-        for (FacilityId facility_id_2 = 0; facility_id_2 < instance_.facility_number(); facility_id_2++) {
+        for (FacilityId facility_id_2 = 0; facility_id_2 < instance_.number_of_facilities(); facility_id_2++) {
             LocationId location_id_2 = solution.locations[facility_id_2];
             if (location_id_2 == -1 || location_id_2 == location_id)
                 continue;
@@ -448,7 +448,7 @@ private:
             solution.cost += instance_.flow(facility_id_2, facility_id)
                 * instance_.distance(location_id_2, location_id);
         }
-        solution.facility_number++;
+        solution.number_of_facilities++;
     }
 
     inline void remove(Solution& solution, FacilityId facility_id) const
@@ -457,7 +457,7 @@ private:
         assert(location_id != -1);
         solution.cost -= instance_.flow(facility_id, facility_id)
             * instance_.distance(location_id, location_id);
-        for (FacilityId facility_id_2 = 0; facility_id_2 < instance_.facility_number(); facility_id_2++) {
+        for (FacilityId facility_id_2 = 0; facility_id_2 < instance_.number_of_facilities(); facility_id_2++) {
             LocationId location_id_2 = solution.locations[facility_id_2];
             if (location_id_2 == -1 || location_id_2 == location_id)
                 continue;
@@ -467,7 +467,7 @@ private:
                 * instance_.distance(location_id_2, location_id);
         }
         solution.locations[facility_id] = -1;
-        solution.facility_number--;
+        solution.number_of_facilities--;
     }
 
     /*
@@ -498,7 +498,7 @@ private:
             * (instance_.distance(location_id_1, location_id_2)
                     - instance_.distance(location_id_2, location_id_1));
         for (FacilityId facility_id_3 = 0;
-                facility_id_3 < instance_.facility_number();
+                facility_id_3 < instance_.number_of_facilities();
                 ++facility_id_3) {
             if (facility_id_3 == facility_id_1)
                 continue;

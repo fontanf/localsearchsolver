@@ -30,16 +30,16 @@ public:
     /** Global cost: <Interventions, Conflicts, Overwork, Underwork, Cost>; */
     using GlobalCost = std::tuple<InterventionId, ExclusionId, Workload, Workload, Cost>;
 
-    inline InterventionId&      intervention_number(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline ExclusionId&             conflict_number(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline Workload&                       overwork(GlobalCost& global_cost) { return std::get<2>(global_cost); }
-    inline Workload&                      underwork(GlobalCost& global_cost) { return std::get<3>(global_cost); }
-    inline Cost&                               cost(GlobalCost& global_cost) { return std::get<4>(global_cost); }
-    inline InterventionId intervention_number(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline ExclusionId        conflict_number(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline Workload                  overwork(const GlobalCost& global_cost) { return std::get<2>(global_cost); }
-    inline Workload                 underwork(const GlobalCost& global_cost) { return std::get<3>(global_cost); }
-    inline Cost                          cost(const GlobalCost& global_cost) { return std::get<4>(global_cost); }
+    inline InterventionId&       number_of_interventions(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline ExclusionId&              number_of_conflicts(GlobalCost& global_cost) { return std::get<1>(global_cost); }
+    inline Workload&                            overwork(GlobalCost& global_cost) { return std::get<2>(global_cost); }
+    inline Workload&                           underwork(GlobalCost& global_cost) { return std::get<3>(global_cost); }
+    inline Cost&                                    cost(GlobalCost& global_cost) { return std::get<4>(global_cost); }
+    inline InterventionId  number_of_interventions(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline ExclusionId         number_of_conflicts(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
+    inline Workload                       overwork(const GlobalCost& global_cost) { return std::get<2>(global_cost); }
+    inline Workload                      underwork(const GlobalCost& global_cost) { return std::get<3>(global_cost); }
+    inline Cost                               cost(const GlobalCost& global_cost) { return std::get<4>(global_cost); }
 
     static GlobalCost global_cost_worst()
     {
@@ -103,7 +103,7 @@ public:
     struct Solution
     {
         /** Number of interventions. */
-        InterventionId intervention_number = 0;
+        InterventionId number_of_interventions = 0;
         /** Start date for each intervention, -1 if not in solution. */
         std::vector<Time> intervention_starts;
         /** Informations for each time step. */
@@ -128,7 +128,7 @@ public:
     Solution compact2solution(const CompactSolution& compact_solution)
     {
         auto solution = empty_solution();
-        for (InterventionId j = 0; j < instance_.intervention_number(); ++j)
+        for (InterventionId j = 0; j < instance_.number_of_interventions(); ++j)
             if (compact_solution[j] != -1)
                 add(solution, j, compact_solution[j]);
         return solution;
@@ -140,11 +140,6 @@ public:
 
     struct Parameters
     {
-        /** Enable reduced instance. */
-        double reduced_instance_time = -1;
-
-        /** Enable repair procedure. */
-        int repair = -1;
     };
 
     LocalScheme(
@@ -152,20 +147,18 @@ public:
             Parameters parameters):
         instance_(instance),
         parameters_(parameters),
-        interventions_(instance.intervention_number()),
+        interventions_(instance.number_of_interventions()),
         times_(instance.horizon())
     {
-        if (parameters_.reduced_instance_time == -1)
-            parameters_.reduced_instance_time = 60;
-        if (parameters_.repair == -1)
-            parameters_.repair = 1;
-
+        // Initialize interventions_.
         std::iota(interventions_.begin(), interventions_.end(), 0);
+        // Initialize times_.
         std::iota(times_.begin(), times_.end(), 0);
+        // Initialize risks_ and sorted_scenarios_.
         ScenarioId s_max = 0;
         for (Time t_cur = 0; t_cur < instance.horizon(); ++t_cur)
-            if (s_max < instance_.scenario_number(t_cur))
-                s_max = instance_.scenario_number(t_cur);
+            if (s_max < instance_.number_of_scenarios(t_cur))
+                s_max = instance_.number_of_scenarios(t_cur);
         risks_.resize(s_max, 0);
         sorted_scenarios_.resize(s_max, 0);
     }
@@ -200,7 +193,7 @@ public:
 
     inline bool feasible(const Solution& solution) const
     {
-        return (solution.intervention_number == instance_.intervention_number()
+        return (solution.number_of_interventions == instance_.number_of_interventions()
                 && solution.conflicts.size() == 0
                 && solution.overwork == 0
                 && solution.underwork == 0);
@@ -209,7 +202,7 @@ public:
     inline GlobalCost global_cost(const Solution& solution) const
     {
         return {
-            -solution.intervention_number,
+            -solution.number_of_interventions,
             solution.conflicts.size(),
             solution.overwork,
             solution.underwork,
@@ -228,7 +221,7 @@ public:
         GlobalCost global_cost;
     };
 
-    static Move move_null() { return {-1, -1, global_cost_worst()}; };
+    static Move move_null() { return {-1, -1,  global_cost_worst()}; };
 
     struct MoveHasher
     {
@@ -278,12 +271,12 @@ public:
             std::ostream &os,
             const Solution& solution)
     {
-        for (InterventionId j = 0; j < instance_.intervention_number(); ++j) {
+        for (InterventionId j = 0; j < instance_.number_of_interventions(); ++j) {
             os << "j " << j << " t_start " << solution.intervention_starts[j] << std::endl;
         }
         for (Time t_cur = 0; t_cur < instance_.horizon(); ++t_cur) {
             os << "t " << t_cur;
-            for (ResourceId r = 0; r < instance_.resource_number(); ++r)
+            for (ResourceId r = 0; r < instance_.number_of_resources(); ++r)
                 os << " " << solution.time_steps[t_cur].workloads[r] << "/" << instance_.workload_max(r, t_cur);
             os << std::endl;
         }
@@ -302,19 +295,12 @@ public:
             return;
         }
 
-        for (InterventionId j = 0; j < instance_.intervention_number(); ++j)
+        for (InterventionId j = 0; j < instance_.number_of_interventions(); ++j)
             cert << instance_.intervention_name(j)
                 << " " << solution.intervention_starts[j] + 1 << std::endl;
     }
 
 private:
-
-    /*
-     * Initial solutions.
-     */
-
-    std::pair<int, Solution> repair(
-            const Solution& infeasible_solution);
 
     /*
      * Manipulate solutions.

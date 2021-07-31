@@ -16,8 +16,8 @@ inline AStarLocalSearchOptionalParameters<LocalScheme> read_astar_args(
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
         ("seed,s", boost::program_options::value<Seed>(&parameters.seed), "")
-        (",x", boost::program_options::value<Seed>(&parameters.thread_number_1), "")
-        (",y", boost::program_options::value<Seed>(&parameters.thread_number_2), "")
+        (",x", boost::program_options::value<Seed>(&parameters.number_of_threads_1), "")
+        (",y", boost::program_options::value<Seed>(&parameters.number_of_threads_2), "")
         (",i", boost::program_options::value<std::vector<Counter>>(&parameters.initial_solution_ids)->multitoken(), "")
         ;
     boost::program_options::variables_map vm;
@@ -39,7 +39,7 @@ inline GeneticLocalSearchOptionalParameters<LocalScheme> read_genetic_args(
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
         ("seed,s", boost::program_options::value<Seed>(&parameters.seed), "")
-        (",t", boost::program_options::value<Seed>(&parameters.thread_number), "")
+        (",t", boost::program_options::value<Seed>(&parameters.number_of_threads), "")
         (",i", boost::program_options::value<std::vector<Counter>>(&parameters.initial_solution_ids)->multitoken(), "")
         (",s", boost::program_options::value<Counter>(&parameters.population_size_max), "")
         ;

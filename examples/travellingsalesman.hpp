@@ -30,9 +30,9 @@ public:
     /** Global cost: <Vertex number, Length>; */
     using GlobalCost = std::tuple<VertexId, Distance>;
 
-    inline VertexId&       vertex_number(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline VertexId&       number_of_vertices(GlobalCost& global_cost) { return std::get<0>(global_cost); }
     inline Distance&              length(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline VertexId  vertex_number(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline VertexId  number_of_vertices(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
     inline Distance         length(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
 
     static GlobalCost global_cost_worst()
@@ -100,7 +100,7 @@ public:
         bool swap = true;
         bool twoopt = true;
         bool shuffle_neighborhood_order = true;
-        Counter perturbation_number = 10;
+        Counter number_of_perturbations = 10;
     };
 
     LocalScheme(
@@ -108,10 +108,10 @@ public:
             Parameters parameters):
         instance_(instance),
         parameters_(parameters),
-        positions1_(instance.vertex_number() - 1),
-        positions2_(instance.vertex_number() - 1)
+        positions1_(instance.number_of_vertices() - 1),
+        positions2_(instance.number_of_vertices() - 1)
     {
-        VertexId n = instance_.vertex_number();
+        VertexId n = instance_.number_of_vertices();
         std::iota(positions1_.begin(), positions1_.end(), 0);
         std::iota(positions2_.begin(), positions2_.end(), 0);
         // We do not consider swaps of consecutive vertices since they are
@@ -120,7 +120,7 @@ public:
             for (VertexPos pos_2 = pos_1 + 2; pos_2 < n - 1; ++pos_2)
                 pairs_swap_.push_back({pos_1, pos_2});
         for (VertexPos pos_1 = 0; pos_1 < n; ++pos_1)
-            for (VertexPos pos_2 = pos_1 + 1; pos_2 < instance_.vertex_number(); ++pos_2)
+            for (VertexPos pos_2 = pos_1 + 1; pos_2 < instance_.number_of_vertices(); ++pos_2)
                 pairs_twoopt_.push_back({pos_1, pos_2});
     }
 
@@ -143,7 +143,7 @@ public:
             Counter,
             std::mt19937_64& generator)
     {
-        std::vector<VertexId> vertices(instance_.vertex_number() - 1);
+        std::vector<VertexId> vertices(instance_.number_of_vertices() - 1);
         std::iota(vertices.begin(), vertices.end(), 1);
         std::shuffle(vertices.begin(), vertices.end(), generator);
         return compact2solution(vertices);
@@ -190,7 +190,7 @@ public:
             std::mt19937_64& generator)
     {
         std::vector<Move> moves;
-        for (Counter perturbation = 0; perturbation < parameters_.perturbation_number; ++perturbation) {
+        for (Counter perturbation = 0; perturbation < parameters_.number_of_perturbations; ++perturbation) {
             std::vector<VertexPos> edges = optimizationtools::bob_floyd<VertexPos>(
                     4, solution.vertices.size() + 1, generator);
             std::sort(edges.begin(), edges.end());
@@ -220,7 +220,7 @@ public:
             vertices.push_back(solution.vertices[pos]);
         for (VertexPos pos = move.pos_4; pos < (VertexPos)solution.vertices.size(); ++pos)
             vertices.push_back(solution.vertices[pos]);
-        assert((VertexPos)vertices.size() <= instance_.vertex_number());
+        assert((VertexPos)vertices.size() <= instance_.number_of_vertices());
         compute(solution, vertices);
     }
 
@@ -232,7 +232,7 @@ public:
         //print(std::cout, solution);
         //std::cout << to_string(global_cost(solution)) << std::endl;
 
-        VertexId n = instance_.vertex_number();
+        VertexId n = instance_.number_of_vertices();
         Counter it = 0;
         std::vector<Counter> neighborhoods;
         if (parameters_.twoopt)

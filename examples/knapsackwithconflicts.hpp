@@ -116,8 +116,8 @@ public:
 
     CompactSolution solution2compact(const Solution& solution)
     {
-        std::vector<bool> items(instance_.item_number(), false);
-        for (ItemId j = 0; j < instance_.item_number(); ++j)
+        std::vector<bool> items(instance_.number_of_items(), false);
+        for (ItemId j = 0; j < instance_.number_of_items(); ++j)
             if (solution.items[j].in)
                 items[j] = true;
         return items;
@@ -126,7 +126,7 @@ public:
     Solution compact2solution(const CompactSolution& compact_solution)
     {
         auto solution = empty_solution();
-        for (ItemId j = 0; j < instance_.item_number(); ++j)
+        for (ItemId j = 0; j < instance_.number_of_items(); ++j)
             if (compact_solution[j])
                 add(solution, j);
         return solution;
@@ -150,10 +150,10 @@ public:
             Parameters parameters):
         instance_(instance),
         parameters_(parameters),
-        items_(instance.item_number()),
-        neighbors_(instance_.item_number()),
-        free_items_(instance_.item_number()),
-        free_items_2_(instance_.item_number())
+        items_(instance.number_of_items()),
+        neighbors_(instance_.number_of_items()),
+        free_items_(instance_.number_of_items()),
+        free_items_2_(instance_.number_of_items())
     {
         // Initialize items_.
         std::iota(items_.begin(), items_.end(), 0);
@@ -171,7 +171,7 @@ public:
     inline Solution empty_solution() const
     {
         Solution solution;
-        solution.items.resize(instance_.item_number());
+        solution.items.resize(instance_.number_of_items());
         return solution;
     }
 
@@ -194,7 +194,7 @@ public:
     {
         Solution solution = empty_solution();
         std::vector<ItemId> items;
-        for (ItemId j = 0; j < instance_.item_number(); ++j) {
+        for (ItemId j = 0; j < instance_.number_of_items(); ++j) {
             // Add items which are in both parents.
             if (contains(solution_parent_1, j)
                     && contains(solution_parent_2, j)) {
@@ -230,7 +230,7 @@ public:
             const Solution& solution_2) const
     {
         ItemId d = 0;
-        for (ItemId j = 0; j < instance_.item_number(); ++j)
+        for (ItemId j = 0; j < instance_.number_of_items(); ++j)
             if (contains(solution_1, j) != contains(solution_2, j))
                 d++;
         return d;
@@ -486,7 +486,7 @@ public:
             const Solution& solution)
     {
         os << "items:";
-        for (ItemId j = 0; j < instance_.item_number(); ++j)
+        for (ItemId j = 0; j < instance_.number_of_items(); ++j)
             if (contains(solution, j))
                 os << " " << j;
         os << std::endl;
@@ -507,7 +507,7 @@ public:
             return;
         }
 
-        for (ItemId j = 0; j < instance_.item_number(); ++j)
+        for (ItemId j = 0; j < instance_.number_of_items(); ++j)
             if (contains(solution, j))
                 cert << j << " ";
     }

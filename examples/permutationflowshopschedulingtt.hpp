@@ -29,9 +29,9 @@ public:
     /** Global cost: <Job number, Total tardiness>; */
     using GlobalCost = std::tuple<JobId, Time>;
 
-    inline JobId&           job_number(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline JobId&           number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
     inline Time&       total_tardiness(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline JobId      job_number(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline JobId      number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
     inline Time  total_tardiness(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
 
     static GlobalCost global_cost_worst()
@@ -98,7 +98,7 @@ public:
         JobPos bloc_size_max = 3;
         bool swap = true;
         bool shuffle_neighborhood_order = true;
-        Counter perturbation_number = 10;
+        Counter number_of_perturbations = 10;
     };
 
     LocalScheme(
@@ -106,20 +106,20 @@ public:
             Parameters parameters):
         instance_(instance),
         parameters_(parameters),
-        positions1_(instance.job_number()),
-        positions2_(instance.job_number()),
-        times_(instance_.machine_number(), 0),
-        heads_(instance.machine_number(), 0),
-        total_tardinesses_shift_(instance.job_number() + 1, 0),
-        total_tardinesses_swap_(instance.job_number())
+        positions1_(instance.number_of_jobs()),
+        positions2_(instance.number_of_jobs()),
+        times_(instance_.number_of_machines(), 0),
+        heads_(instance.number_of_machines(), 0),
+        total_tardinesses_shift_(instance.number_of_jobs() + 1, 0),
+        total_tardinesses_swap_(instance.number_of_jobs())
     {
         std::iota(positions1_.begin(), positions1_.end(), 0);
         std::iota(positions2_.begin(), positions2_.end(), 0);
-        for (JobPos pos_1 = 0; pos_1 < instance_.job_number(); ++pos_1)
-            for (JobPos pos_2 = pos_1 + 1; pos_2 < instance_.job_number(); ++pos_2)
+        for (JobPos pos_1 = 0; pos_1 < instance_.number_of_jobs(); ++pos_1)
+            for (JobPos pos_2 = pos_1 + 1; pos_2 < instance_.number_of_jobs(); ++pos_2)
                 pairs_.push_back({pos_1, pos_2});
-        for (JobPos pos_1 = 0; pos_1 < instance_.job_number(); ++pos_1)
-            total_tardinesses_swap_[pos_1].resize(instance_.job_number() - pos_1, 0);
+        for (JobPos pos_1 = 0; pos_1 < instance_.number_of_jobs(); ++pos_1)
+            total_tardinesses_swap_[pos_1].resize(instance_.number_of_jobs() - pos_1, 0);
     }
 
     LocalScheme(const LocalScheme& local_scheme):
@@ -141,7 +141,7 @@ public:
             Counter,
             std::mt19937_64& generator)
     {
-        std::vector<JobId> jobs(instance_.job_number());
+        std::vector<JobId> jobs(instance_.number_of_jobs());
         std::iota(jobs.begin(), jobs.end(), 0);
         std::shuffle(jobs.begin(), jobs.end(), generator);
         return compact2solution(jobs);
@@ -188,7 +188,7 @@ public:
             std::mt19937_64& generator)
     {
         std::vector<Move> moves;
-        for (Counter perturbation = 0; perturbation < parameters_.perturbation_number; ++perturbation) {
+        for (Counter perturbation = 0; perturbation < parameters_.number_of_perturbations; ++perturbation) {
             std::vector<JobPos> edges = optimizationtools::bob_floyd<JobPos>(
                     4, solution.jobs.size() + 1, generator);
             std::sort(edges.begin(), edges.end());
@@ -218,7 +218,7 @@ public:
             jobs.push_back(solution.jobs[pos]);
         for (JobPos pos = move.pos_4; pos < (JobPos)solution.jobs.size(); ++pos)
             jobs.push_back(solution.jobs[pos]);
-        assert((JobPos)jobs.size() <= instance_.job_number());
+        assert((JobPos)jobs.size() <= instance_.number_of_jobs());
         compute(solution, jobs);
     }
 
@@ -275,7 +275,7 @@ public:
                         improved = true;
                         // Apply best move.
                         std::vector<JobId> jobs;
-                        for (JobPos pos = 0; pos < instance_.job_number(); ++pos) {
+                        for (JobPos pos = 0; pos < instance_.number_of_jobs(); ++pos) {
                             if (pos == pos_1_best) {
                                 jobs.push_back(solution.jobs[pos_2_best]);
                             } else if (pos == pos_2_best) {
@@ -337,7 +337,7 @@ public:
                             for (JobPos p = pos_new_best + bloc_size; p < (JobPos)solution.jobs.size(); ++p)
                                 jobs.push_back(solution.jobs[p]);
                         }
-                        assert((JobPos)jobs.size() <= instance_.job_number());
+                        assert((JobPos)jobs.size() <= instance_.number_of_jobs());
                         compute(solution, jobs);
                         if (solution.total_tardiness != total_tardiness(c_best)) {
                             std::cout << "pos_best " << pos_best
@@ -404,7 +404,7 @@ private:
             Solution& solution,
             const std::vector<JobId>& jobs)
     {
-        MachineId m = instance_.machine_number();
+        MachineId m = instance_.number_of_machines();
         // Update jobs.
         solution.jobs = jobs;
         // Initialize times_ and total tardiness.
@@ -436,7 +436,7 @@ private:
             JobPos pos,
             JobPos size)
     {
-        MachineId m = instance_.machine_number();
+        MachineId m = instance_.number_of_machines();
 
         // Initialize heads_ and head total tardiness.
         Time total_tardiness_cur = 0;
@@ -526,7 +526,7 @@ private:
 
     inline void compute_cost_swap(const Solution& solution)
     {
-        MachineId m = instance_.machine_number();
+        MachineId m = instance_.number_of_machines();
         // Initialize heads_ and head total tardiness.
         Time total_tardiness_cur = 0;
         std::fill(heads_.begin(), heads_.end(), 0);
