@@ -52,9 +52,10 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
 
 Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https://github.com/fontanf/generalizedassignmentsolver/blob/master/generalizedassignmentsolver/algorithms/localsearch.cpp)
 * Algorithm:
-  * Perturbation: force item `j` to be assigned to agent `i`
+  * Perturbation: shift 8 random jobs
   * Local search neighborhoods:
     * Shift item `j` to agent `i`
+  * The local search implementation avoids recomputing moves which have not change since the last neighborhood exploration
 
 ### Routing
 
@@ -63,9 +64,10 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
 * Algorithm:
   * Perturbation: swap two blocs (double-bridge)
   * Local search neighborhoods:
-    * Shift a bloc of `k` consecutive vertices, `k = 1..3` (or-opt)
+    * Shift a bloc of `k` consecutive vertices, `k = 1..8` (or-opt)
     * Swap vertex `j1` with vertex `j2`
     * Replace edges `(j1, j2)` and `(j3, j4)` by edges `(j1, j3)` and `(j2, j4)` (2-opt)
+  * The local search implementation avoids recomputing moves which have not change since the last neighborhood exploration
 * Benchmarks:
   * `python3 ../optimizationtools/optimizationtools/bench_run.py --csv ../ordata/travellingsalesman/data.csv -l travellingsalesman -t 60`
   * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/travellingsalesman/data.csv -l travellingsalesman -b heuristiclong -t 62`
