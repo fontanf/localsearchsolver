@@ -151,7 +151,7 @@ struct SolutionPoolComparator
     typedef typename Scheme::Solution Solution;
 
     SolutionPoolComparator(const Scheme& local_scheme):
-        local_scheme(local_scheme) {  }
+        local_scheme(local_scheme) { }
 
     const Scheme& local_scheme;
 
@@ -175,13 +175,9 @@ public:
         scheme_(local_scheme),
         size_max_(size_max),
         solution_pool_comparator_(local_scheme),
-        solutions_(solution_pool_comparator_)
-    {
-        Solution solution = local_scheme.empty_solution();
-        solutions_.insert(solution);
-        worst_ = solution;
-        best_ = solution;
-    }
+        solutions_(solution_pool_comparator_),
+        worst_(local_scheme.empty_solution()),
+        best_(local_scheme.empty_solution()) { }
 
     virtual ~SolutionPool() { }
 

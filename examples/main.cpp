@@ -90,6 +90,7 @@ int main(int argc, char *argv[])
     optimizationtools::Info info = optimizationtools::Info()
         .set_verbose(vm.count("verbose"))
         .set_time_limit(time_limit)
+        .set_certificate_path(certificate_path)
         .set_json_output_path(output_path)
         .set_only_write_at_the_end(vm.count("only-write-at-the-end"))
         ;

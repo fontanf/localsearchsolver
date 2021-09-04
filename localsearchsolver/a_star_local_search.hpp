@@ -193,6 +193,7 @@ inline void a_star_local_search_worker(
         Counter thread_id)
 {
     typedef typename LocalScheme::CompactSolution CompactSolution;
+    //std::cout << "a_star_local_search_worker start" << std::endl;
 
     LocalScheme local_scheme(data.local_scheme);
     Seed seed = data.parameters.seed + thread_id;
@@ -220,7 +221,8 @@ inline void a_star_local_search_worker(
         local_scheme.local_search(solution, generator);
 
         // Check for a new best solution.
-        if (local_scheme.global_cost(data.output.solution_pool.worst())
+        if (data.output.solution_pool.size() == 0
+                || local_scheme.global_cost(data.output.solution_pool.worst())
                 > local_scheme.global_cost(solution)) {
             std::stringstream ss;
             ss << "initial solution " << initial_solution_pos
@@ -377,7 +379,8 @@ inline void a_star_local_search_worker(
         local_scheme.local_search(solution, generator, move);
 
         // Check for a new best solution.
-        if (local_scheme.global_cost(data.output.solution_pool.worst())
+        if (data.output.solution_pool.size() == 0
+                || local_scheme.global_cost(data.output.solution_pool.worst())
                 > local_scheme.global_cost(solution)) {
             std::stringstream ss;
             ss << "node " << node_id
@@ -423,6 +426,7 @@ inline AStarLocalSearchOutput<LocalScheme> a_star_local_search(
         LocalScheme& local_scheme,
         AStarLocalSearchOptionalParameters<LocalScheme> parameters)
 {
+    //std::cout << "a_star_local_search start" << std::endl;
     AStarLocalSearchOutput<LocalScheme> output(local_scheme);
     output.solution_pool.display_init(parameters.info);
     std::vector<std::thread> threads;
