@@ -345,8 +345,8 @@ inline void genetic_local_search_worker(
 
     for (;;) {
 
-        // Check time.
-        if (!data.parameters.info.check_time())
+        // Check end.
+        if (data.parameters.info.needs_to_end())
             break;
 
         data.mutex.lock();

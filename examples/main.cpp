@@ -93,6 +93,7 @@ int main(int argc, char *argv[])
         .set_certificate_path(certificate_path)
         .set_json_output_path(output_path)
         .set_only_write_at_the_end(vm.count("only-write-at-the-end"))
+        .set_sigint_handler()
         ;
 
     // Run algorithm
