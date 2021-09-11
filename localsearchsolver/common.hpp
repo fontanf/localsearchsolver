@@ -204,7 +204,8 @@ public:
         //    if (solution == solution_tmp)
         //        return 0;
         // If new best solution, display.
-        bool new_best = scheme_.global_cost(solution) < scheme_.global_cost(*solutions_.begin());
+        bool new_best = (solutions_.size() == 0)
+            || (scheme_.global_cost(solution) < scheme_.global_cost(*solutions_.begin()));
         // Add new solution to solution pool.
         solutions_.insert(solution);
         if (new_best) {

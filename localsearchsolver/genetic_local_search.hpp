@@ -29,7 +29,7 @@ struct GeneticLocalSearchOptionalParameters
     Seed seed = 0;
     /** Callback function called when a new best solution is found. */
     GeneticLocalSearchCallback<LocalScheme> new_solution_callback
-        = [](const Solution& solution) { (void)solution; };
+        = [](const Solution&) { };
 
     optimizationtools::Info info;
 };
