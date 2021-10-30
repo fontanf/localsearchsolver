@@ -13,6 +13,22 @@ Still, more complex neighborhoods can be implemented if better performances are 
 
 In addition, the algorithms don't require parameter tuning.
 
+Implemented algorithms:
+* Iterated local search
+  * Single solution algorithm
+  * Lowest implementation cost
+  * Good for very large problems
+  * Requires: `GlobalCost`, `global_cost_worst`, `Solution`, `initial_solution`, `global_cost`, `Move`, `move_null`, `perturbations`, `apply_move` and `local_search`
+* A\* local search
+  * Multi-solution algorithm
+  * Higher implementation cost
+  * Higher quality solutions
+  * Requires: + `CompactSolution`, `compact_solution_hasher`, `solution2compact`, `compact2solution` and `move_hasher`
+* Genetic local search
+  * Population-based algorithm
+  * Use A\* local search as sub-routine
+  * Requires: + `crossover` and `distance`
+
 ## Examples
 
 Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orproblems)
@@ -128,7 +144,7 @@ Maximum-Weight Independent Set Problem from [fontanf/stablesolver](https://githu
     * Move vertex `v` in/out of the solution (and remove conflicting vertices)
     * Remove one vertex and add two non-conflicting vertices from its neighbors
 
-Graph Coloring Problem from [fontanf/coloringsolver](https://github.com/fontanf/stablesolver/blob/master/coloringsolver/algorithms/localsearch.cpp)
+Graph Coloring Problem from [fontanf/coloringsolver](https://github.com/fontanf/coloringsolver/blob/master/coloringsolver/algorithms/localsearch.cpp)
 * Algorithm:
   * Perturbation:
     * If the solution is feasible, merge two colors
@@ -145,7 +161,7 @@ bazel build -- //...
 
 Then, examples can be executed as follows:
 ```shell
-./bazel-bin/examples/main -v -p knapsackwithconflicts -i ../ordata/knapsackwithconflicts/C1/BPPC_1_0_1.txt_0.1 -t 5
+./bazel-bin/examples/main -v -p knapsackwithconflicts -i ../ordata/knapsackwithconflicts/bettinelli2017/C1/BPPC_1_0_1.txt_0.1 -f bettinelli2017 -t 5
 ```
 
 ## Usage, C++ library

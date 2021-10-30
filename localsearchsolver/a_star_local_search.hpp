@@ -31,7 +31,7 @@ struct AStarLocalSearchOptionalParameters
     /** Callback function called when a new best solution is found. */
     AStarLocalSearchCallback<LocalScheme> new_solution_callback
         = [](const Solution& solution) { (void)solution; };
-
+    /** Info structure. */
     optimizationtools::Info info;
 };
 

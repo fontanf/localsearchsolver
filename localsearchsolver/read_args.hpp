@@ -1,5 +1,6 @@
 #pragma once
 
+#include "localsearchsolver/iterated_local_search.hpp"
 #include "localsearchsolver/a_star_local_search.hpp"
 #include "localsearchsolver/genetic_local_search.hpp"
 
@@ -9,7 +10,28 @@ namespace localsearchsolver
 {
 
 template <typename LocalScheme>
-inline AStarLocalSearchOptionalParameters<LocalScheme> read_astar_args(
+inline IteratedLocalSearchOptionalParameters<LocalScheme> read_iterated_local_search_args(
+        const std::vector<char*> argv)
+{
+    IteratedLocalSearchOptionalParameters<LocalScheme> parameters;
+    boost::program_options::options_description desc("Allowed options");
+    desc.add_options()
+        ("seed,s", boost::program_options::value<Seed>(&parameters.seed), "")
+        (",i", boost::program_options::value<std::vector<Counter>>(&parameters.initial_solution_ids)->multitoken(), "")
+        ;
+    boost::program_options::variables_map vm;
+    boost::program_options::store(boost::program_options::parse_command_line((Counter)argv.size(), argv.data(), desc), vm);
+    try {
+        boost::program_options::notify(vm);
+    } catch (const boost::program_options::required_option& e) {
+        std::cout << desc << std::endl;;
+        throw "";
+    }
+    return parameters;
+}
+
+template <typename LocalScheme>
+inline AStarLocalSearchOptionalParameters<LocalScheme> read_a_star_local_search_args(
         const std::vector<char*> argv)
 {
     AStarLocalSearchOptionalParameters<LocalScheme> parameters;
@@ -32,7 +54,7 @@ inline AStarLocalSearchOptionalParameters<LocalScheme> read_astar_args(
 }
 
 template <typename LocalScheme>
-inline GeneticLocalSearchOptionalParameters<LocalScheme> read_genetic_args(
+inline GeneticLocalSearchOptionalParameters<LocalScheme> read_genetic_local_search_args(
         const std::vector<char*> argv)
 {
     GeneticLocalSearchOptionalParameters<LocalScheme> parameters;
