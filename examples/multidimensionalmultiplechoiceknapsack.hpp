@@ -6,8 +6,6 @@
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/multidimensionalmultiplechoiceknapsack.hpp
  *
- * TODO
- *
  */
 
 #include "localsearchsolver/common.hpp"
@@ -29,15 +27,15 @@ class LocalScheme
 
 public:
 
-    /** Global cost: <Group number, Overweight, Profit>; */
+    /** Global cost: <Number of groups, Overweight, Profit>; */
     using GlobalCost = std::tuple<GroupId, Weight, Profit>;
 
     inline GroupId&       number_of_groups(GlobalCost& global_cost) const { return std::get<0>(global_cost); }
-    inline Weight&          overweight(GlobalCost& global_cost) const { return std::get<1>(global_cost); }
-    inline Profit&              profit(GlobalCost& global_cost) const { return std::get<2>(global_cost); }
+    inline Weight&              overweight(GlobalCost& global_cost) const { return std::get<1>(global_cost); }
+    inline Profit&                  profit(GlobalCost& global_cost) const { return std::get<2>(global_cost); }
     inline GroupId  number_of_groups(const GlobalCost& global_cost) const { return std::get<0>(global_cost); }
-    inline Weight     overweight(const GlobalCost& global_cost) const { return std::get<1>(global_cost); }
-    inline Profit         profit(const GlobalCost& global_cost) const { return std::get<2>(global_cost); }
+    inline Weight         overweight(const GlobalCost& global_cost) const { return std::get<1>(global_cost); }
+    inline Profit             profit(const GlobalCost& global_cost) const { return std::get<2>(global_cost); }
 
     static GlobalCost global_cost_worst()
     {
@@ -271,7 +269,7 @@ public:
             std::ostream &os,
             const Solution& solution) const
     {
-        os << "group number: " << solution.number_of_groups << std::endl;
+        os << "number of groups: " << solution.number_of_groups << std::endl;
         os << "items:";
         for (ItemId j: solution.items)
             os << " " << j;
