@@ -50,7 +50,7 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
   * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/multidimensionalmultiplechoiceknapsack/data.csv -l multidimensionalmultiplechoiceknapsack -b heuristiclong -t 62`
 
 </p>
-</details> * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -b heuristiclong -t 6`
+</details>
 
 [Quadratic Assignment Problem](examples/quadraticassignment.hpp)
 * Example which implements a problem specific acceleration strategy to compute the move costs
@@ -67,7 +67,7 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
   * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/quadraticassignment/data.csv -l quadraticassignment -b heuristiclong -t 185`
 
 </p>
-</details> * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -b heuristiclong -t 6`
+</details>
 
 [Knapsack Problem with Conflicts](examples/knapsackwithconflicts.hpp)
 * Example with multiple neigborhoods
@@ -85,9 +85,10 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
   * `python3 ../optimizationtools/optimizationtools/bench_run.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'hifi2006'" -l knapsackwithconflicts -t 300`
   * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'hifi2006'" -l knapsackwithconflicts -b heuristiclong -t 310`
   * `python3 ../optimizationtools/optimizationtools/bench_run.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -t 5`
+  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -b heuristiclong -t 6`
 
 </p>
-</details> * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -b heuristiclong -t 6`
+</details>
 
 Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https://github.com/fontanf/generalizedassignmentsolver/blob/master/generalizedassignmentsolver/algorithms/localsearch.cpp)
 * Example which implements a generic strategy for very large problems to avoid recomputing moves which have not change since the last neighborhood exploration
@@ -116,7 +117,7 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
   * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/travellingsalesman/data.csv -l travellingsalesman -b heuristiclong -t 62`
 
 </p>
-</details> * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -b heuristiclong -t 6`
+</details>
 
 ### Scheduling
 
@@ -139,7 +140,7 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
   * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/schedulingwithsdsttwt/data.csv -l schedulingwithsdsttwt -b heuristiclong -t 31`
 
 </p>
-</details> * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -b heuristiclong -t 6`
+</details>
 
 #### Flow shop scheduling
 
@@ -158,7 +159,7 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
   * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_makespan.csv -f "row['Dataset'] == 'vallada2015_large' and int(row['Job number']) <= 100" -l permutationflowshopschedulingmakespan -b heuristiclong -t 500`
 
 </p>
-</details> * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -b heuristiclong -t 6`
+</details>
 
 [Permutation flow shop scheduling problem, Total tardiness](examples/permutationflowshopschedulingtt.hpp)
 * Example of a sequencing problem
@@ -176,7 +177,7 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
   * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt -b heuristiclong -t 500`
 
 </p>
-</details> * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -b heuristiclong -t 6`
+</details>
 
 #### Resource constrained scheduling
 
@@ -195,7 +196,7 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
   * `python3 ../optimizationtools/optimizationtools/bench_process.py -b heuristiclong --csv ../ordata/roadef2020/data.csv -l roadef2020 -t 920 -f "'A' not in row['Dataset']"`
 
 </p>
-</details> * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -b heuristiclong -t 6`
+</details>
 
 ### Graphs
 
