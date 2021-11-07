@@ -4,6 +4,7 @@ cc_library(
                 "iterated_local_search.hpp",
                 "a_star_local_search.hpp",
                 "genetic_local_search.hpp",
+                "sequencing.hpp",
                 "read_args.hpp",
                 "common.hpp",
         ],

@@ -183,8 +183,9 @@ int main(int argc, char *argv[])
         schedulingwithsdsttwt::Instance instance(instance_path, format);
         if (vm.count("print-instance"))
             std::cout << instance << std::endl;
-        auto parameters_local_scheme = read_schedulingwithsdsttwt_args(local_scheme_argv);
-        schedulingwithsdsttwt::LocalScheme local_scheme(instance, parameters_local_scheme);
+        auto parameters_local_scheme_0 = read_schedulingwithsdsttwt_args(local_scheme_argv);
+        schedulingwithsdsttwt::LocalScheme local_scheme_0(instance, parameters_local_scheme_0);
+        sequencing::LocalScheme<schedulingwithsdsttwt::LocalScheme> local_scheme(local_scheme_0, parameters_local_scheme_0.sequencing_parameters);
         auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
             run_a_star_local_search(algorithm_args, local_scheme, info);
@@ -209,8 +210,9 @@ int main(int argc, char *argv[])
         permutationflowshopschedulingtt::Instance instance(instance_path, format);
         if (vm.count("print-instance"))
             std::cout << instance << std::endl;
-        auto parameters_local_scheme = read_permutationflowshopschedulingtt_args(local_scheme_argv);
-        permutationflowshopschedulingtt::LocalScheme local_scheme(instance, parameters_local_scheme);
+        auto parameters_local_scheme_0 = read_permutationflowshopschedulingtt_args(local_scheme_argv);
+        permutationflowshopschedulingtt::LocalScheme local_scheme_0(instance, parameters_local_scheme_0);
+        sequencing::LocalScheme<permutationflowshopschedulingtt::LocalScheme> local_scheme(local_scheme_0, parameters_local_scheme_0.sequencing_parameters);
         auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
             run_a_star_local_search(algorithm_args, local_scheme, info);

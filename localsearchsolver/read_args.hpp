@@ -3,6 +3,7 @@
 #include "localsearchsolver/iterated_local_search.hpp"
 #include "localsearchsolver/a_star_local_search.hpp"
 #include "localsearchsolver/genetic_local_search.hpp"
+#include "localsearchsolver/sequencing.hpp"
 
 #include <boost/program_options.hpp>
 

@@ -11,8 +11,6 @@ The algorithms of this repository are designed to get the best performances out 
 
 Still, more complex neighborhoods can be implemented if better performances are needed.
 
-In addition, the algorithms don't require parameter tuning.
-
 Implemented algorithms:
 * Iterated local search
   * Single solution algorithm
@@ -28,6 +26,12 @@ Implemented algorithms:
   * Population-based algorithm
   * Use A\* local search as sub-routine
   * Requires: + `crossover` and `distance`
+
+A specific implementation is also available for sequencing problems. The neighborhoods and perturbations are already implemented, it is only required to provide an `append(solution, j)` method to use them:
+* Perturbation: swap two blocs (double-bridge)
+* Local search neighborhoods:
+  * Shift a bloc of `k` consecutive jobs, `k = 1..3`
+  * Swap job `j1` and job `j2`
 
 ## Examples
 
@@ -125,12 +129,6 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
 
 [Single machine scheduling problem with sequence-dependent setup times, Total weighted tardiness](examples/schedulingwithsdsttwt.hpp)
 * Example of a sequencing problem
-* Algorithm:
-  * The algorithm is mainly based on the Iterated Local Search from "Efficient local search limitation strategy for single machine total weighted tardiness scheduling with sequence-dependent setup times" (Subramanian et Farias., 2017)
-  * Perturbation: swap two blocs (double-bridge)
-  * Local search neighborhoods:
-    * Shift a bloc of `k` consecutive jobs, `k = 1..13`
-    * Swap job `j1` and job `j2`
 
 <details><summary>Benchmarks</summary>
 <p>
@@ -145,7 +143,7 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
 #### Flow shop scheduling
 
 [Permutation flow shop scheduling problem, Makespan](examples/permutationflowshopschedulingmakespan.hpp)
-* Example of a sequencing problem
+* This one is not considered as a sequencing problem since the dedicated acceleration strategy makes it possible to explore the neighborhoods more efficiently
 * Algorithm:
   * Perturbation: swap two blocs (double-bridge)
   * Local search neighborhoods:
@@ -163,11 +161,6 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
 
 [Permutation flow shop scheduling problem, Total tardiness](examples/permutationflowshopschedulingtt.hpp)
 * Example of a sequencing problem
-* Algorithm:
-  * Perturbation: swap two blocs (double-bridge)
-  * Local search neighborhoods:
-    * Shift a bloc of `k` consecutive jobs, `k = 1..3`
-    * Swap job `j1` and job `j2`
 
 <details><summary>Benchmarks</summary>
 <p>
