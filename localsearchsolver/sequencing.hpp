@@ -17,8 +17,15 @@ using JobPos = int64_t;
 
 struct Parameters
 {
-    JobPos bloc_size_max = 3;
+    JobPos shift_bloc_maximum_length = 3;
+    JobPos shift_maximum_distance = 1024;
+
     bool swap = true;
+    JobPos swap_maximum_distance = 1024;
+
+    bool reverse = false;
+    JobPos reverse_maximum_length = 1024;
+
     bool shuffle_neighborhood_order = true;
     Counter number_of_perturbations = 10;
 };
@@ -199,7 +206,9 @@ public:
         std::vector<Counter> neighborhoods;
         if (parameters_.swap)
             neighborhoods.push_back(0);
-        for (JobPos bloc_size = 1; bloc_size <= parameters_.bloc_size_max; ++bloc_size)
+        if (parameters_.reverse)
+            neighborhoods.push_back(-1);
+        for (JobPos bloc_size = 1; bloc_size <= parameters_.shift_bloc_maximum_length; ++bloc_size)
             neighborhoods.push_back(bloc_size);
 
         Counter it = 0;
@@ -232,6 +241,10 @@ public:
                         c_best = c;
                     }
                     if (pos_1_best != -1) {
+                        //std::cout << "swap"
+                        //    << " pos_1_best " << pos_1_best
+                        //    << " pos_2_best " << pos_2_best
+                        //    << std::endl;
                         improved = true;
                         // Apply best move.
                         solution_tmp_ = local_scheme_0_.empty_solution();
@@ -241,6 +254,46 @@ public:
                                 j = local_scheme_0_.jobs(solution)[pos_2_best];
                             if (pos == pos_2_best)
                                 j = local_scheme_0_.jobs(solution)[pos_1_best];
+                            local_scheme_0_.append(solution_tmp_, j);
+                        }
+                        solution = solution_tmp_;
+                        assert(local_scheme_0_.global_cost(solution) == c_best);
+                    }
+                    break;
+                } case -1: { // Reverse neighborhood.
+                    std::shuffle(pairs_.begin(), pairs_.end(), generator);
+                    compute_cost_reverse(solution);
+                    JobPos pos_1_best = -1;
+                    JobPos pos_2_best = -1;
+                    GlobalCost c_best = global_cost(solution);
+                    for (auto pair: pairs_) {
+                        GlobalCost c = global_costs_swap_[pair.first][pair.second - pair.first - 1];
+                        if (c >= c_best)
+                            continue;
+                        if (pos_1_best != -1 && !dominates(c, c_best))
+                            continue;
+                        pos_1_best = pair.first;
+                        pos_2_best = pair.second;
+                        c_best = c;
+                    }
+                    if (pos_1_best != -1) {
+                        //std::cout << "reverse"
+                        //    << " pos_1_best " << pos_1_best
+                        //    << " pos_2_best " << pos_2_best
+                        //    << std::endl;
+                        improved = true;
+                        // Apply best move.
+                        solution_tmp_ = local_scheme_0_.empty_solution();
+                        for (JobPos pos = 0; pos < pos_1_best; ++pos) {
+                            JobId j = local_scheme_0_.jobs(solution)[pos];
+                            local_scheme_0_.append(solution_tmp_, j);
+                        }
+                        for (JobPos pos = pos_2_best; pos >= pos_1_best; --pos) {
+                            JobId j = local_scheme_0_.jobs(solution)[pos];
+                            local_scheme_0_.append(solution_tmp_, j);
+                        }
+                        for (JobPos pos = pos_2_best + 1; pos < local_scheme_0_.number_of_jobs(); ++pos) {
+                            JobId j = local_scheme_0_.jobs(solution)[pos];
                             local_scheme_0_.append(solution_tmp_, j);
                         }
                         solution = solution_tmp_;
@@ -272,6 +325,10 @@ public:
                         }
                     }
                     if (pos_best != -1) {
+                        //std::cout << "shift " << neighborhood
+                        //    << " pos_best " << pos_best
+                        //    << " pos_new_best " << pos_new_best
+                        //    << std::endl;
                         improved = true;
                         assert(c_best < local_scheme_0_.global_cost(solution));
                         // Apply best move.
@@ -350,7 +407,13 @@ private:
                 local_scheme_0_.global_cost_worst());
 
         // Loop through all new positions.
-        for (JobPos pos_new = 0; pos_new <= (JobPos)local_scheme_0_.jobs(solution).size() - size; ++pos_new) {
+        JobPos pos_min = std::max(
+                (JobPos)0,
+                pos - parameters_.shift_maximum_distance);
+        JobPos pos_max = std::min(
+                (JobPos)local_scheme_0_.jobs(solution).size() - size,
+                pos + parameters_.shift_maximum_distance);
+        for (JobPos pos_new = pos_min; pos_new <= pos_max; ++pos_new) {
             // Initialize solution_tmp_.
             Solution solution_tmp_ = solution_cur_;
 
@@ -397,7 +460,10 @@ private:
 
         // Loop through all pairs.
         for (JobPos pos_1 = 0; pos_1 < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos_1) {
-            for (JobPos pos_2 = pos_1 + 1; pos_2 < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos_2) {
+            JobPos pos_max = std::min(
+                    (JobPos)local_scheme_0_.jobs(solution).size(),
+                    pos_1 + parameters_.swap_maximum_distance);
+            for (JobPos pos_2 = pos_1 + 1; pos_2 < pos_max; ++pos_2) {
                 // Initialize solution_tmp_.
                 Solution solution_tmp_ = solution_cur_;
                 // Add remaining jobs.
@@ -412,6 +478,47 @@ private:
                     local_scheme_0_.append(solution_tmp_, j);
                 }
                 global_costs_swap_[pos_1][pos_2 - pos_1 - 1] = local_scheme_0_.global_cost(solution_tmp_);
+            }
+
+            // Add j1 to solution_cur_.
+            JobId j1 = local_scheme_0_.jobs(solution)[pos_1];
+            local_scheme_0_.append(solution_cur_, j1);
+        }
+    }
+
+    inline void compute_cost_reverse(const Solution& solution)
+    {
+        // Initialize solution_cur_.
+        Solution solution_cur_ = local_scheme_0_.empty_solution();
+        // Reset global_costs_swap_.
+        for (JobPos pos_1 = 0; pos_1 < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos_1)
+            std::fill(
+                    global_costs_swap_[pos_1].begin(),
+                    global_costs_swap_[pos_1].end(),
+                    local_scheme_0_.global_cost_worst());
+
+        // Loop through all pairs.
+        for (JobPos pos_1 = 0; pos_1 < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos_1) {
+            JobPos pos_max = std::min(
+                    (JobPos)local_scheme_0_.jobs(solution).size(),
+                    pos_1 + parameters_.reverse_maximum_length);
+            for (JobPos pos_2 = pos_1 + 2; pos_2 < pos_max; ++pos_2) {
+                // Initialize solution_tmp_.
+                Solution solution_tmp_ = solution_cur_;
+                // Add reverse sequence.
+                for (JobPos pos = pos_2; pos >= pos_1; --pos) {
+                    JobId j = local_scheme_0_.jobs(solution)[pos];
+                    // Add job to solution_tmp_.
+                    local_scheme_0_.append(solution_tmp_, j);
+                }
+                // Add remaining jobs.
+                for (JobPos pos = pos_2 + 1; pos < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos) {
+                    JobId j = local_scheme_0_.jobs(solution)[pos];
+                    // Add job to solution_tmp_.
+                    local_scheme_0_.append(solution_tmp_, j);
+                }
+                global_costs_swap_[pos_1][pos_2 - pos_1 - 1] = local_scheme_0_.global_cost(solution_tmp_);
+                //std::cout << to_string(global_costs_swap_[pos_1][pos_2 - pos_1 - 1]) << std::endl;
             }
 
             // Add j1 to solution_cur_.

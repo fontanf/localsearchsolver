@@ -61,8 +61,9 @@ public:
     {
         Parameters()
         {
-            sequencing_parameters.bloc_size_max = 3;
+            sequencing_parameters.shift_bloc_maximum_length = 3;
             sequencing_parameters.swap = true;
+            sequencing_parameters.reverse = true;
             sequencing_parameters.shuffle_neighborhood_order = true;
             sequencing_parameters.number_of_perturbations = 10;
         }
@@ -74,8 +75,7 @@ public:
             const Instance& instance,
             Parameters parameters):
         instance_(instance),
-        parameters_(parameters)
-    { }
+        parameters_(parameters) { }
 
     LocalScheme(const LocalScheme& local_scheme):
         LocalScheme(local_scheme.instance_, local_scheme.parameters_) { }

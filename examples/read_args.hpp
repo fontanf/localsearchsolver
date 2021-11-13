@@ -97,7 +97,7 @@ inline schedulingwithsdsttwt::LocalScheme::Parameters read_schedulingwithsdsttwt
     schedulingwithsdsttwt::LocalScheme::Parameters parameters;
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
-        ("bloc-size-max,b", boost::program_options::value<travellingsalesman::VertexPos>(&parameters.sequencing_parameters.bloc_size_max), "")
+        ("shift-bloc-maximum-size,b", boost::program_options::value<travellingsalesman::VertexPos>(&parameters.sequencing_parameters.shift_bloc_maximum_length), "")
         ("swap,s", boost::program_options::value<bool>(&parameters.sequencing_parameters.swap), "")
         ;
     boost::program_options::variables_map vm;
@@ -136,7 +136,7 @@ inline permutationflowshopschedulingtt::LocalScheme::Parameters read_permutation
     permutationflowshopschedulingtt::LocalScheme::Parameters parameters;
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
-        ("bloc-size-max,b", boost::program_options::value<travellingsalesman::VertexPos>(&parameters.sequencing_parameters.bloc_size_max), "")
+        ("shift-bloc-maximum-size,b", boost::program_options::value<travellingsalesman::VertexPos>(&parameters.sequencing_parameters.shift_bloc_maximum_length), "")
         ("swap,s", boost::program_options::value<bool>(&parameters.sequencing_parameters.swap), "")
         ;
     boost::program_options::variables_map vm;

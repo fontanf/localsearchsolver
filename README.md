@@ -30,8 +30,9 @@ Implemented algorithms:
 A specific implementation is also available for sequencing problems. The neighborhoods and perturbations are already implemented, it is only required to provide an `append(solution, j)` method to use them:
 * Perturbation: swap two blocs (double-bridge)
 * Local search neighborhoods:
-  * Shift a bloc of `k` consecutive jobs, `k = 1..3`
+  * Shift a bloc of `k` consecutive jobs, `k = 1..3` (or-opt)
   * Swap job `j1` and job `j2`
+  * Reverse the sequence between job `j1` and job `j2` (2-opt)
 
 ## Examples
 
