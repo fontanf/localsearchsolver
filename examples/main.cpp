@@ -188,7 +188,9 @@ int main(int argc, char *argv[])
         sequencing::LocalScheme<schedulingwithsdsttwt::LocalScheme> local_scheme(local_scheme_0, parameters_local_scheme_0.sequencing_parameters);
         auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
-            run_a_star_local_search(algorithm_args, local_scheme, info);
+            (algorithm_args[0] == "a_star_local_search")?
+            run_a_star_local_search(algorithm_args, local_scheme, info):
+            run_genetic_local_search(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))
             local_scheme.print(std::cout, solution_pool.best());
@@ -215,7 +217,9 @@ int main(int argc, char *argv[])
         sequencing::LocalScheme<permutationflowshopschedulingtt::LocalScheme> local_scheme(local_scheme_0, parameters_local_scheme_0.sequencing_parameters);
         auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
-            run_a_star_local_search(algorithm_args, local_scheme, info);
+            (algorithm_args[0] == "a_star_local_search")?
+            run_a_star_local_search(algorithm_args, local_scheme, info):
+            run_genetic_local_search(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))
             local_scheme.print(std::cout, solution_pool.best());

@@ -119,6 +119,64 @@ public:
         return local_scheme_0_.initial_solution(initial_solution_id, generator);
     }
 
+    /**
+     * Generate a new solution from two parent solutions using a crossover
+     * operator.
+     *
+     * The crossover applied is the OX crossover. It consists in selecting a
+     * random substring from the first parent, copying this substring into the
+     * child while leaving the rest of the positions empty, and finally
+     * completing the child’s missing positions circularly with the visits from
+     * the second parent, starting from the end cutting point.
+     *
+     * References:
+     * - "A simple and effective hybrid genetic search for the job sequencing
+     *   and tool switching problem" (Mecler et al., 2021)
+     *   https://doi.org/10.1016/j.cor.2020.105153
+     */
+    inline Solution crossover(
+            const Solution& solution_parent_1,
+            const Solution& solution_parent_2,
+            std::mt19937_64& generator)
+    {
+        JobPos n = local_scheme_0_.jobs(solution_parent_1).size();
+
+        std::vector<JobPos> edges = optimizationtools::bob_floyd<JobPos>(
+                2, n + 1, generator);
+        std::sort(edges.begin(), edges.end());
+
+        JobPos pos_1 = edges[0];
+        JobPos pos_2 = edges[1];
+
+        std::vector<uint8_t> in_substring(n, false);
+        for (JobPos pos = pos_1; pos < pos_2; ++pos) {
+            JobId j = local_scheme_0_.jobs(solution_parent_1)[pos];
+            in_substring[j] = true;
+        }
+
+        Solution solution = empty_solution();
+        for (JobPos pos = 0; pos < n; ++pos) {
+            if ((JobPos)local_scheme_0_.jobs(solution).size() == pos_1) {
+                for (JobPos p = pos_1; p < pos_2; ++p) {
+                    JobId j = local_scheme_0_.jobs(solution_parent_1)[p];
+                    local_scheme_0_.append(solution, j);
+                }
+            }
+            JobId j = local_scheme_0_.jobs(solution_parent_2)[pos];
+            if (in_substring[j])
+                continue;
+            local_scheme_0_.append(solution, j);
+        }
+        if ((JobPos)local_scheme_0_.jobs(solution).size() == pos_1) {
+            for (JobPos p = pos_1; p < pos_2; ++p) {
+                JobId j = local_scheme_0_.jobs(solution_parent_1)[p];
+                local_scheme_0_.append(solution, j);
+            }
+        }
+
+        return solution;
+    }
+
     /*
      * Solution properties.
      */
@@ -126,6 +184,40 @@ public:
     inline GlobalCost global_cost(const Solution& solution) const
     {
         return local_scheme_0_.global_cost(solution);
+    }
+
+    /**
+     * Return the distance between two solutions.
+     *
+     * The distance between two solutions (represented as job permutations) is
+     * defined as the number of different edges between them (broken-pairs
+     * distance).
+     *
+     * References:
+     * - "A simple and effective hybrid genetic search for the job sequencing
+     *   and tool switching problem" (Mecler et al., 2021)
+     *   https://doi.org/10.1016/j.cor.2020.105153
+     */
+    inline JobPos distance(
+            const Solution& solution_1,
+            const Solution& solution_2) const
+    {
+        JobPos n = local_scheme_0_.jobs(solution_1).size();
+        std::vector<JobId> next_1(n, -1);
+        for (JobPos pos = 0; pos < n - 1; ++pos) {
+            JobId j = local_scheme_0_.jobs(solution_1)[pos];
+            JobId j_next = local_scheme_0_.jobs(solution_1)[pos + 1];
+            next_1[j] = j_next;
+        }
+
+        JobPos d = 0;
+        for (JobPos pos = 0; pos < n - 1; ++pos) {
+            JobId j = local_scheme_0_.jobs(solution_2)[pos];
+            JobId j_next = local_scheme_0_.jobs(solution_2)[pos + 1];
+            if (j_next != next_1[j])
+                d++;
+        }
+        return d;
     }
 
     /*
