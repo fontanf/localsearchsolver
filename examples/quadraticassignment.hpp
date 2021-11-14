@@ -29,13 +29,13 @@ class LocalScheme
 
 public:
 
-    /** Global cost: <Facility number, Cost>; */
+    /** Global cost: <Number of facilities, Cost>; */
     using GlobalCost = std::tuple<FacilityId, Cost>;
 
     inline FacilityId&       number_of_facilities(GlobalCost& global_cost) const { return std::get<0>(global_cost); }
-    inline Cost&                        cost(GlobalCost& global_cost) const { return std::get<1>(global_cost); }
+    inline Cost&                             cost(GlobalCost& global_cost) const { return std::get<1>(global_cost); }
     inline FacilityId  number_of_facilities(const GlobalCost& global_cost) const { return std::get<0>(global_cost); }
-    inline Cost                   cost(const GlobalCost& global_cost) const { return std::get<1>(global_cost); }
+    inline Cost                        cost(const GlobalCost& global_cost) const { return std::get<1>(global_cost); }
 
     static GlobalCost global_cost_worst()
     {

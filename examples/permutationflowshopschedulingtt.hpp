@@ -26,7 +26,7 @@ class LocalScheme
 
 public:
 
-    /** Global cost: <Job number, Total tardiness>; */
+    /** Global cost: <Number of jobs, Total tardiness>; */
     using GlobalCost = std::tuple<JobId, Time>;
 
     inline JobId&       number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }

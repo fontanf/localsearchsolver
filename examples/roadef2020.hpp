@@ -27,7 +27,7 @@ class LocalScheme
 
 public:
 
-    /** Global cost: <Interventions, Conflicts, Overwork, Underwork, Cost>; */
+    /** Global cost: <Number of interventions, Number of conflicts, Overwork, Underwork, Cost>; */
     using GlobalCost = std::tuple<InterventionId, ExclusionId, Workload, Workload, Cost>;
 
     inline InterventionId&       number_of_interventions(GlobalCost& global_cost) { return std::get<0>(global_cost); }
