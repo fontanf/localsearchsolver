@@ -11,21 +11,23 @@ The algorithms of this repository are designed to get the best performances out 
 
 Still, more complex neighborhoods can be implemented if better performances are needed.
 
+All algorithm require the Local Scheme to implement: `GlobalCost`, `global_cost_worst`, `Solution`, `initial_solution`, `global_cost`, `local_search`
+
 Implemented algorithms:
 * Iterated local search
   * Single solution algorithm
   * Lowest implementation cost
   * Good for very large problems
-  * Requires: `GlobalCost`, `global_cost_worst`, `Solution`, `initial_solution`, `global_cost`, `Move`, `move_null`, `perturbations`, `apply_move` and `local_search`
+  * Additional requirements: `Move`, `move_null`, `perturbations`, `apply_move`
 * A\* local search
   * Multi-solution algorithm
   * Higher implementation cost
   * Higher quality solutions
-  * Requires: + `CompactSolution`, `compact_solution_hasher`, `solution2compact`, `compact2solution` and `move_hasher`
+  * Additional requirements: `CompactSolution`, `compact_solution_hasher`, `solution2compact`, `compact2solution`, `Move`, `move_null`, `move_hasher`, `perturbations`, `apply_move`
 * Genetic local search
   * Population-based algorithm
-  * Use A\* local search as sub-routine
-  * Requires: + `crossover` and `distance`
+  * Good when the ruggedness of a landscape is high
+  * Additional requirements: `crossover` and `distance`
 
 A specific implementation is also available for sequencing problems. The neighborhoods and perturbations are already implemented, it is only required to provide an `append(solution, j)` method to use them:
 * Perturbation: swap two blocs (double-bridge)

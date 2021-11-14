@@ -1,6 +1,8 @@
 #pragma once
 
-#include "localsearchsolver/a_star_local_search.hpp"
+#include "localsearchsolver/common.hpp"
+
+#include <thread>
 
 namespace localsearchsolver
 {
@@ -17,8 +19,6 @@ struct GeneticLocalSearchOptionalParameters
     Counter number_of_threads = 1;
     /** Maximum number of genetic iterations. */
     Counter maximum_number_of_genetic_iterations = -1;
-    /** Number of nodes of internal A* Local Search calls. */
-    Counter maximum_number_of_local_search_nodes = 1000;
     /** Maximum size of the population. */
     Counter population_size_max = 10;
     /** Ids of generated initial solutions. */
@@ -134,7 +134,7 @@ public:
         for (Counter solution_id = 0; solution_id < size(); ++solution_id) {
             const Solution& solution_2 = solutions_[solution_id].solution;
             if (local_scheme_.distance(solution, solution_2) == 0) {
-                std::cout << "New solution is identical to solution " << solution_id << "." << std::endl;
+                //std::cout << "New solution is identical to solution " << solution_id << "." << std::endl;
                 return;
             }
         }
@@ -142,7 +142,7 @@ public:
         // Add the new solution to the population.
         PopulationSolution population_solution;
         population_solution.solution = solution;
-        std::cout << "Add new solution." << std::endl;
+        //std::cout << "Add new solution." << std::endl;
         solutions_.push_back(population_solution);
         update_scores(generator);
 
@@ -153,7 +153,7 @@ public:
             for (Counter solution_id = 0; solution_id < size(); ++solution_id)
                 if (solutions_[solution_id].rank == size() - 1)
                     solution_id_worse = solution_id;
-            std::cout << "Remove solution " << solution_id_worse << "." << std::endl;
+            //std::cout << "Remove solution " << solution_id_worse << "." << std::endl;
             solutions_[solution_id_worse] = solutions_.back();
             solutions_.pop_back();
             update_scores(generator);
@@ -245,7 +245,7 @@ private:
                 });
         for (Counter pos = 0; pos < size(); ++pos)
             solutions_[ranks[pos]].rank = pos;
-        print();
+        //print();
     }
 
     /*
@@ -312,15 +312,10 @@ inline void genetic_local_search_worker(
         data.mutex.unlock();
 
         // Generate initial solution.
-        auto solution_initial = local_scheme.initial_solution(
+        auto solution = local_scheme.initial_solution(
                 data.parameters.initial_solution_ids[initial_solution_pos], generator);
         // Run A* Local Search.
-        AStarLocalSearchOptionalParameters<LocalScheme> parameters_astar;
-        parameters_astar.initial_solution_ids = {};
-        parameters_astar.initial_solutions.push_back(solution_initial);
-        parameters_astar.maximum_number_of_nodes = data.parameters.maximum_number_of_local_search_nodes;
-        auto output_astar = a_star_local_search(local_scheme, parameters_astar);
-        auto solution = output_astar.solution_pool.best();
+        local_scheme.local_search(solution, generator);
         //std::cout << to_string(local_scheme.global_cost(solution)) << std::endl;
 
         // Lock mutex since we will modify the shared structure.
@@ -376,17 +371,10 @@ inline void genetic_local_search_worker(
         data.mutex.unlock();
 
         // Crossover.
-        auto solution_child = local_scheme.crossover(
+        auto solution = local_scheme.crossover(
                 solution_parent_1, solution_parent_2, generator);
-
-        // Run A* Local Search.
-        AStarLocalSearchOptionalParameters<LocalScheme> parameters_astar;
-        parameters_astar.initial_solution_ids = {};
-        parameters_astar.initial_solutions.push_back(solution_child);
-        parameters_astar.maximum_number_of_nodes = data.parameters.maximum_number_of_local_search_nodes;
-        auto output_astar = a_star_local_search(local_scheme, parameters_astar);
-        auto solution = output_astar.solution_pool.best();
-        //std::cout << to_string(local_scheme.global_cost(solution)) << std::endl;
+        // Run Local Search.
+        local_scheme.local_search(solution, generator);
 
         // Lock mutex since we will modify the shared structure.
         data.mutex.lock();
