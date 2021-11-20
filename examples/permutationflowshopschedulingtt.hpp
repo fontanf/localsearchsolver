@@ -26,18 +26,15 @@ class LocalScheme
 
 public:
 
-    /** Global cost: <Number of jobs, Total tardiness>; */
-    using GlobalCost = std::tuple<JobId, Time>;
+    /** Global cost: <Total tardiness>; */
+    using GlobalCost = std::tuple<Time>;
 
-    inline JobId&       number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Time&       total_tardiness(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline JobId  number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Time  total_tardiness(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
+    inline Time&       total_tardiness(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline Time  total_tardiness(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
 
     static GlobalCost global_cost_worst()
     {
         return {
-            std::numeric_limits<JobId>::max(),
             std::numeric_limits<Time>::max(),
         };
     }
@@ -90,6 +87,7 @@ public:
     {
         Solution solution;
         solution.times = std::vector<Time>(instance_.number_of_machines(), 0);
+        solution.total_tardiness = std::numeric_limits<Time>::max();
         return solution;
     }
 
@@ -113,7 +111,6 @@ public:
     inline GlobalCost global_cost(const Solution& solution) const
     {
         return {
-            -solution.jobs.size(),
             solution.total_tardiness,
         };
     }
@@ -130,6 +127,8 @@ public:
             Solution& solution,
             JobId j) const
     {
+        if (solution.jobs.size() == 0)
+            solution.total_tardiness = 0;
         MachineId m = instance_.number_of_machines();
         // Update jobs.
         solution.jobs.push_back(j);

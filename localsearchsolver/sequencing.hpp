@@ -640,7 +640,7 @@ private:
             JobPos size)
     {
         // Initialize solution_cur_.
-        Solution solution_cur_ = local_scheme_0_.empty_solution();
+        solution_cur_ = local_scheme_0_.empty_solution();
         // Reset global_costs_shift_.
         std::fill(
                 global_costs_shift_.begin(),
@@ -656,21 +656,27 @@ private:
                 pos + parameters_.shift_maximum_distance);
         for (JobPos pos_new = pos_min; pos_new <= pos_max; ++pos_new) {
             // Initialize solution_tmp_.
-            Solution solution_tmp_ = solution_cur_;
+            solution_tmp_ = solution_cur_;
 
             // Add bloc to times_.
             for (JobPos p = pos; p < pos + size; ++p) {
                 // Add job to solution_tmp_.
                 JobId j = local_scheme_0_.jobs(solution)[p];
                 local_scheme_0_.append(solution_tmp_, j);
+                // Check early termination.
+                if (global_cost(solution_tmp_) >= global_cost(solution))
+                    break;
             }
 
-            // Add the remaining jobs to solution_tmp.
+                // Add the remaining jobs to solution_tmp.
             JobPos p0 = (pos_new < pos)? pos_new: pos_new + size;
             for (JobPos p = p0; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p) {
                 // Skip jobs from the previously added bloc.
                 if (pos <= p && p < pos + size)
                     continue;
+                // Check early termination.
+                if (global_cost(solution_tmp_) >= global_cost(solution))
+                    break;
                 // Add job to solution_tmp_.
                 JobId j = local_scheme_0_.jobs(solution)[p];
                 local_scheme_0_.append(solution_tmp_, j);
@@ -691,7 +697,7 @@ private:
     inline void compute_cost_swap(const Solution& solution)
     {
         // Initialize solution_cur_.
-        Solution solution_cur_ = local_scheme_0_.empty_solution();
+        solution_cur_ = local_scheme_0_.empty_solution();
         // Reset global_costs_swap_.
         for (JobPos pos_1 = 0; pos_1 < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos_1)
             std::fill(
@@ -706,7 +712,7 @@ private:
                     pos_1 + parameters_.swap_maximum_distance);
             for (JobPos pos_2 = pos_1 + 1; pos_2 < pos_max; ++pos_2) {
                 // Initialize solution_tmp_.
-                Solution solution_tmp_ = solution_cur_;
+                solution_tmp_ = solution_cur_;
                 // Add remaining jobs.
                 for (JobPos pos = pos_1; pos < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos) {
                     JobId j = local_scheme_0_.jobs(solution)[pos];
@@ -717,6 +723,9 @@ private:
                         j = local_scheme_0_.jobs(solution)[pos_1];
                     // Add job to solution_tmp_.
                     local_scheme_0_.append(solution_tmp_, j);
+                    // Check early termination.
+                    if (global_cost(solution_tmp_) >= global_cost(solution))
+                        break;
                 }
                 global_costs_swap_[pos_1][pos_2 - pos_1 - 1] = local_scheme_0_.global_cost(solution_tmp_);
             }
@@ -730,7 +739,7 @@ private:
     inline void compute_cost_reverse(const Solution& solution)
     {
         // Initialize solution_cur_.
-        Solution solution_cur_ = local_scheme_0_.empty_solution();
+        solution_cur_ = local_scheme_0_.empty_solution();
         // Reset global_costs_swap_.
         for (JobPos pos_1 = 0; pos_1 < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos_1)
             std::fill(
@@ -745,15 +754,21 @@ private:
                     pos_1 + parameters_.reverse_maximum_length);
             for (JobPos pos_2 = pos_1 + 2; pos_2 < pos_max; ++pos_2) {
                 // Initialize solution_tmp_.
-                Solution solution_tmp_ = solution_cur_;
+                solution_tmp_ = solution_cur_;
                 // Add reverse sequence.
                 for (JobPos pos = pos_2; pos >= pos_1; --pos) {
                     JobId j = local_scheme_0_.jobs(solution)[pos];
                     // Add job to solution_tmp_.
                     local_scheme_0_.append(solution_tmp_, j);
+                    // Check early termination.
+                    if (global_cost(solution_tmp_) >= global_cost(solution))
+                        break;
                 }
                 // Add remaining jobs.
                 for (JobPos pos = pos_2 + 1; pos < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos) {
+                    // Check early termination.
+                    if (global_cost(solution_tmp_) >= global_cost(solution))
+                        break;
                     JobId j = local_scheme_0_.jobs(solution)[pos];
                     // Add job to solution_tmp_.
                     local_scheme_0_.append(solution_tmp_, j);

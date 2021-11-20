@@ -28,18 +28,15 @@ class LocalScheme
 
 public:
 
-    /** Global cost: <Number of jobs, Total weighted tardiness>; */
-    using GlobalCost = std::tuple<JobId, Weight>;
+    /** Global cost: <Total weighted tardiness>; */
+    using GlobalCost = std::tuple<Weight>;
 
-    inline JobId&                  number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Weight&       total_weighted_tardiness(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline JobId             number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Weight  total_weighted_tardiness(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
+    inline Weight&       total_weighted_tardiness(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline Weight  total_weighted_tardiness(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
 
     static GlobalCost global_cost_worst()
     {
         return {
-            std::numeric_limits<JobId>::max(),
             std::numeric_limits<Weight>::max(),
         };
     }
@@ -52,7 +49,7 @@ public:
     {
         std::vector<JobId> jobs;
         Time time = 0;
-        Time total_weighted_tardiness = 0;
+        Weight total_weighted_tardiness = 0;
     };
 
     /*
@@ -90,6 +87,7 @@ public:
     inline Solution empty_solution() const
     {
         Solution solution;
+        solution.total_weighted_tardiness = std::numeric_limits<Weight>::max();
         return solution;
     }
 
@@ -113,7 +111,6 @@ public:
     inline GlobalCost global_cost(const Solution& solution) const
     {
         return {
-            -solution.jobs.size(),
             solution.total_weighted_tardiness,
         };
     }
@@ -130,11 +127,13 @@ public:
             Solution& solution,
             JobId j) const
     {
+        if (solution.jobs.size() == 0)
+            solution.total_weighted_tardiness = 0;
         // Update time.
-        if (solution.jobs.size() > 0) {
-            JobId j_prev = solution.jobs.back();
-            solution.time += instance_.setup_time(j_prev, j);
-        }
+        JobId j_prev = (solution.jobs.size() > 0)?
+            solution.jobs.back():
+            instance_.number_of_jobs();
+        solution.time += instance_.setup_time(j_prev, j);
         solution.time += instance_.job(j).processing_time;
         // Update jobs.
         solution.jobs.push_back(j);
