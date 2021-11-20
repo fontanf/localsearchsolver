@@ -8,6 +8,23 @@ using namespace localsearchsolver;
 namespace po = boost::program_options;
 
 template <typename LocalScheme>
+SolutionPool<LocalScheme> run_restarting_local_search(
+        const std::vector<std::string>& algorithm_args,
+        LocalScheme& local_scheme,
+        const optimizationtools::Info& info)
+{
+    std::vector<char*> algorithm_argv;
+    for (Counter i = 0; i < (Counter)algorithm_args.size(); ++i)
+        algorithm_argv.push_back(const_cast<char*>(algorithm_args[i].c_str()));
+
+    auto parameters = read_restarting_local_search_args<LocalScheme>(algorithm_argv);
+    parameters.info = info;
+    if (parameters.initial_solution_ids.empty())
+        parameters.initial_solution_ids = {0};
+    return restarting_local_search(local_scheme, parameters).solution_pool;
+}
+
+template <typename LocalScheme>
 SolutionPool<LocalScheme> run_iterated_local_search(
         const std::vector<std::string>& algorithm_args,
         LocalScheme& local_scheme,
@@ -129,7 +146,10 @@ int main(int argc, char *argv[])
             std::cout << instance << std::endl;
         auto parameters_local_scheme = read_knapsackwithconflicts_args(local_scheme_argv);
         knapsackwithconflicts::LocalScheme local_scheme(instance, parameters_local_scheme);
-        auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
+        auto solution_pool =
+            (algorithm_args[0] == "restarting_local_search")?
+            run_restarting_local_search(algorithm_args, local_scheme, info):
+            (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
             (algorithm_args[0] == "best_first_local_search")?
             run_best_first_local_search(algorithm_args, local_scheme, info):
@@ -144,7 +164,10 @@ int main(int argc, char *argv[])
             std::cout << instance << std::endl;
         auto parameters_local_scheme = read_multidimensionalmultiplechoiceknapsack_args(local_scheme_argv);
         multidimensionalmultiplechoiceknapsack::LocalScheme local_scheme(instance, parameters_local_scheme);
-        auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
+        auto solution_pool =
+            (algorithm_args[0] == "restarting_local_search")?
+            run_restarting_local_search(algorithm_args, local_scheme, info):
+            (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
             run_best_first_local_search(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
@@ -157,7 +180,10 @@ int main(int argc, char *argv[])
             std::cout << instance << std::endl;
         auto parameters_local_scheme = read_quadraticassignment_args(local_scheme_argv);
         quadraticassignment::LocalScheme local_scheme(instance, parameters_local_scheme);
-        auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
+        auto solution_pool =
+            (algorithm_args[0] == "restarting_local_search")?
+            run_restarting_local_search(algorithm_args, local_scheme, info):
+            (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
             (algorithm_args[0] == "best_first_local_search")?
             run_best_first_local_search(algorithm_args, local_scheme, info):
@@ -172,7 +198,10 @@ int main(int argc, char *argv[])
             std::cout << instance << std::endl;
         auto parameters_local_scheme = read_travellingsalesman_args(local_scheme_argv);
         travellingsalesman::LocalScheme local_scheme(instance, parameters_local_scheme);
-        auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
+        auto solution_pool =
+            (algorithm_args[0] == "restarting_local_search")?
+            run_restarting_local_search(algorithm_args, local_scheme, info):
+            (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
             run_best_first_local_search(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
@@ -186,7 +215,10 @@ int main(int argc, char *argv[])
         auto parameters_local_scheme_0 = read_schedulingwithsdsttwt_args(local_scheme_argv);
         schedulingwithsdsttwt::LocalScheme local_scheme_0(instance, parameters_local_scheme_0);
         sequencing::LocalScheme<schedulingwithsdsttwt::LocalScheme> local_scheme(local_scheme_0, parameters_local_scheme_0.sequencing_parameters);
-        auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
+        auto solution_pool =
+            (algorithm_args[0] == "restarting_local_search")?
+            run_restarting_local_search(algorithm_args, local_scheme, info):
+            (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
             (algorithm_args[0] == "best_first_local_search")?
             run_best_first_local_search(algorithm_args, local_scheme, info):
@@ -201,7 +233,10 @@ int main(int argc, char *argv[])
             std::cout << instance << std::endl;
         auto parameters_local_scheme = read_permutationflowshopschedulingmakespan_args(local_scheme_argv);
         permutationflowshopschedulingmakespan::LocalScheme local_scheme(instance, parameters_local_scheme);
-        auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
+        auto solution_pool =
+            (algorithm_args[0] == "restarting_local_search")?
+            run_restarting_local_search(algorithm_args, local_scheme, info):
+            (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
             run_best_first_local_search(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
@@ -215,7 +250,10 @@ int main(int argc, char *argv[])
         auto parameters_local_scheme_0 = read_permutationflowshopschedulingtt_args(local_scheme_argv);
         permutationflowshopschedulingtt::LocalScheme local_scheme_0(instance, parameters_local_scheme_0);
         sequencing::LocalScheme<permutationflowshopschedulingtt::LocalScheme> local_scheme(local_scheme_0, parameters_local_scheme_0.sequencing_parameters);
-        auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
+        auto solution_pool =
+            (algorithm_args[0] == "restarting_local_search")?
+            run_restarting_local_search(algorithm_args, local_scheme, info):
+            (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
             (algorithm_args[0] == "best_first_local_search")?
             run_best_first_local_search(algorithm_args, local_scheme, info):

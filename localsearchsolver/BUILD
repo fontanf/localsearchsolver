@@ -1,6 +1,7 @@
 cc_library(
         name = "localsearchsolver",
         hdrs = [
+                "restarting_local_search.hpp",
                 "iterated_local_search.hpp",
                 "best_first_local_search.hpp",
                 "genetic_local_search.hpp",
