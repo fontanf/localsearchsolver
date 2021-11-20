@@ -35,6 +35,7 @@ A specific implementation is also available for sequencing problems. The neighbo
   * Shift a bloc of `k` consecutive jobs, `k = 1..3` (or-opt)
   * Swap job `j1` and job `j2`
   * Reverse the sequence between job `j1` and job `j2` (2-opt)
+  * Shift and reverse a bloc of `k` consecutive jobs, `k = 2..3`
 
 ## Examples
 

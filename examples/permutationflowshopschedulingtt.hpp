@@ -61,8 +61,7 @@ public:
             sequencing_parameters.shift_bloc_maximum_length = 3;
             sequencing_parameters.swap = true;
             sequencing_parameters.reverse = true;
-            sequencing_parameters.shuffle_neighborhood_order = true;
-            sequencing_parameters.number_of_perturbations = 10;
+            sequencing_parameters.shift_reverse_bloc_maximum_length = 3;
         }
 
         sequencing::Parameters sequencing_parameters;
