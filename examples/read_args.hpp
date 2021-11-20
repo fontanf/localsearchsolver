@@ -138,6 +138,9 @@ inline permutationflowshopschedulingtt::LocalScheme::Parameters read_permutation
     desc.add_options()
         ("shift-bloc-maximum-size,b", boost::program_options::value<travellingsalesman::VertexPos>(&parameters.sequencing_parameters.shift_bloc_maximum_length), "")
         ("swap,s", boost::program_options::value<bool>(&parameters.sequencing_parameters.swap), "")
+        ("crossover-ox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_ox_weight), "")
+        ("crossover-sjox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_sjox_weight), "")
+        ("crossover-sbox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_sbox_weight), "")
         ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line((Counter)argv.size(), argv.data(), desc), vm);

@@ -28,6 +28,10 @@ struct Parameters
 
     bool shuffle_neighborhood_order = true;
     Counter number_of_perturbations = 10;
+
+    double crossover_ox_weight = 1;
+    double crossover_sjox_weight = 0;
+    double crossover_sbox_weight = 0;
 };
 
 template <typename LocalScheme0>
@@ -119,22 +123,46 @@ public:
         return local_scheme_0_.initial_solution(initial_solution_id, generator);
     }
 
+    inline Solution crossover(
+            const Solution& solution_parent_1,
+            const Solution& solution_parent_2,
+            std::mt19937_64& generator)
+    {
+        std::discrete_distribution<Counter> d_crossover({
+                parameters_.crossover_ox_weight,
+                parameters_.crossover_sjox_weight,
+                parameters_.crossover_sbox_weight,
+                });
+        Counter x = d_crossover(generator);
+        switch (x) {
+        case 0: {
+            return crossover_ox(solution_parent_1, solution_parent_2, generator);
+        } case 1: {
+            return crossover_sjox(solution_parent_1, solution_parent_2, generator);
+        } case 2: {
+            return crossover_sbox(solution_parent_1, solution_parent_2, generator);
+        } default: {
+            return crossover_ox(solution_parent_1, solution_parent_2, generator);
+        }
+        }
+    }
+
     /**
-     * Generate a new solution from two parent solutions using a crossover
+     * Generate a new solution from two parent solutions using the OX crossover
      * operator.
      *
-     * The crossover applied is the OX crossover. It consists in selecting a
-     * random substring from the first parent, copying this substring into the
-     * child while leaving the rest of the positions empty, and finally
-     * completing the child’s missing positions circularly with the visits from
-     * the second parent, starting from the end cutting point.
+     * The OX crossover operator consists in selecting a random substring from
+     * the first parent, copying this substring into the child while leaving
+     * the rest of the positions empty, and finally completing the child’s
+     * missing positions circularly with the visits from the second parent,
+     * starting from the end cutting point.
      *
      * References:
      * - "A simple and effective hybrid genetic search for the job sequencing
      *   and tool switching problem" (Mecler et al., 2021)
      *   https://doi.org/10.1016/j.cor.2020.105153
      */
-    inline Solution crossover(
+    inline Solution crossover_ox(
             const Solution& solution_parent_1,
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
@@ -172,6 +200,127 @@ public:
                 JobId j = local_scheme_0_.jobs(solution_parent_1)[p];
                 local_scheme_0_.append(solution, j);
             }
+        }
+
+        return solution;
+    }
+
+    /**
+     * Generate a new solution from two parent solutions using the SJOX
+     * crossover operator.
+     *
+     * References:
+     * - "Two new robust genetic algorithms for the flowshop scheduling
+     *   problem" (Ruiz et al., 2006)
+     *   https://doi.org/10.1016/j.omega.2004.12.006
+     */
+    inline Solution crossover_sjox(
+            const Solution& solution_parent_1,
+            const Solution& solution_parent_2,
+            std::mt19937_64& generator)
+    {
+        JobPos n = local_scheme_0_.jobs(solution_parent_1).size();
+
+        Solution solution = empty_solution();
+        std::vector<JobPos> positions(n, -1);
+
+        // Add jobs from parent_1 up to a given cut point.
+        std::uniform_int_distribution<JobPos> d_point(1, n);
+        JobPos pos_0 = d_point(generator);
+        for (JobPos pos = 0; pos < pos_0; ++pos) {
+            JobId j = local_scheme_0_.jobs(solution_parent_1)[pos];
+            positions[j] = pos;
+            local_scheme_0_.append(solution, j);
+        }
+
+        // Add jobs from parent_2 keeping the relative order.
+        for (JobPos pos = 0; pos < n; ++pos) {
+            // Add jobs which have the same positions in both parents.
+            for (;;) {
+                JobPos p = local_scheme_0_.jobs(solution).size();
+                if (p == n)
+                    break;
+                JobId j1 = local_scheme_0_.jobs(solution_parent_1)[p];
+                JobId j2 = local_scheme_0_.jobs(solution_parent_2)[p];
+                if (j1 == j2) {
+                    positions[j1] = p;
+                    local_scheme_0_.append(solution, j1);
+                    continue;
+                }
+                break;
+            }
+            JobId j = local_scheme_0_.jobs(solution_parent_2)[pos];
+            if (positions[j] != -1)
+                continue;
+            positions[j] = local_scheme_0_.jobs(solution).size();
+            local_scheme_0_.append(solution, j);
+        }
+
+        return solution;
+    }
+
+    /**
+     * Generate a new solution from two parent solutions using the SBOX
+     * crossover operator.
+     *
+     * References:
+     * - "Two new robust genetic algorithms for the flowshop scheduling
+     *   problem" (Ruiz et al., 2006)
+     *   https://doi.org/10.1016/j.omega.2004.12.006
+     */
+    inline Solution crossover_sbox(
+            const Solution& solution_parent_1,
+            const Solution& solution_parent_2,
+            std::mt19937_64& generator)
+    {
+        JobPos n = local_scheme_0_.jobs(solution_parent_1).size();
+
+        Solution solution = empty_solution();
+        std::vector<JobPos> positions(n, -1);
+
+        // Add jobs from parent_1 up to a given cut point.
+        std::uniform_int_distribution<JobPos> d_point(1, n);
+        JobPos pos_0 = d_point(generator);
+        for (JobPos pos = 0; pos < pos_0; ++pos) {
+            JobId j = local_scheme_0_.jobs(solution_parent_1)[pos];
+            positions[j] = pos;
+            local_scheme_0_.append(solution, j);
+        }
+
+        // Add jobs from parent_2 keeping the relative order.
+        for (JobPos pos = 0; pos < n; ++pos) {
+            // Add jobs which have the same positions in both parents.
+            for (;;) {
+                JobPos p = local_scheme_0_.jobs(solution).size();
+                if (p == n)
+                    break;
+                JobId j1 = local_scheme_0_.jobs(solution_parent_1)[p];
+                JobId j2 = local_scheme_0_.jobs(solution_parent_2)[p];
+                if (p <= n - 1) {
+                    JobId j1_next = local_scheme_0_.jobs(solution_parent_1)[p + 1];
+                    JobId j2_next = local_scheme_0_.jobs(solution_parent_2)[p + 1];
+                    if (j1 == j2 && j1_next == j2_next) {
+                        positions[j1] = p;
+                        local_scheme_0_.append(solution, j1);
+                        continue;
+                    }
+                }
+                if (p >= 1) {
+                    JobId j1_prev = local_scheme_0_.jobs(solution_parent_1)[p - 1];
+                    JobId j2_prev = local_scheme_0_.jobs(solution_parent_2)[p - 1];
+                    if (j1 == j2 && j1_prev == j2_prev) {
+                        positions[j1] = p;
+                        local_scheme_0_.append(solution, j1);
+                        continue;
+                    }
+                }
+                break;
+            }
+            JobId j = local_scheme_0_.jobs(solution_parent_2)[pos];
+            if (positions[j] != -1)
+                continue;
+            positions[j] = local_scheme_0_.jobs(solution).size();
+            local_scheme_0_.append(solution, j);
         }
 
         return solution;

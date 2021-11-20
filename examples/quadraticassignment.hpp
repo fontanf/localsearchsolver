@@ -179,7 +179,7 @@ public:
             free_locations.add(location_id);
 
         // If a facility is assigned to the same location in both parent
-        // solutions, kepp it assigned to the same location in the child
+        // solutions, keep it assigned to the same location in the child
         // solution.
         for (FacilityId facility_id: facilities_) {
             LocationId location_id_1 = solution_parent_1.locations[facility_id];
