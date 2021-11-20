@@ -233,33 +233,35 @@ public:
     void display_init(optimizationtools::Info& info)
     {
         VER(info,
-                "----------------------------------------------------------------------" << std::endl
-                << std::left << std::setw(16) << "Time"
-                << std::left << std::setw(40) << "Value"
-                << std::left << std::setw(32) << "Comment"
-                << std::endl
-                << "----------------------------------------------------------------------" << std::endl
-                );
+                std::setw(10) << "Time"
+                << std::setw(40) << "Value"
+                << std::setw(40) << "Comment" << std::endl
+                << std::setw(10) << "----"
+                << std::setw(40) << "-----"
+                << std::setw(40) << "-------" << std::endl);
     }
 
     void display(const std::stringstream& ss, optimizationtools::Info& info)
     {
         double t = info.elapsed_time();
         VER(info,
-                std::left << std::setw(16) << t
-                << std::left << std::setw(40) << to_string(scheme_.global_cost(best()))
-                << std::left << std::setw(32) << ss.str()
+                std::setw(10) << std::fixed << std::setprecision(3) << t
+                << std::setw(40) << to_string(scheme_.global_cost(best()))
+                << std::setw(40) << ss.str()
                 << std::endl);
     }
 
     void display_end(optimizationtools::Info& info)
     {
         double t = info.elapsed_time();
+        VER(info, std::defaultfloat
+                << std::endl
+                << "Final statistics" << std::endl
+                << "----------------" << std::endl
+                << "Value:                      " << to_string(scheme_.global_cost(best())) << std::endl
+                << "Time:                       " << t << std::endl);
+
         std::string sol_str = "Solution";
-        VER(info,
-                "---" << std::endl
-                << "Time: " << t << std::endl
-                << "Value: " << to_string(scheme_.global_cost(*solutions_.begin())) << std::endl);
         PUT(info, sol_str, "Time", t);
         PUT(info, sol_str, "Value", to_string(scheme_.global_cost(*solutions_.begin())));
         info.write_json_output();

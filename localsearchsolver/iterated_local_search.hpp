@@ -22,6 +22,8 @@ struct IteratedLocalSearchOptionalParameters
     std::vector<Counter> initial_solution_ids = {0};
     /** User-provided initial solutions. */
     std::vector<Solution> initial_solutions;
+    /** Maximum size of the solution pool. */
+    Counter maximum_size_of_the_solution_pool = 1;
     /** Seed. */
     Seed seed = 0;
     /** Callback function called when a new best solution is found. */
@@ -36,8 +38,9 @@ struct IteratedLocalSearchOutput
 {
     /** Constructor. */
     IteratedLocalSearchOutput(
-            const LocalScheme& local_scheme):
-        solution_pool(local_scheme, 1) { }
+            const LocalScheme& local_scheme,
+            Counter maximum_size_of_the_solution_pool):
+        solution_pool(local_scheme, maximum_size_of_the_solution_pool) { }
 
     /** Solution pool. */
     SolutionPool<LocalScheme> solution_pool;
@@ -62,13 +65,34 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
     typedef typename LocalScheme::Solution Solution;
     typedef typename LocalScheme::Move Move;
 
+    // Initial display.
+    VER(parameters.info,
+               "=======================================" << std::endl
+            << "          Local Search Solver          " << std::endl
+            << "=======================================" << std::endl
+            << std::endl
+            << "Algorithm" << std::endl
+            << "---------" << std::endl
+            << "Iterated Local Search" << std::endl
+            << std::endl
+            << "Parameters" << std::endl
+            << "----------" << std::endl
+            << "Maximum number of iterations:    " << parameters.maximum_number_of_iterations << std::endl
+            << "Seed:                            " << parameters.seed << std::endl
+            << "Maximum size of the pool:        " << parameters.maximum_size_of_the_solution_pool << std::endl
+            << "Time limit:                      " << parameters.info.time_limit << std::endl
+            << std::endl
+       );
+
     auto move_compare = [](const Move& move_1, const Move& move_2) -> bool
     {
         return move_1.global_cost < move_2.global_cost;
     };
 
     //std::cout << "iterated_local_search start" << std::endl;
-    IteratedLocalSearchOutput<LocalScheme> output(local_scheme);
+    IteratedLocalSearchOutput<LocalScheme> output(
+            local_scheme,
+            parameters.maximum_size_of_the_solution_pool);
     output.solution_pool.display_init(parameters.info);
 
     std::mt19937_64 generator(parameters.seed);

@@ -64,7 +64,7 @@ inline GeneticLocalSearchOptionalParameters<LocalScheme> read_genetic_local_sear
         ("seed,s", boost::program_options::value<Seed>(&parameters.seed), "")
         (",t", boost::program_options::value<Seed>(&parameters.number_of_threads), "")
         (",i", boost::program_options::value<std::vector<Counter>>(&parameters.initial_solution_ids)->multitoken(), "")
-        (",s", boost::program_options::value<Counter>(&parameters.population_size_max), "")
+        (",s", boost::program_options::value<Counter>(&parameters.maximum_size_of_the_population), "")
         ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line((Counter)argv.size(), argv.data(), desc), vm);

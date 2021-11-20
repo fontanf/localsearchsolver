@@ -18,13 +18,15 @@ struct GeneticLocalSearchOptionalParameters
     /** Number of threads. */
     Counter number_of_threads = 1;
     /** Maximum number of genetic iterations. */
-    Counter maximum_number_of_genetic_iterations = -1;
+    Counter maximum_number_of_iterations = -1;
     /** Maximum size of the population. */
-    Counter population_size_max = 10;
+    Counter maximum_size_of_the_population = 10;
     /** Ids of generated initial solutions. */
     std::vector<Counter> initial_solution_ids = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     /** User-provided initial solutions. */
     std::vector<Solution> initial_solutions;
+    /** Maximum size of the solution pool. */
+    Counter maximum_size_of_the_solution_pool = 1;
     /** Seed. */
     Seed seed = 0;
     /** Callback function called when a new best solution is found. */
@@ -38,13 +40,15 @@ template <typename LocalScheme>
 struct GeneticLocalSearchOutput
 {
     /** Constructor. */
-    GeneticLocalSearchOutput(const LocalScheme& local_scheme):
-        solution_pool(local_scheme, 1) { }
+    GeneticLocalSearchOutput(
+            const LocalScheme& local_scheme,
+            Counter maximum_size_of_the_solution_pool):
+        solution_pool(local_scheme, maximum_size_of_the_solution_pool) { }
 
     /** Solution pool. */
     SolutionPool<LocalScheme> solution_pool;
     /** Number of genetic iterations. */
-    Counter number_of_genetic_iterations = 0;
+    Counter number_of_iterations = 0;
 };
 
 template <typename LocalScheme>
@@ -74,9 +78,9 @@ class Population
 public:
 
     /** Constructor. */
-    Population(const LocalScheme& local_scheme, Counter population_size_max):
+    Population(const LocalScheme& local_scheme, Counter maximum_size_of_the_population):
         local_scheme_(local_scheme),
-        population_size_max_(population_size_max)
+        maximum_size_of_the_population_(maximum_size_of_the_population)
     { }
 
     /** Destructor. */
@@ -148,7 +152,7 @@ public:
 
         // If the maximum population size is exceeded, remove the worst
         // solution.
-        if (size() > population_size_max_) {
+        if (size() > maximum_size_of_the_population_) {
             Counter solution_id_worse = -1;
             for (Counter solution_id = 0; solution_id < size(); ++solution_id)
                 if (solutions_[solution_id].rank == size() - 1)
@@ -256,7 +260,7 @@ private:
     const LocalScheme& local_scheme_;
 
     /** Maximum size of the population. */
-    Counter population_size_max_ = -1;
+    Counter maximum_size_of_the_population_ = -1;
 
     /** Set of solutions. */
     std::vector<PopulationSolution> solutions_;
@@ -272,7 +276,7 @@ struct GeneticLocalSearchData
             GeneticLocalSearchOutput<LocalScheme>& output):
         local_scheme(local_scheme),
         parameters(parameters),
-        population(local_scheme, parameters.population_size_max),
+        population(local_scheme, parameters.maximum_size_of_the_population),
         output(output)
         {  }
 
@@ -347,9 +351,9 @@ inline void genetic_local_search_worker(
         data.mutex.lock();
 
         // Check genetic iteration limit.
-        if (data.parameters.maximum_number_of_genetic_iterations != -1
-                && data.output.number_of_genetic_iterations
-                >= data.parameters.maximum_number_of_genetic_iterations) {
+        if (data.parameters.maximum_number_of_iterations != -1
+                && data.output.number_of_iterations
+                >= data.parameters.maximum_number_of_iterations) {
             data.mutex.unlock();
             return;
         }
@@ -360,8 +364,8 @@ inline void genetic_local_search_worker(
             continue;
         }
 
-        Counter number_of_genetic_iterations = data.output.number_of_genetic_iterations;
-        data.output.number_of_genetic_iterations++;
+        Counter number_of_iterations = data.output.number_of_iterations;
+        data.output.number_of_iterations++;
 
         // Draw parent solutions.
         auto p = data.population.get_parents(generator);
@@ -384,7 +388,7 @@ inline void genetic_local_search_worker(
         if (local_scheme.global_cost(data.output.solution_pool.worst())
                 > local_scheme.global_cost(solution)) {
             std::stringstream ss;
-            ss << "iteration " << number_of_genetic_iterations
+            ss << "iteration " << number_of_iterations
                 << " (thread " << thread_id << ")";
             int res = data.output.solution_pool.add(solution, ss, data.parameters.info);
             if (res == 2) {
@@ -403,7 +407,29 @@ inline GeneticLocalSearchOutput<LocalScheme> genetic_local_search(
         LocalScheme& local_scheme,
         GeneticLocalSearchOptionalParameters<LocalScheme> parameters)
 {
-    GeneticLocalSearchOutput<LocalScheme> output(local_scheme);
+    // Initial display.
+    VER(parameters.info,
+               "=======================================" << std::endl
+            << "          Local Search Solver          " << std::endl
+            << "=======================================" << std::endl
+            << std::endl
+            << "Algorithm" << std::endl
+            << "---------" << std::endl
+            << "Genetic Local Search" << std::endl
+            << std::endl
+            << "Parameters" << std::endl
+            << "----------" << std::endl
+            << "Maximum size of the population:  " << parameters.maximum_size_of_the_population << std::endl
+            << "Maximum number of iterations:    " << parameters.maximum_number_of_iterations << std::endl
+            << "Seed:                            " << parameters.seed << std::endl
+            << "Maximum size of the pool:        " << parameters.maximum_size_of_the_solution_pool << std::endl
+            << "Time limit:                      " << parameters.info.time_limit << std::endl
+            << std::endl
+       );
+
+    GeneticLocalSearchOutput<LocalScheme> output(
+            local_scheme,
+            parameters.maximum_size_of_the_solution_pool);
     output.solution_pool.display_init(parameters.info);
     std::vector<std::thread> threads;
     GeneticLocalSearchData<LocalScheme> data(local_scheme, parameters, output);

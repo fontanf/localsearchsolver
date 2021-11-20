@@ -26,6 +26,8 @@ struct BestFirstLocalSearchOptionalParameters
     std::vector<Counter> initial_solution_ids = {0};
     /** User-provided initial solutions. */
     std::vector<Solution> initial_solutions;
+    /** Maximum size of the solution pool. */
+    Counter maximum_size_of_the_solution_pool = 1;
     /** Seed. */
     Seed seed = 0;
     /** Callback function called when a new best solution is found. */
@@ -40,8 +42,9 @@ struct BestFirstLocalSearchOutput
 {
     /** Constructor. */
     BestFirstLocalSearchOutput(
-            const LocalScheme& local_scheme):
-        solution_pool(local_scheme, 1) { }
+            const LocalScheme& local_scheme,
+            Counter maximum_size_of_the_solution_pool):
+        solution_pool(local_scheme, maximum_size_of_the_solution_pool) { }
 
     /** Solution pool. */
     SolutionPool<LocalScheme> solution_pool;
@@ -426,8 +429,29 @@ inline BestFirstLocalSearchOutput<LocalScheme> best_first_local_search(
         LocalScheme& local_scheme,
         BestFirstLocalSearchOptionalParameters<LocalScheme> parameters)
 {
+    // Initial display.
+    VER(parameters.info,
+               "=======================================" << std::endl
+            << "          Local Search Solver          " << std::endl
+            << "=======================================" << std::endl
+            << std::endl
+            << "Algorithm" << std::endl
+            << "---------" << std::endl
+            << "Best First Local Search" << std::endl
+            << std::endl
+            << "Parameters" << std::endl
+            << "----------" << std::endl
+            << "Maximum number of nodes:     " << parameters.maximum_number_of_nodes << std::endl
+            << "Seed:                        " << parameters.seed << std::endl
+            << "Maximum size of the pool:    " << parameters.maximum_size_of_the_solution_pool << std::endl
+            << "Time limit:                  " << parameters.info.time_limit << std::endl
+            << std::endl
+       );
+
     //std::cout << "best_first_local_search start" << std::endl;
-    BestFirstLocalSearchOutput<LocalScheme> output(local_scheme);
+    BestFirstLocalSearchOutput<LocalScheme> output(
+            local_scheme,
+            parameters.maximum_size_of_the_solution_pool);
     output.solution_pool.display_init(parameters.info);
     std::vector<std::thread> threads;
     std::vector<std::shared_ptr<BestFirstLocalSearchData<LocalScheme>>> datas;
