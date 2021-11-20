@@ -25,7 +25,7 @@ SolutionPool<LocalScheme> run_iterated_local_search(
 }
 
 template <typename LocalScheme>
-SolutionPool<LocalScheme> run_a_star_local_search(
+SolutionPool<LocalScheme> run_best_first_local_search(
         const std::vector<std::string>& algorithm_args,
         LocalScheme& local_scheme,
         const optimizationtools::Info& info)
@@ -34,11 +34,11 @@ SolutionPool<LocalScheme> run_a_star_local_search(
     for (Counter i = 0; i < (Counter)algorithm_args.size(); ++i)
         algorithm_argv.push_back(const_cast<char*>(algorithm_args[i].c_str()));
 
-    auto parameters = read_a_star_local_search_args<LocalScheme>(algorithm_argv);
+    auto parameters = read_best_first_local_search_args<LocalScheme>(algorithm_argv);
     parameters.info = info;
     if (parameters.initial_solution_ids.empty())
         parameters.initial_solution_ids = std::vector<Counter>(parameters.number_of_threads_2, 0);
-    return a_star_local_search(local_scheme, parameters).solution_pool;
+    return best_first_local_search(local_scheme, parameters).solution_pool;
 }
 
 template <typename LocalScheme>
@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
     std::string output_path = "";
     std::string certificate_path = "";
     std::string format = "";
-    std::string algorithm = "a_star_local_search";
+    std::string algorithm = "best_first_local_search";
     std::string local_scheme_parameters = "";
     double time_limit = std::numeric_limits<double>::infinity();
     Seed seed = 0;
@@ -131,8 +131,8 @@ int main(int argc, char *argv[])
         knapsackwithconflicts::LocalScheme local_scheme(instance, parameters_local_scheme);
         auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
-            (algorithm_args[0] == "a_star_local_search")?
-            run_a_star_local_search(algorithm_args, local_scheme, info):
+            (algorithm_args[0] == "best_first_local_search")?
+            run_best_first_local_search(algorithm_args, local_scheme, info):
             run_genetic_local_search(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))
@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
         multidimensionalmultiplechoiceknapsack::LocalScheme local_scheme(instance, parameters_local_scheme);
         auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
-            run_a_star_local_search(algorithm_args, local_scheme, info);
+            run_best_first_local_search(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))
             local_scheme.print(std::cout, solution_pool.best());
@@ -159,8 +159,8 @@ int main(int argc, char *argv[])
         quadraticassignment::LocalScheme local_scheme(instance, parameters_local_scheme);
         auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
-            (algorithm_args[0] == "a_star_local_search")?
-            run_a_star_local_search(algorithm_args, local_scheme, info):
+            (algorithm_args[0] == "best_first_local_search")?
+            run_best_first_local_search(algorithm_args, local_scheme, info):
             run_genetic_local_search(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))
@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
         travellingsalesman::LocalScheme local_scheme(instance, parameters_local_scheme);
         auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
-            run_a_star_local_search(algorithm_args, local_scheme, info);
+            run_best_first_local_search(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))
             local_scheme.print(std::cout, solution_pool.best());
@@ -188,8 +188,8 @@ int main(int argc, char *argv[])
         sequencing::LocalScheme<schedulingwithsdsttwt::LocalScheme> local_scheme(local_scheme_0, parameters_local_scheme_0.sequencing_parameters);
         auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
-            (algorithm_args[0] == "a_star_local_search")?
-            run_a_star_local_search(algorithm_args, local_scheme, info):
+            (algorithm_args[0] == "best_first_local_search")?
+            run_best_first_local_search(algorithm_args, local_scheme, info):
             run_genetic_local_search(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))
@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
         permutationflowshopschedulingmakespan::LocalScheme local_scheme(instance, parameters_local_scheme);
         auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
-            run_a_star_local_search(algorithm_args, local_scheme, info);
+            run_best_first_local_search(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))
             local_scheme.print(std::cout, solution_pool.best());
@@ -217,8 +217,8 @@ int main(int argc, char *argv[])
         sequencing::LocalScheme<permutationflowshopschedulingtt::LocalScheme> local_scheme(local_scheme_0, parameters_local_scheme_0.sequencing_parameters);
         auto solution_pool = (algorithm_args[0] == "iterated_local_search")?
             run_iterated_local_search(algorithm_args, local_scheme, info):
-            (algorithm_args[0] == "a_star_local_search")?
-            run_a_star_local_search(algorithm_args, local_scheme, info):
+            (algorithm_args[0] == "best_first_local_search")?
+            run_best_first_local_search(algorithm_args, local_scheme, info):
             run_genetic_local_search(algorithm_args, local_scheme, info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))

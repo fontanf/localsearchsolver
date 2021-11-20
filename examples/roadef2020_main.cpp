@@ -97,14 +97,14 @@ int main(int argc, char *argv[])
     LocalScheme local_scheme(instance, parameters_local_scheme);
 
     // Run A*.
-    AStarLocalSearchOptionalParameters<LocalScheme> parameters_a_star;
-    parameters_a_star.info.set_verbose(true);
-    parameters_a_star.info.set_time_limit(info.remaining_time());
-    parameters_a_star.number_of_threads_1 = number_of_threads_1;
-    parameters_a_star.number_of_threads_2 = number_of_threads_2;
-    parameters_a_star.initial_solution_ids = std::vector<Counter>(
+    BestFirstLocalSearchOptionalParameters<LocalScheme> parameters_best_first_local_search;
+    parameters_best_first_local_search.info.set_verbose(true);
+    parameters_best_first_local_search.info.set_time_limit(info.remaining_time());
+    parameters_best_first_local_search.number_of_threads_1 = number_of_threads_1;
+    parameters_best_first_local_search.number_of_threads_2 = number_of_threads_2;
+    parameters_best_first_local_search.initial_solution_ids = std::vector<Counter>(
             number_of_threads_2, initial_solution_id);
-    parameters_a_star.new_solution_callback
+    parameters_best_first_local_search.new_solution_callback
         = [&local_scheme, &info](
                 const LocalScheme::Solution& solution)
         {
@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
                 }
             }
         };
-    auto output = a_star_local_search(local_scheme, parameters_a_star);
+    auto output = best_first_local_search(local_scheme, parameters_best_first_local_search);
 
     const LocalScheme::Solution& solution = output.solution_pool.best();
     double t = info.elapsed_time();

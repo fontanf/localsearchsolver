@@ -1,7 +1,7 @@
 #pragma once
 
 #include "localsearchsolver/iterated_local_search.hpp"
-#include "localsearchsolver/a_star_local_search.hpp"
+#include "localsearchsolver/best_first_local_search.hpp"
 #include "localsearchsolver/genetic_local_search.hpp"
 #include "localsearchsolver/sequencing.hpp"
 
@@ -32,10 +32,10 @@ inline IteratedLocalSearchOptionalParameters<LocalScheme> read_iterated_local_se
 }
 
 template <typename LocalScheme>
-inline AStarLocalSearchOptionalParameters<LocalScheme> read_a_star_local_search_args(
+inline BestFirstLocalSearchOptionalParameters<LocalScheme> read_best_first_local_search_args(
         const std::vector<char*> argv)
 {
-    AStarLocalSearchOptionalParameters<LocalScheme> parameters;
+    BestFirstLocalSearchOptionalParameters<LocalScheme> parameters;
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
         ("seed,s", boost::program_options::value<Seed>(&parameters.seed), "")
