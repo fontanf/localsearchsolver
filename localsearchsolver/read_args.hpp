@@ -41,6 +41,9 @@ inline IteratedLocalSearchOptionalParameters<LocalScheme> read_iterated_local_se
     desc.add_options()
         ("seed,s", boost::program_options::value<Seed>(&parameters.seed), "")
         (",i", boost::program_options::value<std::vector<Counter>>(&parameters.initial_solution_ids)->multitoken(), "")
+        ("maximum-number-of-restarts,r", boost::program_options::value<Counter>(&parameters.maximum_number_of_restarts), "")
+        ("maximum-number-of-iterations,n", boost::program_options::value<Counter>(&parameters.maximum_number_of_iterations), "")
+        ("minimum-number-of-perturbations,p", boost::program_options::value<Counter>(&parameters.minimum_number_of_perturbations), "")
         ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line((Counter)argv.size(), argv.data(), desc), vm);

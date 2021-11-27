@@ -386,10 +386,10 @@ inline void best_first_local_search_worker(
                 || local_scheme.global_cost(data.output.solution_pool.worst())
                 > local_scheme.global_cost(solution)) {
             std::stringstream ss;
-            ss << "node " << node_id
-                << " depth " << node_cur->depth
-                << " child " << node_cur->next_child_pos - 1
-                << " (thread " << thread_id << ")";
+            ss << "n" << node_id
+                << " d" << node_cur->depth
+                << " c" << node_cur->next_child_pos - 1
+                << " (t" << thread_id << ")";
             int res = data.output.solution_pool.add(solution, ss, data.parameters.info);
             if (res == 2) {
                 data.output.solution_pool.display(ss, data.parameters.info);
@@ -471,6 +471,8 @@ inline BestFirstLocalSearchOutput<LocalScheme> best_first_local_search(
         threads[thread_id].join();
 
     output.solution_pool.display_end(parameters.info);
+    //VER(parameters.info, "Number of nodes:            " << output.number_of_nodes << std::endl);
+    //PUT(parameters.info, "Algorithm", "NumberOfNodes", output.number_of_nodes);
     return output;
 }
 

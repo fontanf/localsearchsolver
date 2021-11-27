@@ -18,6 +18,19 @@ struct IteratedLocalSearchOptionalParameters
 
     /** Maximum number of iterations. */
     Counter maximum_number_of_iterations = -1;
+    /** Maximum number of restarts. */
+    Counter maximum_number_of_restarts = -1;
+    /**
+     * Minimum number of perturbation.
+     *
+     * In the literature, such a strategy is known as "Evolutionary Local
+     * Search"
+     *
+     * See "Evolutionary Local Search for the Super-Peer Selection Problem and
+     * the p-Hub Median Problem" (WolfPeter et Merz, 2007)
+     * https://doi.org/10.1007/978-3-540-75514-2_1
+     */
+    Counter minimum_number_of_perturbations = 1;
     /** Ids of generated initial solutions. */
     std::vector<Counter> initial_solution_ids = {0};
     /** User-provided initial solutions. */
@@ -46,6 +59,8 @@ struct IteratedLocalSearchOutput
     SolutionPool<LocalScheme> solution_pool;
     /** Number of iterations. */
     Counter number_of_iterations = 0;
+    /** Number of restarts. */
+    Counter number_of_restarts = 0;
 };
 
 template <typename LocalScheme>
@@ -77,10 +92,12 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
             << std::endl
             << "Parameters" << std::endl
             << "----------" << std::endl
-            << "Maximum number of iterations:    " << parameters.maximum_number_of_iterations << std::endl
-            << "Seed:                            " << parameters.seed << std::endl
-            << "Maximum size of the pool:        " << parameters.maximum_size_of_the_solution_pool << std::endl
-            << "Time limit:                      " << parameters.info.time_limit << std::endl
+            << "Maximum number of iterations:     " << parameters.maximum_number_of_iterations << std::endl
+            << "Maximum number of restarts:       " << parameters.maximum_number_of_restarts << std::endl
+            << "Minimum number of perturbations:  " << parameters.minimum_number_of_perturbations << std::endl
+            << "Seed:                             " << parameters.seed << std::endl
+            << "Maximum size of the pool:         " << parameters.maximum_size_of_the_solution_pool << std::endl
+            << "Time limit:                       " << parameters.info.time_limit << std::endl
             << std::endl
        );
 
@@ -97,88 +114,125 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
 
     std::mt19937_64 generator(parameters.seed);
 
-    // Generate initial solutions.
-    Counter number_of_initial_solutions
-        = (Counter)parameters.initial_solution_ids.size()
-        + (Counter)parameters.initial_solutions.size();
-    Solution solution_cur;
-    for (Counter initial_solution_pos = 0;
-            initial_solution_pos < number_of_initial_solutions;
-            initial_solution_pos++) {
-
-        auto solution_tmp = (initial_solution_pos < (Counter)parameters.initial_solution_ids.size())?
-            local_scheme.initial_solution(parameters.initial_solution_ids[initial_solution_pos], generator):
-            parameters.initial_solutions[initial_solution_pos - (Counter)parameters.initial_solution_ids.size()];
-        local_scheme.local_search(solution_tmp, generator);
-
-        // Check for a new best solution.
-        if (output.solution_pool.size() == 0
-                || local_scheme.global_cost(output.solution_pool.worst())
-                > local_scheme.global_cost(solution_tmp)) {
-            std::stringstream ss;
-            ss << "initial solution " << initial_solution_pos;
-            output.solution_pool.add(solution_tmp, ss, parameters.info);
-            output.solution_pool.display(ss, parameters.info);
-            parameters.new_solution_callback(solution_tmp);
-        }
-
-        if (initial_solution_pos == 0
-                || local_scheme.global_cost(solution_cur)
-                > local_scheme.global_cost(solution_tmp)) {
-            solution_cur = solution_tmp;
-        }
-    }
-
-    Counter perturbation_id = 0;
-    std::vector<Move> perturbations = local_scheme.perturbations(solution_cur, generator);
-    auto global_cost_cur = local_scheme.global_cost(solution_cur);
-    for (Move& move: perturbations)
-        move.global_cost = update_move_cost(move.global_cost, global_cost_cur);
-    // Sort moves.
-    std::sort(perturbations.begin(), perturbations.end(), move_compare);
-    for (output.number_of_iterations = 0;; ++output.number_of_iterations) {
-
-        // Check end.
+    std::vector<Solution> initial_solutions;
+    for (output.number_of_restarts = 1;; output.number_of_restarts++) {
+        // Check maximum number of restarts.
+        if (parameters.maximum_number_of_restarts >= 0
+                && output.number_of_restarts > parameters.maximum_number_of_restarts)
+            break;
+        // Check time.
         if (parameters.info.needs_to_end())
             break;
 
-        if (perturbation_id >= (Counter)perturbations.size())
-            break;
+        // Generate initial solutions.
+        if (initial_solutions.empty()) {
+            Counter number_of_initial_solutions
+                = (Counter)parameters.initial_solution_ids.size()
+                + (Counter)parameters.initial_solutions.size();
+            Solution solution_cur;
+            for (Counter initial_solution_pos = 0;
+                    initial_solution_pos < number_of_initial_solutions;
+                    initial_solution_pos++) {
 
-        // Apply perturbation and local search.
-        Solution solution_tmp = solution_cur;
-        auto move = perturbations[perturbation_id];
-        local_scheme.apply_move(solution_tmp, move);
-        local_scheme.local_search(solution_tmp, generator, move);
+                auto solution_tmp = (initial_solution_pos < (Counter)parameters.initial_solution_ids.size())?
+                    local_scheme.initial_solution(parameters.initial_solution_ids[initial_solution_pos], generator):
+                    parameters.initial_solutions[initial_solution_pos - (Counter)parameters.initial_solution_ids.size()];
+                local_scheme.local_search(solution_tmp, generator);
 
-        // Check for a new best solution.
-        if (output.solution_pool.size() == 0
-                || local_scheme.global_cost(output.solution_pool.worst())
-                > local_scheme.global_cost(solution_tmp)) {
-            std::stringstream ss;
-            ss << "iteration " << output.number_of_iterations
-                << " child " << perturbation_id;
-            output.solution_pool.add(solution_tmp, ss, parameters.info);
-            output.solution_pool.display(ss, parameters.info);
-            parameters.new_solution_callback(solution_tmp);
+                // Check for a new best solution.
+                if (output.solution_pool.size() == 0
+                        || local_scheme.global_cost(output.solution_pool.worst())
+                        > local_scheme.global_cost(solution_tmp)) {
+                    std::stringstream ss;
+                    ss << "initial solution " << initial_solution_pos;
+                    output.solution_pool.add(solution_tmp, ss, parameters.info);
+                    output.solution_pool.display(ss, parameters.info);
+                    parameters.new_solution_callback(solution_tmp);
+                }
+
+                initial_solutions.push_back(solution_tmp);
+            }
+
+            std::sort(
+                    initial_solutions.begin(),
+                    initial_solutions.end(),
+                    [&local_scheme](const Solution& solution_1, const Solution& solution_2) -> bool
+                    {
+                        return local_scheme.global_cost(solution_1)
+                            > local_scheme.global_cost(solution_2);
+                    });
         }
 
-        if (local_scheme.global_cost(solution_cur)
-                > local_scheme.global_cost(solution_tmp)) {
-            solution_cur = solution_tmp;
-            perturbations = local_scheme.perturbations(solution_cur, generator);
-            perturbation_id = 0;
-            auto global_cost_cur = local_scheme.global_cost(solution_cur);
-            for (Move& move: perturbations)
-                move.global_cost = update_move_cost(move.global_cost, global_cost_cur);
-            // Sort moves.
-            std::sort(perturbations.begin(), perturbations.end(), move_compare);
-        } else {
+        Solution solution_cur = initial_solutions.back();
+        initial_solutions.pop_back();
+        Counter perturbation_id = 0;
+        std::vector<Move> perturbations = local_scheme.perturbations(solution_cur, generator);
+        auto global_cost_cur = local_scheme.global_cost(solution_cur);
+        for (Move& move: perturbations)
+            move.global_cost = update_move_cost(move.global_cost, global_cost_cur);
+        // Sort moves.
+        std::sort(perturbations.begin(), perturbations.end(), move_compare);
+        Counter depth = 1;
+        Solution solution_next = solution_cur;
+        bool better_found = false;
+        for (;; ++output.number_of_iterations) {
+
+            // Check end.
+            if (parameters.info.needs_to_end())
+                break;
+
+            if (perturbation_id >= parameters.minimum_number_of_perturbations
+                    && better_found) {
+                solution_cur = solution_next;
+                better_found = false;
+                perturbation_id = 0;
+                depth++;
+                perturbations = local_scheme.perturbations(solution_cur, generator);
+                auto global_cost_cur = local_scheme.global_cost(solution_cur);
+                for (Move& move: perturbations)
+                    move.global_cost = update_move_cost(move.global_cost, global_cost_cur);
+                // Sort moves.
+                std::sort(perturbations.begin(), perturbations.end(), move_compare);
+            }
+
+            if (perturbation_id >= (Counter)perturbations.size())
+                break;
+
+            // Apply perturbation and local search.
+            Solution solution_tmp = solution_cur;
+            auto move = perturbations[perturbation_id];
+            local_scheme.apply_move(solution_tmp, move);
+            local_scheme.local_search(solution_tmp, generator, move);
+
+            // Check for a new best solution.
+            if (output.solution_pool.size() == 0
+                    || local_scheme.global_cost(output.solution_pool.worst())
+                    > local_scheme.global_cost(solution_tmp)) {
+                std::stringstream ss;
+                ss << "s" << output.number_of_restarts
+                    << " d" << depth
+                    << " c" << perturbation_id << "/" << perturbations.size()
+                    << " i" << output.number_of_iterations;
+                output.solution_pool.add(solution_tmp, ss, parameters.info);
+                output.solution_pool.display(ss, parameters.info);
+                parameters.new_solution_callback(solution_tmp);
+            }
+
+            if (local_scheme.global_cost(solution_next)
+                    > local_scheme.global_cost(solution_tmp)) {
+                solution_next = solution_tmp;
+                better_found = true;
+            }
+
             perturbation_id++;
         }
     }
 
     output.solution_pool.display_end(parameters.info);
+    VER(parameters.info, "Number of restarts:         " << output.number_of_restarts << std::endl);
+    VER(parameters.info, "Number of iterations:       " << output.number_of_iterations << std::endl);
+    PUT(parameters.info, "Algorithm", "NumberOfRestarts", output.number_of_restarts);
+    PUT(parameters.info, "Algorithm", "NumberOfIterations", output.number_of_iterations);
     return output;
 }
 

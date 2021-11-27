@@ -443,6 +443,8 @@ inline GeneticLocalSearchOutput<LocalScheme> genetic_local_search(
         threads[thread_id].join();
 
     output.solution_pool.display_end(parameters.info);
+    VER(parameters.info, "Number of iterations:       " << output.number_of_iterations << std::endl);
+    PUT(parameters.info, "Algorithm", "NumberOfIterations", output.number_of_iterations);
     return output;
 }
 
