@@ -111,6 +111,24 @@ public:
             global_costs_swap_[pos_1].resize(
                     local_scheme_0_.number_of_jobs() - pos_1,
                     local_scheme_0_.global_cost_worst());
+
+        // Initialize statistics structures.
+        shift_number_of_explorations_ = std::vector<Counter>(
+                parameters_.shift_bloc_maximum_length + 1, 0);
+        shift_number_of_sucesses_ = std::vector<Counter>(
+                parameters_.shift_bloc_maximum_length + 1, 0);
+        swap_number_of_explorations_ = std::vector<std::vector<Counter>>(
+                parameters_.swap_bloc_maximum_length + 1);
+        swap_number_of_sucesses_ = std::vector<std::vector<Counter>>(
+                parameters_.swap_bloc_maximum_length + 1);
+        for (JobPos p = 0; p <= parameters_.swap_bloc_maximum_length; ++p) {
+            swap_number_of_explorations_[p] = std::vector<Counter>(p + 1, 0);
+            swap_number_of_sucesses_[p] = std::vector<Counter>(p + 1, 0);
+        }
+        shift_reverse_number_of_explorations_ = std::vector<Counter>(
+                parameters_.shift_bloc_maximum_length + 1, 0);
+        shift_reverse_number_of_sucesses_ = std::vector<Counter>(
+                parameters_.shift_bloc_maximum_length + 1, 0);
     }
 
     LocalScheme(const LocalScheme& sequencing_scheme):
@@ -455,7 +473,7 @@ public:
             neighborhoods.push_back({Neighborhoods::SwapK, bloc_size, 0});
         if (parameters_.reverse)
             neighborhoods.push_back({Neighborhoods::Reverse, 0, 0});
-        for (JobPos bloc_size = 2; bloc_size <= parameters_.shift_bloc_maximum_length; ++bloc_size)
+        for (JobPos bloc_size = 2; bloc_size <= parameters_.shift_reverse_bloc_maximum_length; ++bloc_size)
             neighborhoods.push_back({Neighborhoods::ShiftReverse, bloc_size, 0});
 
         Counter it = 0;
@@ -527,7 +545,9 @@ public:
                         solution = solution_tmp_;
                         assert((JobPos)local_scheme_0_.jobs(solution).size() <= local_scheme_0_.number_of_jobs());
                         assert(local_scheme_0_.global_cost(solution) == c_best);
+                        shift_number_of_sucesses_[bloc_size]++;
                     }
+                    shift_number_of_explorations_[bloc_size]++;
                     break;
                 } case Neighborhoods::SwapK: {
                     JobPos bloc_size = std::get<1>(neighborhood);
@@ -556,15 +576,21 @@ public:
                         solution_tmp_ = local_scheme_0_.empty_solution();
                         for (JobPos pos = 0; pos < local_scheme_0_.number_of_jobs(); ++pos) {
                             JobId j = local_scheme_0_.jobs(solution)[pos];
-                            if (pos == pos_1_best)
-                                j = local_scheme_0_.jobs(solution)[pos_2_best];
-                            if (pos == pos_2_best)
-                                j = local_scheme_0_.jobs(solution)[pos_1_best];
+                            if (pos_1_best <= pos && pos < pos_1_best + bloc_size) {
+                                JobPos diff = pos - pos_1_best;
+                                j = local_scheme_0_.jobs(solution)[pos_2_best + diff];
+                            }
+                            if (pos_2_best <= pos && pos < pos_2_best + bloc_size) {
+                                JobPos diff = pos - pos_2_best;
+                                j = local_scheme_0_.jobs(solution)[pos_1_best + diff];
+                            }
                             local_scheme_0_.append(solution_tmp_, j);
                         }
                         solution = solution_tmp_;
                         assert(local_scheme_0_.global_cost(solution) == c_best);
+                        swap_number_of_sucesses_[bloc_size][bloc_size]++;
                     }
+                    swap_number_of_explorations_[bloc_size][bloc_size]++;
                     break;
                 } case Neighborhoods::SwapK1K2: {
                     break;
@@ -606,7 +632,9 @@ public:
                         }
                         solution = solution_tmp_;
                         assert(local_scheme_0_.global_cost(solution) == c_best);
+                        reverse_number_of_sucesses_++;
                     }
+                    reverse_number_of_explorations_++;
                     break;
                 } case Neighborhoods::ShiftReverse: {
                     JobPos bloc_size = std::get<1>(neighborhood);
@@ -664,7 +692,9 @@ public:
                         solution = solution_tmp_;
                         assert((JobPos)local_scheme_0_.jobs(solution).size() <= local_scheme_0_.number_of_jobs());
                         assert(local_scheme_0_.global_cost(solution) == c_best);
+                        shift_reverse_number_of_sucesses_[bloc_size]++;
                     }
+                    shift_reverse_number_of_explorations_[bloc_size]++;
                     break;
                 }
                 }
@@ -693,6 +723,71 @@ public:
             std::string certificate_path) const
     {
         local_scheme_0_.write(solution, certificate_path);
+    }
+
+    inline void print_statistics(optimizationtools::Info& info)
+    {
+        VER(info, std::endl
+                << "Sequencing statistics" << std::endl
+                << "---------------------" << std::endl);
+        for (JobPos bloc_size = 1; bloc_size <= parameters_.shift_bloc_maximum_length; ++bloc_size) {
+            VER(info,
+                    std::left << std::setw(28) << ("Shift " + std::to_string(bloc_size) + ":")
+                    << shift_number_of_explorations_[bloc_size]
+                    << " / " << shift_number_of_sucesses_[bloc_size]
+                    << " / " << (double)shift_number_of_sucesses_[bloc_size] / shift_number_of_explorations_[bloc_size] * 100 << "%"
+                    << std::endl);
+            PUT(info,
+                    "Algorithm", ("Shift" + std::to_string(bloc_size) + "NumberOfExplorations"),
+                    shift_number_of_explorations_[bloc_size]);
+            PUT(info,
+                    "Algorithm", ("Shift" + std::to_string(bloc_size) + "NumberOfSuccesses"),
+                    shift_number_of_explorations_[bloc_size]);
+        }
+        for (JobPos bloc_size_1 = 1; bloc_size_1 <= parameters_.swap_bloc_maximum_length; ++bloc_size_1) {
+            for (JobPos bloc_size_2 = 1; bloc_size_2 <= bloc_size_1; ++bloc_size_2) {
+                VER(info,
+                        std::left << std::setw(28) << ("Swap " + std::to_string(bloc_size_1) + "," + std::to_string(bloc_size_2) + ":")
+                        << swap_number_of_explorations_[bloc_size_1][bloc_size_2]
+                        << " / " << swap_number_of_sucesses_[bloc_size_1][bloc_size_2]
+                        << " / " << (double)swap_number_of_sucesses_[bloc_size_1][bloc_size_2] / swap_number_of_explorations_[bloc_size_1][bloc_size_2] * 100 << "%"
+                        << std::endl);
+                PUT(info,
+                        "Algorithm", ("Swap" + std::to_string(bloc_size_1) + "," + std::to_string(bloc_size_2) + "NumberOfExplorations"),
+                        swap_number_of_explorations_[bloc_size_1][bloc_size_2]);
+                PUT(info,
+                        "Algorithm", ("Shift" + std::to_string(bloc_size_1) + "," + std::to_string(bloc_size_2) + "NumberOfSuccesses"),
+                        swap_number_of_explorations_[bloc_size_1][bloc_size_2]);
+            }
+        }
+        if (parameters_.reverse) {
+            VER(info,
+                    std::left << std::setw(28) << ("Reverse:")
+                    << reverse_number_of_explorations_
+                    << " / " << reverse_number_of_sucesses_
+                    << " / " << (double)reverse_number_of_sucesses_ / reverse_number_of_explorations_ * 100 << "%"
+                    << std::endl);
+            PUT(info,
+                    "Algorithm", ("ReverseNumberOfExplorations"),
+                    reverse_number_of_explorations_);
+            PUT(info,
+                    "Algorithm", ("ReverseNumberOfSuccesses"),
+                    reverse_number_of_explorations_);
+        }
+        for (JobPos bloc_size = 2; bloc_size <= parameters_.shift_reverse_bloc_maximum_length; ++bloc_size) {
+            VER(info,
+                    std::left << std::setw(28) << ("Shift-reverse " + std::to_string(bloc_size) + ":")
+                    << shift_reverse_number_of_explorations_[bloc_size]
+                    << " / " << shift_reverse_number_of_sucesses_[bloc_size]
+                    << " / " << (double)shift_reverse_number_of_sucesses_[bloc_size] / shift_reverse_number_of_explorations_[bloc_size] * 100 << "%"
+                    << std::endl);
+            PUT(info,
+                    "Algorithm", ("ShiftReverse" + std::to_string(bloc_size) + "NumberOfExplorations"),
+                    shift_reverse_number_of_explorations_[bloc_size]);
+            PUT(info,
+                    "Algorithm", ("ShiftReverse" + std::to_string(bloc_size) + "NumberOfSuccesses"),
+                    shift_reverse_number_of_explorations_[bloc_size]);
+        }
     }
 
 private:
@@ -883,6 +978,19 @@ private:
 
     Solution solution_cur_;
     Solution solution_tmp_;
+
+    /*
+     * Statistics.
+     */
+
+    std::vector<Counter> shift_number_of_explorations_;
+    std::vector<Counter> shift_number_of_sucesses_;
+    std::vector<std::vector<Counter>> swap_number_of_explorations_;
+    std::vector<std::vector<Counter>> swap_number_of_sucesses_;
+    Counter reverse_number_of_explorations_ = 0;
+    Counter reverse_number_of_sucesses_ = 0;
+    std::vector<Counter> shift_reverse_number_of_explorations_;
+    std::vector<Counter> shift_reverse_number_of_sucesses_;
 
 };
 

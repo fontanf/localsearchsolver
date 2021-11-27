@@ -223,6 +223,7 @@ int main(int argc, char *argv[])
             (algorithm_args[0] == "best_first_local_search")?
             run_best_first_local_search(algorithm_args, local_scheme, info):
             run_genetic_local_search(algorithm_args, local_scheme, info);
+        local_scheme.print_statistics(info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))
             local_scheme.print(std::cout, solution_pool.best());
@@ -258,6 +259,7 @@ int main(int argc, char *argv[])
             (algorithm_args[0] == "best_first_local_search")?
             run_best_first_local_search(algorithm_args, local_scheme, info):
             run_genetic_local_search(algorithm_args, local_scheme, info);
+        local_scheme.print_statistics(info);
         local_scheme.write(solution_pool.best(), certificate_path);
         if (vm.count("print-solution"))
             local_scheme.print(std::cout, solution_pool.best());
