@@ -61,7 +61,7 @@ public:
         Parameters()
         {
             sequencing_parameters.shift_bloc_maximum_length = 13;
-            sequencing_parameters.swap = true;
+            sequencing_parameters.swap_bloc_maximum_length = 1;
             sequencing_parameters.shuffle_neighborhood_order = true;
             sequencing_parameters.number_of_perturbations = 10;
         }

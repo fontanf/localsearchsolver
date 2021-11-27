@@ -97,8 +97,8 @@ inline schedulingwithsdsttwt::LocalScheme::Parameters read_schedulingwithsdsttwt
     schedulingwithsdsttwt::LocalScheme::Parameters parameters;
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
-        ("shift-bloc-maximum-size,b", boost::program_options::value<travellingsalesman::VertexPos>(&parameters.sequencing_parameters.shift_bloc_maximum_length), "")
-        ("swap,s", boost::program_options::value<bool>(&parameters.sequencing_parameters.swap), "")
+        ("shift-bloc-maximum-length,", boost::program_options::value<schedulingwithsdsttwt::JobPos>(&parameters.sequencing_parameters.shift_bloc_maximum_length), "")
+        ("swap-bloc-maximum-length,", boost::program_options::value<schedulingwithsdsttwt::JobPos>(&parameters.sequencing_parameters.swap_bloc_maximum_length), "")
         ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line((Counter)argv.size(), argv.data(), desc), vm);
@@ -136,8 +136,8 @@ inline permutationflowshopschedulingtt::LocalScheme::Parameters read_permutation
     permutationflowshopschedulingtt::LocalScheme::Parameters parameters;
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
-        ("shift-bloc-maximum-size,b", boost::program_options::value<travellingsalesman::VertexPos>(&parameters.sequencing_parameters.shift_bloc_maximum_length), "")
-        ("swap,s", boost::program_options::value<bool>(&parameters.sequencing_parameters.swap), "")
+        ("shift-bloc-maximum-length,", boost::program_options::value<permutationflowshopschedulingtt::JobPos>(&parameters.sequencing_parameters.shift_bloc_maximum_length), "")
+        ("swap-bloc-maximum-length,", boost::program_options::value<permutationflowshopschedulingtt::JobPos>(&parameters.sequencing_parameters.swap_bloc_maximum_length), "")
         ("crossover-ox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_ox_weight), "")
         ("crossover-sjox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_sjox_weight), "")
         ("crossover-sbox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_sbox_weight), "")

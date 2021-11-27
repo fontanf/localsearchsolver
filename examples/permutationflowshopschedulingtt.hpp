@@ -59,7 +59,7 @@ public:
         Parameters()
         {
             sequencing_parameters.shift_bloc_maximum_length = 3;
-            sequencing_parameters.swap = true;
+            sequencing_parameters.swap_bloc_maximum_length = 2;
             sequencing_parameters.reverse = true;
             sequencing_parameters.shift_reverse_bloc_maximum_length = 3;
         }

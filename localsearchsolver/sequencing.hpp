@@ -15,15 +15,15 @@ namespace sequencing
 using JobId = int64_t;
 using JobPos = int64_t;
 
-enum class Neighborhoods { Shift, Swap, Reverse, ShiftReverse };
+enum class Neighborhoods { Shift, SwapK, SwapK1K2, Reverse, ShiftReverse };
 
 struct Parameters
 {
     JobPos shift_bloc_maximum_length = 3;
     JobPos shift_maximum_distance = 1024;
 
-    bool swap = true;
     JobPos swap_maximum_distance = 1024;
+    JobPos swap_bloc_maximum_length = 2;
 
     bool reverse = false;
     JobPos reverse_maximum_length = 1024;
@@ -449,12 +449,12 @@ public:
 
         // Get neighborhoods.
         std::vector<std::tuple<Neighborhoods, JobPos, JobPos>> neighborhoods;
-        if (parameters_.swap)
-            neighborhoods.push_back({Neighborhoods::Swap, 1, 1});
-        if (parameters_.reverse)
-            neighborhoods.push_back({Neighborhoods::Reverse, 0, 0});
         for (JobPos bloc_size = 1; bloc_size <= parameters_.shift_bloc_maximum_length; ++bloc_size)
             neighborhoods.push_back({Neighborhoods::Shift, bloc_size, 0});
+        for (JobPos bloc_size = 1; bloc_size <= parameters_.swap_bloc_maximum_length; ++bloc_size)
+            neighborhoods.push_back({Neighborhoods::SwapK, bloc_size, 0});
+        if (parameters_.reverse)
+            neighborhoods.push_back({Neighborhoods::Reverse, 0, 0});
         for (JobPos bloc_size = 2; bloc_size <= parameters_.shift_bloc_maximum_length; ++bloc_size)
             neighborhoods.push_back({Neighborhoods::ShiftReverse, bloc_size, 0});
 
@@ -471,83 +471,7 @@ public:
             // Loop through neighborhoods.
             for (auto neighborhood: neighborhoods) {
                 switch (std::get<0>(neighborhood)) {
-                case Neighborhoods::Swap: {
-                    std::shuffle(pairs_.begin(), pairs_.end(), generator);
-                    compute_cost_swap(solution);
-                    JobPos pos_1_best = -1;
-                    JobPos pos_2_best = -1;
-                    GlobalCost c_best = global_cost(solution);
-                    for (auto pair: pairs_) {
-                        GlobalCost c = global_costs_swap_[pair.first][pair.second - pair.first - 1];
-                        if (c >= c_best)
-                            continue;
-                        if (pos_1_best != -1 && !dominates(c, c_best))
-                            continue;
-                        pos_1_best = pair.first;
-                        pos_2_best = pair.second;
-                        c_best = c;
-                    }
-                    if (pos_1_best != -1) {
-                        //std::cout << "swap"
-                        //    << " pos_1_best " << pos_1_best
-                        //    << " pos_2_best " << pos_2_best
-                        //    << std::endl;
-                        improved = true;
-                        // Apply best move.
-                        solution_tmp_ = local_scheme_0_.empty_solution();
-                        for (JobPos pos = 0; pos < local_scheme_0_.number_of_jobs(); ++pos) {
-                            JobId j = local_scheme_0_.jobs(solution)[pos];
-                            if (pos == pos_1_best)
-                                j = local_scheme_0_.jobs(solution)[pos_2_best];
-                            if (pos == pos_2_best)
-                                j = local_scheme_0_.jobs(solution)[pos_1_best];
-                            local_scheme_0_.append(solution_tmp_, j);
-                        }
-                        solution = solution_tmp_;
-                        assert(local_scheme_0_.global_cost(solution) == c_best);
-                    }
-                    break;
-                } case Neighborhoods::Reverse: { // Reverse neighborhood.
-                    std::shuffle(pairs_.begin(), pairs_.end(), generator);
-                    compute_cost_reverse(solution);
-                    JobPos pos_1_best = -1;
-                    JobPos pos_2_best = -1;
-                    GlobalCost c_best = global_cost(solution);
-                    for (auto pair: pairs_) {
-                        GlobalCost c = global_costs_swap_[pair.first][pair.second - pair.first - 1];
-                        if (c >= c_best)
-                            continue;
-                        if (pos_1_best != -1 && !dominates(c, c_best))
-                            continue;
-                        pos_1_best = pair.first;
-                        pos_2_best = pair.second;
-                        c_best = c;
-                    }
-                    if (pos_1_best != -1) {
-                        //std::cout << "reverse"
-                        //    << " pos_1_best " << pos_1_best
-                        //    << " pos_2_best " << pos_2_best
-                        //    << std::endl;
-                        improved = true;
-                        // Apply best move.
-                        solution_tmp_ = local_scheme_0_.empty_solution();
-                        for (JobPos pos = 0; pos < pos_1_best; ++pos) {
-                            JobId j = local_scheme_0_.jobs(solution)[pos];
-                            local_scheme_0_.append(solution_tmp_, j);
-                        }
-                        for (JobPos pos = pos_2_best; pos >= pos_1_best; --pos) {
-                            JobId j = local_scheme_0_.jobs(solution)[pos];
-                            local_scheme_0_.append(solution_tmp_, j);
-                        }
-                        for (JobPos pos = pos_2_best + 1; pos < local_scheme_0_.number_of_jobs(); ++pos) {
-                            JobId j = local_scheme_0_.jobs(solution)[pos];
-                            local_scheme_0_.append(solution_tmp_, j);
-                        }
-                        solution = solution_tmp_;
-                        assert(local_scheme_0_.global_cost(solution) == c_best);
-                    }
-                    break;
-                } case Neighborhoods::Shift: {
+                case Neighborhoods::Shift: {
                     JobPos bloc_size = std::get<1>(neighborhood);
                     std::shuffle(positions1_.begin(), positions1_.end(), generator);
                     std::shuffle(positions2_.begin(), positions2_.end(), generator);
@@ -602,6 +526,85 @@ public:
                         }
                         solution = solution_tmp_;
                         assert((JobPos)local_scheme_0_.jobs(solution).size() <= local_scheme_0_.number_of_jobs());
+                        assert(local_scheme_0_.global_cost(solution) == c_best);
+                    }
+                    break;
+                } case Neighborhoods::SwapK: {
+                    JobPos bloc_size = std::get<1>(neighborhood);
+                    std::shuffle(pairs_.begin(), pairs_.end(), generator);
+                    compute_cost_swap(solution, bloc_size);
+                    JobPos pos_1_best = -1;
+                    JobPos pos_2_best = -1;
+                    GlobalCost c_best = global_cost(solution);
+                    for (auto pair: pairs_) {
+                        GlobalCost c = global_costs_swap_[pair.first][pair.second - pair.first - 1];
+                        if (c >= c_best)
+                            continue;
+                        if (pos_1_best != -1 && !dominates(c, c_best))
+                            continue;
+                        pos_1_best = pair.first;
+                        pos_2_best = pair.second;
+                        c_best = c;
+                    }
+                    if (pos_1_best != -1) {
+                        //std::cout << "swap"
+                        //    << " pos_1_best " << pos_1_best
+                        //    << " pos_2_best " << pos_2_best
+                        //    << std::endl;
+                        improved = true;
+                        // Apply best move.
+                        solution_tmp_ = local_scheme_0_.empty_solution();
+                        for (JobPos pos = 0; pos < local_scheme_0_.number_of_jobs(); ++pos) {
+                            JobId j = local_scheme_0_.jobs(solution)[pos];
+                            if (pos == pos_1_best)
+                                j = local_scheme_0_.jobs(solution)[pos_2_best];
+                            if (pos == pos_2_best)
+                                j = local_scheme_0_.jobs(solution)[pos_1_best];
+                            local_scheme_0_.append(solution_tmp_, j);
+                        }
+                        solution = solution_tmp_;
+                        assert(local_scheme_0_.global_cost(solution) == c_best);
+                    }
+                    break;
+                } case Neighborhoods::SwapK1K2: {
+                    break;
+                } case Neighborhoods::Reverse: {
+                    std::shuffle(pairs_.begin(), pairs_.end(), generator);
+                    compute_cost_reverse(solution);
+                    JobPos pos_1_best = -1;
+                    JobPos pos_2_best = -1;
+                    GlobalCost c_best = global_cost(solution);
+                    for (auto pair: pairs_) {
+                        GlobalCost c = global_costs_swap_[pair.first][pair.second - pair.first - 1];
+                        if (c >= c_best)
+                            continue;
+                        if (pos_1_best != -1 && !dominates(c, c_best))
+                            continue;
+                        pos_1_best = pair.first;
+                        pos_2_best = pair.second;
+                        c_best = c;
+                    }
+                    if (pos_1_best != -1) {
+                        //std::cout << "reverse"
+                        //    << " pos_1_best " << pos_1_best
+                        //    << " pos_2_best " << pos_2_best
+                        //    << std::endl;
+                        improved = true;
+                        // Apply best move.
+                        solution_tmp_ = local_scheme_0_.empty_solution();
+                        for (JobPos pos = 0; pos < pos_1_best; ++pos) {
+                            JobId j = local_scheme_0_.jobs(solution)[pos];
+                            local_scheme_0_.append(solution_tmp_, j);
+                        }
+                        for (JobPos pos = pos_2_best; pos >= pos_1_best; --pos) {
+                            JobId j = local_scheme_0_.jobs(solution)[pos];
+                            local_scheme_0_.append(solution_tmp_, j);
+                        }
+                        for (JobPos pos = pos_2_best + 1; pos < local_scheme_0_.number_of_jobs(); ++pos) {
+                            JobId j = local_scheme_0_.jobs(solution)[pos];
+                            local_scheme_0_.append(solution_tmp_, j);
+                        }
+                        solution = solution_tmp_;
                         assert(local_scheme_0_.global_cost(solution) == c_best);
                     }
                     break;
@@ -770,7 +773,7 @@ private:
         }
     }
 
-    inline void compute_cost_swap(const Solution& solution)
+    inline void compute_cost_swap(const Solution& solution, Counter size)
     {
         // Initialize solution_cur_.
         solution_cur_ = local_scheme_0_.empty_solution();
@@ -782,21 +785,26 @@ private:
                     local_scheme_0_.global_cost_worst());
 
         // Loop through all pairs.
-        for (JobPos pos_1 = 0; pos_1 < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos_1) {
-            JobPos pos_max = std::min(
-                    (JobPos)local_scheme_0_.jobs(solution).size(),
+        Counter pos_max = (JobPos)local_scheme_0_.jobs(solution).size() - size;
+        for (JobPos pos_1 = 0; pos_1 <= pos_max; ++pos_1) {
+            JobPos pos_2_max = std::min(
+                    pos_max,
                     pos_1 + parameters_.swap_maximum_distance);
-            for (JobPos pos_2 = pos_1 + 1; pos_2 < pos_max; ++pos_2) {
+            for (JobPos pos_2 = pos_1 + size; pos_2 < pos_2_max; ++pos_2) {
                 // Initialize solution_tmp_.
                 solution_tmp_ = solution_cur_;
                 // Add remaining jobs.
                 for (JobPos pos = pos_1; pos < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos) {
                     JobId j = local_scheme_0_.jobs(solution)[pos];
                     // If j1 or j2, swap.
-                    if (pos == pos_1)
-                        j = local_scheme_0_.jobs(solution)[pos_2];
-                    if (pos == pos_2)
-                        j = local_scheme_0_.jobs(solution)[pos_1];
+                    if (pos_1 <= pos && pos < pos_1 + size) {
+                        JobPos diff = pos - pos_1;
+                        j = local_scheme_0_.jobs(solution)[pos_2 + diff];
+                    }
+                    if (pos_2 <= pos && pos < pos_2 + size) {
+                        JobPos diff = pos - pos_2;
+                        j = local_scheme_0_.jobs(solution)[pos_1 + diff];
+                    }
                     // Add job to solution_tmp_.
                     local_scheme_0_.append(solution_tmp_, j);
                     // Check early termination.
