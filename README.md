@@ -35,8 +35,8 @@ A specific implementation is also available for sequencing problems. The neighbo
 * Perturbation: swap two blocs (double-bridge)
 * Local search neighborhoods:
   * Shift a bloc of `k` consecutive jobs
-  * Swap two blocs of `k` jobs
-  * Reverse the sequence between job `j1` and job `j2`
+  * Swap a bloc of `k1` consecutive jobs with another bloc of `k2` consecutive jobs
+  * Reverse a bloc of consecutive jobs
   * Shift and reverse a bloc of `k` consecutive jobs
 
 ## Examples
