@@ -15,3 +15,13 @@ cc_library(
         ],
         visibility = ["//visibility:public"],
 )
+
+cc_library(
+        name = "read_args",
+        hdrs = ["read_args.hpp"],
+        deps = [
+                ":localsearchsolver",
+                "@boost//:program_options",
+        ],
+        visibility = ["//visibility:public"],
+)

@@ -15,6 +15,20 @@ cc_library(
         visibility = ["//visibility:public"],
 )
 
+cc_binary(
+        name = "knapsackwithconflicts_main",
+        srcs = ["knapsackwithconflicts_main.cpp"],
+        deps = [
+                ":knapsackwithconflicts",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
+
 cc_library(
         name = "multidimensionalmultiplechoiceknapsack",
         hdrs = ["multidimensionalmultiplechoiceknapsack.hpp"],
@@ -24,6 +38,20 @@ cc_library(
         ],
         visibility = ["//visibility:public"],
 )
+
+cc_binary(
+        name = "multidimensionalmultiplechoiceknapsack_main",
+        srcs = ["multidimensionalmultiplechoiceknapsack_main.cpp"],
+        deps = [
+                ":multidimensionalmultiplechoiceknapsack",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
 
 cc_library(
         name = "quadraticassignment",
@@ -35,15 +63,19 @@ cc_library(
         visibility = ["//visibility:public"],
 )
 
-cc_library(
-        name = "travellingsalesman",
-        hdrs = ["travellingsalesman.hpp"],
+cc_binary(
+        name = "quadraticassignment_main",
+        srcs = ["quadraticassignment_main.cpp"],
         deps = [
-                "//localsearchsolver:localsearchsolver",
-                "@orproblems//orproblems:travellingsalesman",
+                ":quadraticassignment",
+                "//localsearchsolver:read_args",
         ],
-        visibility = ["//visibility:public"],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
 )
+
 
 cc_library(
         name = "schedulingwithsdsttwt",
@@ -55,6 +87,20 @@ cc_library(
         visibility = ["//visibility:public"],
 )
 
+cc_binary(
+        name = "schedulingwithsdsttwt_main",
+        srcs = ["schedulingwithsdsttwt_main.cpp"],
+        deps = [
+                ":schedulingwithsdsttwt",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
+
 cc_library(
         name = "permutationflowshopschedulingmakespan",
         hdrs = ["permutationflowshopschedulingmakespan.hpp"],
@@ -65,6 +111,20 @@ cc_library(
         visibility = ["//visibility:public"],
 )
 
+cc_binary(
+        name = "permutationflowshopschedulingmakespan_main",
+        srcs = ["permutationflowshopschedulingmakespan_main.cpp"],
+        deps = [
+                ":permutationflowshopschedulingmakespan",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
+
 cc_library(
         name = "permutationflowshopschedulingtt",
         hdrs = ["permutationflowshopschedulingtt.hpp"],
@@ -74,6 +134,20 @@ cc_library(
         ],
         visibility = ["//visibility:public"],
 )
+
+cc_binary(
+        name = "permutationflowshopschedulingtt_main",
+        srcs = ["permutationflowshopschedulingtt_main.cpp"],
+        deps = [
+                ":permutationflowshopschedulingtt",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
 
 cc_library(
         name = "roadef2020",
@@ -114,28 +188,6 @@ cc_binary(
                 #"-fprofile-use=/home/florian/Dev/localsearchsolver/profile_dir",
                 #"-fprofile-correction",
         ] + select({
-                "@bazel_tools//src/conditions:windows": [],
-                "//conditions:default":                 ["-lpthread"],
-        }),
-)
-
-cc_binary(
-        name = "main",
-        srcs = [
-                "read_args.hpp",
-                "main.cpp",
-        ],
-        deps = [
-                ":knapsackwithconflicts",
-                ":multidimensionalmultiplechoiceknapsack",
-                ":quadraticassignment",
-                ":travellingsalesman",
-                ":schedulingwithsdsttwt",
-                ":permutationflowshopschedulingmakespan",
-                ":permutationflowshopschedulingtt",
-                "@boost//:program_options",
-        ],
-        linkopts = select({
                 "@bazel_tools//src/conditions:windows": [],
                 "//conditions:default":                 ["-lpthread"],
         }),
