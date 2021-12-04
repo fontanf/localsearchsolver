@@ -131,7 +131,7 @@ public:
         MachineId m = instance_.number_of_machines();
         // Update jobs.
         solution.jobs.push_back(j);
-        // Update times_.
+        // Update times.
         solution.times[0] = solution.times[0] + instance_.job(j).processing_times[0];
         for (MachineId i = 1; i < m; ++i) {
             if (solution.times[i - 1] > solution.times[i]) {

@@ -31,8 +31,12 @@ Implemented algorithms:
   * Good when the ruggedness of the landscape is high
   * Additional requirements: `crossover` and `distance`
 
-A specific implementation is also available for sequencing problems. The neighborhoods and perturbations are already implemented, it is only required to provide an `append(solution, j)` method to use them:
+A specific implementation is also available for sequencing problems. The neighborhoods, crossovers and perturbations are already implemented, it is only required to provide an `append(solution, j)` method to use them:
 * Perturbation: swap two blocs (double-bridge)
+* Crossover algorithms:
+  * OX crossover
+  * SJOX crossover
+  * SBOX crossover
 * Local search neighborhoods:
   * Shift a bloc of `k` consecutive jobs
   * Swap a bloc of `k1` consecutive jobs with another bloc of `k2` consecutive jobs
@@ -66,6 +70,7 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
 * Example which implements a problem specific acceleration strategy to compute the move costs
 * Algorithm:
   * Perturbation: ejection chain
+  * Crossover algorithm: UX crossover
   * Local search neighborhoods:
     * Swap two assignments
 
@@ -83,6 +88,7 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
 * Example with multiple neigborhoods
 * Algorithm:
   * Perturbation: force item `j` in/out of the solution
+  * Crossover algorithm: double backbone-based crossover
   * Local search neighborhoods:
     * Move item `j` in/out of the solution (and remove conflicting items)
     * Swap two non-conflicting items
