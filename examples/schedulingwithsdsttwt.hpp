@@ -11,7 +11,7 @@
 
 
 #include "localsearchsolver/common.hpp"
-#include "localsearchsolver/sequencing.hpp"
+#include "localsearchsolver/sequencing2.hpp"
 
 #include "orproblems/schedulingwithsdsttwt.hpp"
 
@@ -66,7 +66,7 @@ public:
             sequencing_parameters.number_of_perturbations = 10;
         }
 
-        sequencing::Parameters sequencing_parameters;
+        sequencing2::Parameters sequencing_parameters;
     };
 
     LocalScheme(

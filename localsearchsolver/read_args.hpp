@@ -4,7 +4,6 @@
 #include "localsearchsolver/iterated_local_search.hpp"
 #include "localsearchsolver/best_first_local_search.hpp"
 #include "localsearchsolver/genetic_local_search.hpp"
-#include "localsearchsolver/sequencing.hpp"
 
 #include <boost/program_options.hpp>
 

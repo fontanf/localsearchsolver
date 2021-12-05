@@ -9,7 +9,7 @@
  */
 
 #include "localsearchsolver/common.hpp"
-#include "localsearchsolver/sequencing.hpp"
+#include "localsearchsolver/sequencing2.hpp"
 
 #include "orproblems/permutationflowshopschedulingtt.hpp"
 
@@ -64,7 +64,7 @@ public:
             sequencing_parameters.shift_reverse_bloc_maximum_length = 4;
         }
 
-        sequencing::Parameters sequencing_parameters;
+        sequencing2::Parameters sequencing_parameters;
     };
 
     LocalScheme(

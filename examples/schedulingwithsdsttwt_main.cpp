@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
     // Create local scheme.
     auto parameters_local_scheme_0 = read_local_scheme_args(main_args.local_scheme_argv);
     LocalScheme local_scheme_0(instance, parameters_local_scheme_0);
-    sequencing::LocalScheme<LocalScheme> local_scheme(local_scheme_0, parameters_local_scheme_0.sequencing_parameters);
+    sequencing2::LocalScheme<LocalScheme> local_scheme(local_scheme_0, parameters_local_scheme_0.sequencing_parameters);
 
     // Run algorithm.
     auto solution_pool =

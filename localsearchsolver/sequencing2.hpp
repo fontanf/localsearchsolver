@@ -9,7 +9,7 @@
 namespace localsearchsolver
 {
 
-namespace sequencing
+namespace sequencing2
 {
 
 using JobId = int64_t;

@@ -31,6 +31,8 @@ Implemented algorithms:
   * Good when the ruggedness of the landscape is high
   * Additional requirements: `crossover` and `distance`
 
+## Sequencing module
+
 A specific implementation is also available for sequencing problems. The neighborhoods, crossovers and perturbations are already implemented, it is only required to provide an `append(solution, j)` method to use them:
 * Perturbation: swap two blocs (double-bridge)
 * Crossover algorithms:
@@ -43,7 +45,33 @@ A specific implementation is also available for sequencing problems. The neighbo
   * Reverse a bloc of consecutive jobs
   * Shift and reverse a bloc of `k` consecutive jobs
 
-## Examples
+### Examples
+
+[Single machine scheduling problem with sequence-dependent setup times, Total weighted tardiness](examples/schedulingwithsdsttwt.hpp)
+
+<details><summary>Benchmarks</summary>
+<p>
+
+* Benchmarks:
+  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/schedulingwithsdsttwt_main --csv ../ordata/schedulingwithsdsttwt/data.csv -l schedulingwithsdsttwt -t 60`
+  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/schedulingwithsdsttwt/data.csv -l schedulingwithsdsttwt -b heuristiclong -t 31`
+
+</p>
+</details>
+
+[Permutation flow shop scheduling problem, Total tardiness](examples/permutationflowshopschedulingtt.hpp)
+
+<details><summary>Benchmarks</summary>
+<p>
+
+* Benchmarks:
+  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtt_main --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt --timelimitfield "Time limit"`
+  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt -b heuristiclong -t 500`
+
+</p>
+</details>
+
+## Other examples
 
 Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orproblems)
 
@@ -139,19 +167,6 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
 
 #### Single machine scheduling
 
-[Single machine scheduling problem with sequence-dependent setup times, Total weighted tardiness](examples/schedulingwithsdsttwt.hpp)
-* Example of a sequencing problem
-
-<details><summary>Benchmarks</summary>
-<p>
-
-* Benchmarks:
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/schedulingwithsdsttwt_main --csv ../ordata/schedulingwithsdsttwt/data.csv -l schedulingwithsdsttwt -t 60`
-  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/schedulingwithsdsttwt/data.csv -l schedulingwithsdsttwt -b heuristiclong -t 31`
-
-</p>
-</details>
-
 #### Flow shop scheduling
 
 [Permutation flow shop scheduling problem, Makespan](examples/permutationflowshopschedulingmakespan.hpp)
@@ -167,19 +182,6 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
 * Benchmarks:
   * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingmakespan_main --csv ../ordata/permutationflowshopscheduling/data_makespan.csv -f "row['Dataset'] == 'vallada2015_large'" -l permutationflowshopschedulingmakespan --timelimitfield "Time limit"`
   * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_makespan.csv -f "row['Dataset'] == 'vallada2015_large' and int(row['Job number']) <= 100" -l permutationflowshopschedulingmakespan -b heuristiclong -t 500`
-
-</p>
-</details>
-
-[Permutation flow shop scheduling problem, Total tardiness](examples/permutationflowshopschedulingtt.hpp)
-* Example of a sequencing problem
-
-<details><summary>Benchmarks</summary>
-<p>
-
-* Benchmarks:
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtt_main --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt --timelimitfield "Time limit"`
-  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt -b heuristiclong -t 500`
 
 </p>
 </details>
