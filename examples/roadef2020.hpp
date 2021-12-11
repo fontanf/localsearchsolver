@@ -41,17 +41,6 @@ public:
     inline Workload                      underwork(const GlobalCost& global_cost) { return std::get<3>(global_cost); }
     inline Cost                               cost(const GlobalCost& global_cost) { return std::get<4>(global_cost); }
 
-    static GlobalCost global_cost_worst()
-    {
-        return {
-            std::numeric_limits<InterventionId>::max(),
-            std::numeric_limits<ExclusionId>::max(),
-            std::numeric_limits<Workload>::max(),
-            std::numeric_limits<Workload>::max(),
-            std::numeric_limits<Cost>::max(),
-        };
-    }
-
     /*
      * Solutions.
      */
@@ -216,12 +205,12 @@ public:
 
     struct Move
     {
+        Move(): j(-1), t_start(-1), global_cost(worst<GlobalCost>()) { }
+
         InterventionId j;
         Time t_start;
         GlobalCost global_cost;
     };
-
-    static Move move_null() { return {-1, -1,  global_cost_worst()}; };
 
     struct MoveHasher
     {
@@ -261,7 +250,7 @@ public:
     void local_search(
             Solution& solution,
             std::mt19937_64& generator,
-            const Move& tabu = move_null());
+            const Move& tabu = Move());
 
     /*
      * Outputs.

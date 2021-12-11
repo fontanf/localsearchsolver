@@ -46,8 +46,6 @@ public:
 
     using GlobalCost = typename LocalScheme0::GlobalCost;
 
-    static GlobalCost global_cost_worst() { return LocalScheme0::global_cost_worst(); }
-
     using Solution = typename LocalScheme0::Solution;
 
     using CompactSolution = std::vector<JobId>;
@@ -99,13 +97,13 @@ public:
         parameters_(parameters),
         positions1_(local_scheme_0_.number_of_jobs()),
         positions2_(local_scheme_0_.number_of_jobs()),
-        global_costs_shift_(local_scheme_0_.number_of_jobs() + 1, local_scheme_0_.global_cost_worst()),
+        global_costs_shift_(local_scheme_0_.number_of_jobs() + 1, worst<GlobalCost>()),
         global_costs_swap_(local_scheme_0_.number_of_jobs()),
         global_costs_swap_2_(
                 local_scheme_0_.number_of_jobs(),
                 std::vector<GlobalCost>(
                     local_scheme_0_.number_of_jobs(),
-                    global_cost_worst()))
+                    worst<GlobalCost>()))
     {
         std::iota(positions1_.begin(), positions1_.end(), 0);
         std::iota(positions2_.begin(), positions2_.end(), 0);
@@ -119,7 +117,7 @@ public:
         for (JobPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_jobs(); ++pos_1)
             global_costs_swap_[pos_1].resize(
                     local_scheme_0_.number_of_jobs() - pos_1,
-                    local_scheme_0_.global_cost_worst());
+                    worst<GlobalCost>());
 
         // Initialize statistics structures.
         shift_number_of_explorations_ = std::vector<Counter>(
@@ -406,14 +404,14 @@ public:
 
     struct Move
     {
+        Move(): pos_1(-1), global_cost(worst<GlobalCost>()) { }
+
         JobPos pos_1;
         JobPos pos_2;
         JobPos pos_3;
         JobPos pos_4;
         GlobalCost global_cost;
     };
-
-    static Move move_null() { return {-1, -1, -1, -1, LocalScheme0::global_cost_worst()}; }
 
     struct MoveHasher
     {
@@ -466,7 +464,7 @@ public:
     inline void local_search(
             Solution& solution,
             std::mt19937_64& generator,
-            const Move& = move_null())
+            const Move& = Move())
     {
         //if (tabu.j != -1)
         //    std::cout << "j " << tabu.j << " j_prev " << tabu.j_prev
@@ -909,7 +907,7 @@ private:
         std::fill(
                 global_costs_shift_.begin(),
                 global_costs_shift_.end(),
-                local_scheme_0_.global_cost_worst());
+                worst<GlobalCost>());
 
         // Loop through all new positions.
         JobPos pos_min = std::max(
@@ -978,7 +976,7 @@ private:
             std::fill(
                     global_costs_swap_[pos_1].begin(),
                     global_costs_swap_[pos_1].end(),
-                    local_scheme_0_.global_cost_worst());
+                    worst<GlobalCost>());
 
         // Loop through all pairs.
         Counter pos_max = (JobPos)local_scheme_0_.jobs(solution).size() - size;
@@ -1029,7 +1027,7 @@ private:
             std::fill(
                     global_costs_swap_2_[pos_1].begin(),
                     global_costs_swap_2_[pos_1].end(),
-                    local_scheme_0_.global_cost_worst());
+                    worst<GlobalCost>());
 
         // Loop through all pairs.
         for (JobPos pos = 0; pos < n; ++pos) {
@@ -1152,7 +1150,7 @@ private:
             std::fill(
                     global_costs_swap_[pos_1].begin(),
                     global_costs_swap_[pos_1].end(),
-                    local_scheme_0_.global_cost_worst());
+                    worst<GlobalCost>());
 
         // Loop through all pairs.
         for (JobPos pos_1 = 0; pos_1 < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos_1) {

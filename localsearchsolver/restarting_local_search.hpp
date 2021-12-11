@@ -89,7 +89,6 @@ inline RestartingLocalSearchOutput<LocalScheme> restarting_local_search(
 
     std::mt19937_64 generator(parameters.seed);
 
-    // Generate initial solutions.
     Counter number_of_initial_solutions
         = (Counter)parameters.initial_solution_ids.size()
         + (Counter)parameters.initial_solutions.size();

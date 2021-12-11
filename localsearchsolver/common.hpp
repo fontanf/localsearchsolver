@@ -145,6 +145,21 @@ std::tuple<Ts...> operator-(
 }
 
 
+template <typename> struct Helper;
+
+template <typename... Ts>
+struct Helper<std::tuple<Ts...>>
+{
+    static std::tuple<Ts...> max()
+    {
+        return { std::numeric_limits<Ts>::max()... };
+    }
+};
+
+template <typename T>
+T worst() { return Helper<T>::max(); }
+
+
 template <typename Scheme>
 struct SolutionPoolComparator
 {

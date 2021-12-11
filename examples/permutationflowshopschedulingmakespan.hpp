@@ -34,14 +34,6 @@ public:
     inline JobId  number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
     inline Time     makespan(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
 
-    static GlobalCost global_cost_worst()
-    {
-        return {
-            std::numeric_limits<JobId>::max(),
-            std::numeric_limits<Time>::max(),
-        };
-    }
-
     /*
      * Solutions.
      */
@@ -170,14 +162,14 @@ public:
 
     struct Move
     {
+        Move(): pos_1(-1), global_cost(worst<GlobalCost>()) { }
+
         JobPos pos_1;
         JobPos pos_2;
         JobPos pos_3;
         JobPos pos_4;
         GlobalCost global_cost;
     };
-
-    static Move move_null() { return {-1, -1, -1, -1, global_cost_worst()}; }
 
     struct MoveHasher
     {
@@ -230,7 +222,7 @@ public:
     inline void local_search(
             Solution& solution,
             std::mt19937_64& generator,
-            const Move& = move_null())
+            const Move& = Move())
     {
         MachineId m = instance_.number_of_machines();
         Counter it = 0;

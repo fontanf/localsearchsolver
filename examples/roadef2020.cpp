@@ -347,7 +347,7 @@ std::vector<LocalScheme::Move> LocalScheme::perturbations(
         for (Time t_start = 0; t_start <= instance_.start_max(j); ++t_start) {
             if (instance_.fixed(j, t_start) == 0)
                 continue;
-            auto c = cost_add(solution, j, t_start, global_cost_worst());
+            auto c = cost_add(solution, j, t_start, worst<GlobalCost>());
             Move move;
             move.j = j;
             move.t_start = t_start;

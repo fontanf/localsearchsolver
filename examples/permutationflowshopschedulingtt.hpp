@@ -32,13 +32,6 @@ public:
     inline Time&       total_tardiness(GlobalCost& global_cost) { return std::get<0>(global_cost); }
     inline Time  total_tardiness(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
 
-    static GlobalCost global_cost_worst()
-    {
-        return {
-            std::numeric_limits<Time>::max(),
-        };
-    }
-
     /*
      * Solutions.
      */
@@ -115,7 +108,7 @@ public:
     }
 
     /*
-     * Methods required by sequencing::LocalScheme.
+     * Methods required by sequencing2::LocalScheme.
      */
 
     inline JobPos number_of_jobs() const { return instance_.number_of_jobs(); }

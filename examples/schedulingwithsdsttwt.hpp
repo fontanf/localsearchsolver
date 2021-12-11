@@ -34,13 +34,6 @@ public:
     inline Weight&       total_weighted_tardiness(GlobalCost& global_cost) { return std::get<0>(global_cost); }
     inline Weight  total_weighted_tardiness(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
 
-    static GlobalCost global_cost_worst()
-    {
-        return {
-            std::numeric_limits<Weight>::max(),
-        };
-    }
-
     /*
      * Solutions.
      */

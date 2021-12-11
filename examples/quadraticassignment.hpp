@@ -37,14 +37,6 @@ public:
     inline FacilityId  number_of_facilities(const GlobalCost& global_cost) const { return std::get<0>(global_cost); }
     inline Cost                        cost(const GlobalCost& global_cost) const { return std::get<1>(global_cost); }
 
-    static GlobalCost global_cost_worst()
-    {
-        return {
-            std::numeric_limits<FacilityId>::max(),
-            std::numeric_limits<Cost>::max(),
-        };
-    }
-
     /*
      * Solutions.
      */
@@ -262,11 +254,11 @@ public:
 
     struct Move
     {
+        Move(): global_cost(worst<GlobalCost>()) { }
+
         std::vector<FacilityId> facilities;
         GlobalCost global_cost;
     };
-
-    static Move move_null() { return {{}, global_cost_worst()}; }
 
     struct MoveHasher
     {
@@ -304,7 +296,7 @@ public:
             FacilityId facility_id_1 = facility_id;
             for (Counter c = 0; c < 16; ++c) {
                 FacilityId facility_id_2_best = -1;
-                GlobalCost c_best = global_cost_worst();
+                GlobalCost c_best = worst<GlobalCost>();
                 std::shuffle(facilities_.begin(), facilities_.end(), generator);
                 for (FacilityId facility_id_2: facilities_) {
                     if (std::find(facility_ids.begin(), facility_ids.end(), facility_id_2)
@@ -357,7 +349,7 @@ public:
     inline void local_search(
             Solution& solution,
             std::mt19937_64& generator,
-            const Move& = move_null())
+            const Move& = Move())
     {
         Counter it = 0;
         for (;; ++it) {

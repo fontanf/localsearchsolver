@@ -35,14 +35,6 @@ public:
     inline VertexId  number_of_vertices(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
     inline Distance              length(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
 
-    static GlobalCost global_cost_worst()
-    {
-        return {
-            std::numeric_limits<VertexId>::max(),
-            std::numeric_limits<Distance>::max(),
-        };
-    }
-
     /*
      * Solutions.
      */
@@ -163,6 +155,8 @@ public:
 
     struct Move
     {
+        Move(): pos_1(-1), global_cost(worst<GlobalCost>()) { }
+
         VertexPos pos_1;
         VertexPos pos_2;
         VertexPos pos_3;
@@ -178,15 +172,6 @@ public:
         VertexId j42;
         GlobalCost global_cost;
     };
-
-    static Move move_null()
-    {
-        return {
-            -1, -1, -1, -1,
-            -1, -1, -1, -1,
-            -1, -1, -1, -1,
-            global_cost_worst()};
-    }
 
     struct MoveHasher
     {
@@ -265,7 +250,7 @@ public:
         VertexId j12 = -1;
         VertexId j21 = -1;
         VertexId j22 = -1;
-        GlobalCost cost_difference = global_cost_worst();
+        GlobalCost cost_difference = worst<GlobalCost>();
     };
 
     /*
@@ -281,7 +266,7 @@ public:
         VertexId j21 = -1;
         VertexId j22 = -1;
         VertexId j23 = -1;
-        GlobalCost cost_difference = global_cost_worst();
+        GlobalCost cost_difference = worst<GlobalCost>();
     };
 
     /*
@@ -300,13 +285,13 @@ public:
         VertexId j21 = -1;
         VertexId j22 = -1;
         bool reverse = false;
-        GlobalCost cost_difference = global_cost_worst();
+        GlobalCost cost_difference = worst<GlobalCost>();
     };
 
     inline void local_search(
             Solution& solution,
             std::mt19937_64& generator,
-            const Move& perturbation = move_null())
+            const Move& perturbation = Move())
     {
         //print(std::cout, solution);
         //std::cout << to_string(global_cost(solution)) << std::endl;

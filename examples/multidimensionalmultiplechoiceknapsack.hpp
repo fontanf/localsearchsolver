@@ -37,15 +37,6 @@ public:
     inline Weight         overweight(const GlobalCost& global_cost) const { return std::get<1>(global_cost); }
     inline Profit             profit(const GlobalCost& global_cost) const { return std::get<2>(global_cost); }
 
-    static GlobalCost global_cost_worst()
-    {
-        return {
-            std::numeric_limits<GroupId>::max(),
-            std::numeric_limits<Weight>::max(),
-            std::numeric_limits<Profit>::max(),
-        };
-    }
-
     /*
      * Solutions.
      */
@@ -166,11 +157,11 @@ public:
 
     struct Move
     {
+        Move(): j(-1), global_cost(worst<GlobalCost>()) { }
+
         ItemId j;
         GlobalCost global_cost;
     };
-
-    static Move move_null() { return {-1, global_cost_worst()}; }
 
     struct MoveHasher
     {
@@ -225,7 +216,7 @@ public:
     inline void local_search(
             Solution& solution,
             std::mt19937_64& generator,
-            const Move& tabu = move_null())
+            const Move& tabu = Move())
     {
         Counter it = 0;
         for (;; ++it) {
