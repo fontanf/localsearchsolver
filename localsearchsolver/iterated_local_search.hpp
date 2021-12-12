@@ -115,6 +115,9 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
     std::mt19937_64 generator(parameters.seed);
 
     std::vector<Solution> initial_solutions;
+    Counter number_of_initial_solutions
+        = (Counter)parameters.initial_solution_ids.size()
+        + (Counter)parameters.initial_solutions.size();
     for (output.number_of_restarts = 1;; output.number_of_restarts++) {
         // Check maximum number of restarts.
         if (parameters.maximum_number_of_restarts >= 0
@@ -126,10 +129,6 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
 
         // Generate initial solutions.
         if (initial_solutions.empty()) {
-            Counter number_of_initial_solutions
-                = (Counter)parameters.initial_solution_ids.size()
-                + (Counter)parameters.initial_solutions.size();
-            Solution solution_cur;
             for (Counter initial_solution_pos = 0;
                     initial_solution_pos < number_of_initial_solutions;
                     initial_solution_pos++) {
