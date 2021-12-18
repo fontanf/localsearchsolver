@@ -83,7 +83,7 @@ public:
 
     CompactSolution solution2compact(const Solution& solution)
     {
-        return local_scheme_0_.jobs(solution);
+        return solution.sequence;
     }
 
     /*
@@ -196,7 +196,7 @@ public:
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
     {
-        JobPos n = local_scheme_0_.jobs(solution_parent_1).size();
+        JobPos n = solution_parent_1.sequence.size();
 
         std::vector<JobPos> edges = optimizationtools::bob_floyd<JobPos>(
                 2, n + 1, generator);
@@ -207,26 +207,26 @@ public:
 
         std::vector<uint8_t> in_substring(n, false);
         for (JobPos pos = pos_1; pos < pos_2; ++pos) {
-            JobId j = local_scheme_0_.jobs(solution_parent_1)[pos];
+            JobId j = solution_parent_1.sequence[pos];
             in_substring[j] = true;
         }
 
         Solution solution = empty_solution();
         for (JobPos pos = 0; pos < n; ++pos) {
-            if ((JobPos)local_scheme_0_.jobs(solution).size() == pos_1) {
+            if ((JobPos)solution.sequence.size() == pos_1) {
                 for (JobPos p = pos_1; p < pos_2; ++p) {
-                    JobId j = local_scheme_0_.jobs(solution_parent_1)[p];
+                    JobId j = solution_parent_1.sequence[p];
                     local_scheme_0_.append(solution, j);
                 }
             }
-            JobId j = local_scheme_0_.jobs(solution_parent_2)[pos];
+            JobId j = solution_parent_2.sequence[pos];
             if (in_substring[j])
                 continue;
             local_scheme_0_.append(solution, j);
         }
-        if ((JobPos)local_scheme_0_.jobs(solution).size() == pos_1) {
+        if ((JobPos)solution.sequence.size() == pos_1) {
             for (JobPos p = pos_1; p < pos_2; ++p) {
-                JobId j = local_scheme_0_.jobs(solution_parent_1)[p];
+                JobId j = solution_parent_1.sequence[p];
                 local_scheme_0_.append(solution, j);
             }
         }
@@ -248,7 +248,7 @@ public:
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
     {
-        JobPos n = local_scheme_0_.jobs(solution_parent_1).size();
+        JobPos n = solution_parent_1.sequence.size();
 
         Solution solution = empty_solution();
         std::vector<JobPos> positions(n, -1);
@@ -257,7 +257,7 @@ public:
         std::uniform_int_distribution<JobPos> d_point(1, n);
         JobPos pos_0 = d_point(generator);
         for (JobPos pos = 0; pos < pos_0; ++pos) {
-            JobId j = local_scheme_0_.jobs(solution_parent_1)[pos];
+            JobId j = solution_parent_1.sequence[pos];
             positions[j] = pos;
             local_scheme_0_.append(solution, j);
         }
@@ -266,11 +266,11 @@ public:
         for (JobPos pos = 0; pos < n; ++pos) {
             // Add jobs which have the same positions in both parents.
             for (;;) {
-                JobPos p = local_scheme_0_.jobs(solution).size();
+                JobPos p = solution.sequence.size();
                 if (p == n)
                     break;
-                JobId j1 = local_scheme_0_.jobs(solution_parent_1)[p];
-                JobId j2 = local_scheme_0_.jobs(solution_parent_2)[p];
+                JobId j1 = solution_parent_1.sequence[p];
+                JobId j2 = solution_parent_2.sequence[p];
                 if (j1 == j2) {
                     positions[j1] = p;
                     local_scheme_0_.append(solution, j1);
@@ -278,10 +278,10 @@ public:
                 }
                 break;
             }
-            JobId j = local_scheme_0_.jobs(solution_parent_2)[pos];
+            JobId j = solution_parent_2.sequence[pos];
             if (positions[j] != -1)
                 continue;
-            positions[j] = local_scheme_0_.jobs(solution).size();
+            positions[j] = solution.sequence.size();
             local_scheme_0_.append(solution, j);
         }
 
@@ -302,7 +302,7 @@ public:
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
     {
-        JobPos n = local_scheme_0_.jobs(solution_parent_1).size();
+        JobPos n = solution_parent_1.sequence.size();
 
         Solution solution = empty_solution();
         std::vector<JobPos> positions(n, -1);
@@ -311,7 +311,7 @@ public:
         std::uniform_int_distribution<JobPos> d_point(1, n);
         JobPos pos_0 = d_point(generator);
         for (JobPos pos = 0; pos < pos_0; ++pos) {
-            JobId j = local_scheme_0_.jobs(solution_parent_1)[pos];
+            JobId j = solution_parent_1.sequence[pos];
             positions[j] = pos;
             local_scheme_0_.append(solution, j);
         }
@@ -320,14 +320,14 @@ public:
         for (JobPos pos = 0; pos < n; ++pos) {
             // Add jobs which have the same positions in both parents.
             for (;;) {
-                JobPos p = local_scheme_0_.jobs(solution).size();
+                JobPos p = solution.sequence.size();
                 if (p == n)
                     break;
-                JobId j1 = local_scheme_0_.jobs(solution_parent_1)[p];
-                JobId j2 = local_scheme_0_.jobs(solution_parent_2)[p];
+                JobId j1 = solution_parent_1.sequence[p];
+                JobId j2 = solution_parent_2.sequence[p];
                 if (p <= n - 1) {
-                    JobId j1_next = local_scheme_0_.jobs(solution_parent_1)[p + 1];
-                    JobId j2_next = local_scheme_0_.jobs(solution_parent_2)[p + 1];
+                    JobId j1_next = solution_parent_1.sequence[p + 1];
+                    JobId j2_next = solution_parent_2.sequence[p + 1];
                     if (j1 == j2 && j1_next == j2_next) {
                         positions[j1] = p;
                         local_scheme_0_.append(solution, j1);
@@ -335,8 +335,8 @@ public:
                     }
                 }
                 if (p >= 1) {
-                    JobId j1_prev = local_scheme_0_.jobs(solution_parent_1)[p - 1];
-                    JobId j2_prev = local_scheme_0_.jobs(solution_parent_2)[p - 1];
+                    JobId j1_prev = solution_parent_1.sequence[p - 1];
+                    JobId j2_prev = solution_parent_2.sequence[p - 1];
                     if (j1 == j2 && j1_prev == j2_prev) {
                         positions[j1] = p;
                         local_scheme_0_.append(solution, j1);
@@ -345,10 +345,10 @@ public:
                 }
                 break;
             }
-            JobId j = local_scheme_0_.jobs(solution_parent_2)[pos];
+            JobId j = solution_parent_2.sequence[pos];
             if (positions[j] != -1)
                 continue;
-            positions[j] = local_scheme_0_.jobs(solution).size();
+            positions[j] = solution.sequence.size();
             local_scheme_0_.append(solution, j);
         }
 
@@ -380,18 +380,18 @@ public:
             const Solution& solution_1,
             const Solution& solution_2) const
     {
-        JobPos n = local_scheme_0_.jobs(solution_1).size();
+        JobPos n = solution_1.sequence.size();
         std::vector<JobId> next_1(n, -1);
         for (JobPos pos = 0; pos < n - 1; ++pos) {
-            JobId j = local_scheme_0_.jobs(solution_1)[pos];
-            JobId j_next = local_scheme_0_.jobs(solution_1)[pos + 1];
+            JobId j = solution_1.sequence[pos];
+            JobId j_next = solution_1.sequence[pos + 1];
             next_1[j] = j_next;
         }
 
         JobPos d = 0;
         for (JobPos pos = 0; pos < n - 1; ++pos) {
-            JobId j = local_scheme_0_.jobs(solution_2)[pos];
-            JobId j_next = local_scheme_0_.jobs(solution_2)[pos + 1];
+            JobId j = solution_2.sequence[pos];
+            JobId j_next = solution_2.sequence[pos + 1];
             if (j_next != next_1[j])
                 d++;
         }
@@ -429,7 +429,7 @@ public:
         std::vector<Move> moves;
         for (Counter perturbation = 0; perturbation < parameters_.number_of_perturbations; ++perturbation) {
             std::vector<JobPos> edges = optimizationtools::bob_floyd<JobPos>(
-                    4, local_scheme_0_.jobs(solution).size() + 1, generator);
+                    4, solution.sequence.size() + 1, generator);
             std::sort(edges.begin(), edges.end());
             Move move;
             move.pos_1 = edges[0];
@@ -437,7 +437,7 @@ public:
             move.pos_3 = edges[2];
             move.pos_4 = edges[3];
             assert(move.pos_1 >= 0);
-            assert(move.pos_4 <= (JobPos)local_scheme_0_.jobs(solution).size());
+            assert(move.pos_4 <= (JobPos)solution.sequence.size());
             move.global_cost = global_cost(solution);
             moves.push_back(move);
         }
@@ -448,17 +448,17 @@ public:
     {
         solution_tmp_ = local_scheme_0_.empty_solution();
         for (JobPos pos = 0; pos < move.pos_1; ++pos)
-            local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[pos]);
+            local_scheme_0_.append(solution_tmp_, solution.sequence[pos]);
         for (JobPos pos = move.pos_3; pos < move.pos_4; ++pos)
-            local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[pos]);
+            local_scheme_0_.append(solution_tmp_, solution.sequence[pos]);
         for (JobPos pos = move.pos_2; pos < move.pos_3; ++pos)
-            local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[pos]);
+            local_scheme_0_.append(solution_tmp_, solution.sequence[pos]);
         for (JobPos pos = move.pos_1; pos < move.pos_2; ++pos)
-            local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[pos]);
-        for (JobPos pos = move.pos_4; pos < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos)
-            local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[pos]);
+            local_scheme_0_.append(solution_tmp_, solution.sequence[pos]);
+        for (JobPos pos = move.pos_4; pos < (JobPos)solution.sequence.size(); ++pos)
+            local_scheme_0_.append(solution_tmp_, solution.sequence[pos]);
         solution = solution_tmp_;
-        assert((JobPos)local_scheme_0_.jobs(solution).size() <= local_scheme_0_.number_of_jobs());
+        assert((JobPos)solution.sequence.size() <= local_scheme_0_.number_of_jobs());
     }
 
     inline void local_search(
@@ -507,11 +507,11 @@ public:
                     JobPos pos_new_best = -1;
                     GlobalCost c_best = global_cost(solution);
                     for (JobPos pos: positions1_) {
-                        if (pos > (JobPos)local_scheme_0_.jobs(solution).size() - block_size)
+                        if (pos > (JobPos)solution.sequence.size() - block_size)
                             continue;
                         compute_cost_shift(solution, pos, block_size);
                         for (JobPos pos_new: positions2_) {
-                            if (pos == pos_new || pos_new > (JobPos)local_scheme_0_.jobs(solution).size() - block_size)
+                            if (pos == pos_new || pos_new > (JobPos)solution.sequence.size() - block_size)
                                 continue;
                             GlobalCost c = global_costs_shift_[pos_new];
                             if (c >= c_best)
@@ -535,25 +535,25 @@ public:
                         solution_tmp_ = local_scheme_0_.empty_solution();
                         if (pos_best > pos_new_best) {
                             for (JobPos p = 0; p < pos_new_best; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                             for (JobPos p = pos_best; p < pos_best + block_size; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                             for (JobPos p = pos_new_best; p < pos_best; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_best + block_size; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
+                            for (JobPos p = pos_best + block_size; p < (JobPos)solution.sequence.size(); ++p)
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                         } else {
                             for (JobPos p = 0; p < pos_best; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                             for (JobPos p = pos_best + block_size; p < pos_new_best + block_size; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                             for (JobPos p = pos_best; p < pos_best + block_size; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_new_best + block_size; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
+                            for (JobPos p = pos_new_best + block_size; p < (JobPos)solution.sequence.size(); ++p)
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                         }
                         solution = solution_tmp_;
-                        assert((JobPos)local_scheme_0_.jobs(solution).size() <= local_scheme_0_.number_of_jobs());
+                        assert((JobPos)solution.sequence.size() <= local_scheme_0_.number_of_jobs());
                         if (local_scheme_0_.global_cost(solution) != c_best) {
                             throw std::logic_error(
                                     std::to_string(block_size)
@@ -591,14 +591,14 @@ public:
                         // Apply best move.
                         solution_tmp_ = local_scheme_0_.empty_solution();
                         for (JobPos pos = 0; pos < local_scheme_0_.number_of_jobs(); ++pos) {
-                            JobId j = local_scheme_0_.jobs(solution)[pos];
+                            JobId j = solution.sequence[pos];
                             if (pos_1_best <= pos && pos < pos_1_best + block_size) {
                                 JobPos diff = pos - pos_1_best;
-                                j = local_scheme_0_.jobs(solution)[pos_2_best + diff];
+                                j = solution.sequence[pos_2_best + diff];
                             }
                             if (pos_2_best <= pos && pos < pos_2_best + block_size) {
                                 JobPos diff = pos - pos_2_best;
-                                j = local_scheme_0_.jobs(solution)[pos_1_best + diff];
+                                j = solution.sequence[pos_1_best + diff];
                             }
                             local_scheme_0_.append(solution_tmp_, j);
                         }
@@ -644,26 +644,26 @@ public:
                         solution_tmp_ = local_scheme_0_.empty_solution();
                         if (pos_1_best < pos_2_best) {
                             for (JobPos p = 0; p < pos_1_best; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                             for (JobPos p = pos_2_best; p < pos_2_best + block_size_2; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                             for (JobPos p = pos_1_best + block_size_1; p < pos_2_best; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                             for (JobPos p = pos_1_best; p < pos_1_best + block_size_1; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_2_best + block_size_2; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
+                            for (JobPos p = pos_2_best + block_size_2; p < (JobPos)solution.sequence.size(); ++p)
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                         } else {
                             for (JobPos p = 0; p < pos_2_best; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                             for (JobPos p = pos_1_best; p < pos_1_best + block_size_1; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                             for (JobPos p = pos_2_best + block_size_2; p < pos_1_best; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                             for (JobPos p = pos_2_best; p < pos_2_best + block_size_2; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_1_best + block_size_1; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
+                            for (JobPos p = pos_1_best + block_size_1; p < (JobPos)solution.sequence.size(); ++p)
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                         }
                         solution = solution_tmp_;
                         if (local_scheme_0_.global_cost(solution) != c_best) {
@@ -707,15 +707,15 @@ public:
                         // Apply best move.
                         solution_tmp_ = local_scheme_0_.empty_solution();
                         for (JobPos pos = 0; pos < pos_1_best; ++pos) {
-                            JobId j = local_scheme_0_.jobs(solution)[pos];
+                            JobId j = solution.sequence[pos];
                             local_scheme_0_.append(solution_tmp_, j);
                         }
                         for (JobPos pos = pos_2_best; pos >= pos_1_best; --pos) {
-                            JobId j = local_scheme_0_.jobs(solution)[pos];
+                            JobId j = solution.sequence[pos];
                             local_scheme_0_.append(solution_tmp_, j);
                         }
                         for (JobPos pos = pos_2_best + 1; pos < local_scheme_0_.number_of_jobs(); ++pos) {
-                            JobId j = local_scheme_0_.jobs(solution)[pos];
+                            JobId j = solution.sequence[pos];
                             local_scheme_0_.append(solution_tmp_, j);
                         }
                         solution = solution_tmp_;
@@ -737,11 +737,11 @@ public:
                     JobPos pos_new_best = -1;
                     GlobalCost c_best = global_cost(solution);
                     for (JobPos pos: positions1_) {
-                        if (pos > (JobPos)local_scheme_0_.jobs(solution).size() - block_size)
+                        if (pos > (JobPos)solution.sequence.size() - block_size)
                             continue;
                         compute_cost_shift(solution, pos, block_size, true);
                         for (JobPos pos_new: positions2_) {
-                            if (pos == pos_new || pos_new > (JobPos)local_scheme_0_.jobs(solution).size() - block_size)
+                            if (pos == pos_new || pos_new > (JobPos)solution.sequence.size() - block_size)
                                 continue;
                             GlobalCost c = global_costs_shift_[pos_new];
                             if (c >= c_best)
@@ -765,25 +765,25 @@ public:
                         solution_tmp_ = local_scheme_0_.empty_solution();
                         if (pos_best > pos_new_best) {
                             for (JobPos p = 0; p < pos_new_best; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                             for (JobPos p = pos_best + block_size - 1; p >= pos_best; --p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                             for (JobPos p = pos_new_best; p < pos_best; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_best + block_size; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
+                            for (JobPos p = pos_best + block_size; p < (JobPos)solution.sequence.size(); ++p)
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                         } else {
                             for (JobPos p = 0; p < pos_best; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                             for (JobPos p = pos_best + block_size; p < pos_new_best + block_size; ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                             for (JobPos p = pos_best + block_size - 1; p >= pos_best; --p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_new_best + block_size; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
-                                local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
+                            for (JobPos p = pos_new_best + block_size; p < (JobPos)solution.sequence.size(); ++p)
+                                local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                         }
                         solution = solution_tmp_;
-                        assert((JobPos)local_scheme_0_.jobs(solution).size() <= local_scheme_0_.number_of_jobs());
+                        assert((JobPos)solution.sequence.size() <= local_scheme_0_.number_of_jobs());
                         if (local_scheme_0_.global_cost(solution) != c_best) {
                             throw std::logic_error(
                                     std::to_string(block_size)
@@ -815,7 +815,7 @@ public:
             const Solution& solution) const
     {
         os << "sequence:";
-        for (JobId j: local_scheme_0_.jobs(solution))
+        for (JobId j: solution.sequence)
             os << " " << j;
         os << std::endl;
         os << "cost: " << to_string(global_cost(solution)) << std::endl;
@@ -834,7 +834,7 @@ public:
             return;
         }
 
-        for (JobId j: local_scheme_0_.jobs(solution))
+        for (JobId j: solution.sequence)
             cert << j << " ";
     }
 
@@ -928,7 +928,7 @@ private:
                 (JobPos)0,
                 pos - parameters_.shift_maximum_distance);
         JobPos pos_max = std::min(
-                (JobPos)local_scheme_0_.jobs(solution).size() - size,
+                (JobPos)solution.sequence.size() - size,
                 pos + parameters_.shift_maximum_distance);
         for (JobPos pos_new = pos_min; pos_new <= pos_max; ++pos_new) {
             // Initialize solution_tmp_.
@@ -938,7 +938,7 @@ private:
             if (!reverse) {
                 for (JobPos p = pos; p < pos + size; ++p) {
                     // Add job to solution_tmp_.
-                    JobId j = local_scheme_0_.jobs(solution)[p];
+                    JobId j = solution.sequence[p];
                     local_scheme_0_.append(solution_tmp_, j);
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
@@ -947,7 +947,7 @@ private:
             } else {
                 for (JobPos p = pos + size - 1; p >= pos; --p) {
                     // Add job to solution_tmp_.
-                    JobId j = local_scheme_0_.jobs(solution)[p];
+                    JobId j = solution.sequence[p];
                     local_scheme_0_.append(solution_tmp_, j);
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
@@ -957,7 +957,7 @@ private:
 
             // Add the remaining jobs to solution_tmp.
             JobPos p0 = (pos_new < pos)? pos_new: pos_new + size;
-            for (JobPos p = p0; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p) {
+            for (JobPos p = p0; p < (JobPos)solution.sequence.size(); ++p) {
                 // Skip jobs from the previously added bloc.
                 if (pos <= p && p < pos + size)
                     continue;
@@ -965,18 +965,18 @@ private:
                 if (global_cost(solution_tmp_) >= global_cost(solution))
                     break;
                 // Add job to solution_tmp_.
-                JobId j = local_scheme_0_.jobs(solution)[p];
+                JobId j = solution.sequence[p];
                 local_scheme_0_.append(solution_tmp_, j);
             }
             global_costs_shift_[pos_new] = global_cost(solution_tmp_);
 
             // Stop condition.
-            if (pos_new == (JobPos)local_scheme_0_.jobs(solution).size() - size)
+            if (pos_new == (JobPos)solution.sequence.size() - size)
                 break;
 
             // Add j1 to solution_cur_.
-            assert(p0 < (JobPos)local_scheme_0_.jobs(solution).size());
-            JobId j1 = local_scheme_0_.jobs(solution)[p0];
+            assert(p0 < (JobPos)solution.sequence.size());
+            JobId j1 = solution.sequence[p0];
             local_scheme_0_.append(solution_cur_, j1);
         }
     }
@@ -986,14 +986,14 @@ private:
         // Initialize solution_cur_.
         solution_cur_ = local_scheme_0_.empty_solution();
         // Reset global_costs_swap_.
-        for (JobPos pos_1 = 0; pos_1 < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos_1)
+        for (JobPos pos_1 = 0; pos_1 < (JobPos)solution.sequence.size(); ++pos_1)
             std::fill(
                     global_costs_swap_[pos_1].begin(),
                     global_costs_swap_[pos_1].end(),
                     worst<GlobalCost>());
 
         // Loop through all pairs.
-        Counter pos_max = (JobPos)local_scheme_0_.jobs(solution).size() - size;
+        Counter pos_max = (JobPos)solution.sequence.size() - size;
         for (JobPos pos_1 = 0; pos_1 <= pos_max; ++pos_1) {
             JobPos pos_2_max = std::min(
                     pos_max,
@@ -1002,16 +1002,16 @@ private:
                 // Initialize solution_tmp_.
                 solution_tmp_ = solution_cur_;
                 // Add remaining jobs.
-                for (JobPos pos = pos_1; pos < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos) {
-                    JobId j = local_scheme_0_.jobs(solution)[pos];
+                for (JobPos pos = pos_1; pos < (JobPos)solution.sequence.size(); ++pos) {
+                    JobId j = solution.sequence[pos];
                     // If j1 or j2, swap.
                     if (pos_1 <= pos && pos < pos_1 + size) {
                         JobPos diff = pos - pos_1;
-                        j = local_scheme_0_.jobs(solution)[pos_2 + diff];
+                        j = solution.sequence[pos_2 + diff];
                     }
                     if (pos_2 <= pos && pos < pos_2 + size) {
                         JobPos diff = pos - pos_2;
-                        j = local_scheme_0_.jobs(solution)[pos_1 + diff];
+                        j = solution.sequence[pos_1 + diff];
                     }
                     // Add job to solution_tmp_.
                     local_scheme_0_.append(solution_tmp_, j);
@@ -1023,7 +1023,7 @@ private:
             }
 
             // Add j1 to solution_cur_.
-            JobId j1 = local_scheme_0_.jobs(solution)[pos_1];
+            JobId j1 = solution.sequence[pos_1];
             local_scheme_0_.append(solution_cur_, j1);
         }
     }
@@ -1033,11 +1033,11 @@ private:
             Counter block_size_1,
             Counter block_size_2)
     {
-        JobPos n = (JobPos)local_scheme_0_.jobs(solution).size();
+        JobPos n = (JobPos)solution.sequence.size();
         // Initialize solution_cur_.
         solution_cur_ = local_scheme_0_.empty_solution();
         // Reset global_costs_swap_.
-        for (JobPos pos_1 = 0; pos_1 < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos_1)
+        for (JobPos pos_1 = 0; pos_1 < (JobPos)solution.sequence.size(); ++pos_1)
             std::fill(
                     global_costs_swap_2_[pos_1].begin(),
                     global_costs_swap_2_[pos_1].end(),
@@ -1059,7 +1059,7 @@ private:
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
                         break;
-                    JobId j = local_scheme_0_.jobs(solution)[p];
+                    JobId j = solution.sequence[p];
                     // Add job to solution_tmp_.
                     local_scheme_0_.append(solution_tmp_, j);
                 }
@@ -1068,7 +1068,7 @@ private:
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
                         break;
-                    JobId j = local_scheme_0_.jobs(solution)[p];
+                    JobId j = solution.sequence[p];
                     // Add job to solution_tmp_.
                     local_scheme_0_.append(solution_tmp_, j);
                 }
@@ -1077,7 +1077,7 @@ private:
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
                         break;
-                    JobId j = local_scheme_0_.jobs(solution)[p];
+                    JobId j = solution.sequence[p];
                     // Add job to solution_tmp_.
                     local_scheme_0_.append(solution_tmp_, j);
                 }
@@ -1086,7 +1086,7 @@ private:
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
                         break;
-                    JobId j = local_scheme_0_.jobs(solution)[p];
+                    JobId j = solution.sequence[p];
                     // Add job to solution_tmp_.
                     local_scheme_0_.append(solution_tmp_, j);
                 }
@@ -1105,7 +1105,7 @@ private:
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
                         break;
-                    JobId j = local_scheme_0_.jobs(solution)[p];
+                    JobId j = solution.sequence[p];
                     // Add job to solution_tmp_.
                     local_scheme_0_.append(solution_tmp_, j);
                 }
@@ -1114,7 +1114,7 @@ private:
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
                         break;
-                    JobId j = local_scheme_0_.jobs(solution)[p];
+                    JobId j = solution.sequence[p];
                     // Add job to solution_tmp_.
                     local_scheme_0_.append(solution_tmp_, j);
                 }
@@ -1123,7 +1123,7 @@ private:
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
                         break;
-                    JobId j = local_scheme_0_.jobs(solution)[p];
+                    JobId j = solution.sequence[p];
                     // Add job to solution_tmp_.
                     local_scheme_0_.append(solution_tmp_, j);
                 }
@@ -1132,13 +1132,13 @@ private:
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
                         break;
-                    JobId j = local_scheme_0_.jobs(solution)[p];
+                    JobId j = solution.sequence[p];
                     // Add job to solution_tmp_.
                     local_scheme_0_.append(solution_tmp_, j);
                 }
                 //if (pos_1 == 46 && pos_2 == 44) {
                 //    std::cout << "jobs: ";
-                //    for (JobId j: local_scheme_0_.jobs(solution))
+                //    for (JobId j: solution.sequence)
                 //        std::cout << " " << j;
                 //    std::cout << std::endl;
                 //    std::cout << "jobs: ";
@@ -1150,7 +1150,7 @@ private:
             }
 
             // Add j to solution_cur_.
-            JobId j = local_scheme_0_.jobs(solution)[pos];
+            JobId j = solution.sequence[pos];
             local_scheme_0_.append(solution_cur_, j);
         }
     }
@@ -1160,23 +1160,23 @@ private:
         // Initialize solution_cur_.
         solution_cur_ = local_scheme_0_.empty_solution();
         // Reset global_costs_swap_.
-        for (JobPos pos_1 = 0; pos_1 < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos_1)
+        for (JobPos pos_1 = 0; pos_1 < (JobPos)solution.sequence.size(); ++pos_1)
             std::fill(
                     global_costs_swap_[pos_1].begin(),
                     global_costs_swap_[pos_1].end(),
                     worst<GlobalCost>());
 
         // Loop through all pairs.
-        for (JobPos pos_1 = 0; pos_1 < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos_1) {
+        for (JobPos pos_1 = 0; pos_1 < (JobPos)solution.sequence.size(); ++pos_1) {
             JobPos pos_max = std::min(
-                    (JobPos)local_scheme_0_.jobs(solution).size(),
+                    (JobPos)solution.sequence.size(),
                     pos_1 + parameters_.reverse_maximum_length);
             for (JobPos pos_2 = pos_1 + 2; pos_2 < pos_max; ++pos_2) {
                 // Initialize solution_tmp_.
                 solution_tmp_ = solution_cur_;
                 // Add reverse sequence.
                 for (JobPos pos = pos_2; pos >= pos_1; --pos) {
-                    JobId j = local_scheme_0_.jobs(solution)[pos];
+                    JobId j = solution.sequence[pos];
                     // Add job to solution_tmp_.
                     local_scheme_0_.append(solution_tmp_, j);
                     // Check early termination.
@@ -1184,11 +1184,11 @@ private:
                         break;
                 }
                 // Add remaining jobs.
-                for (JobPos pos = pos_2 + 1; pos < (JobPos)local_scheme_0_.jobs(solution).size(); ++pos) {
+                for (JobPos pos = pos_2 + 1; pos < (JobPos)solution.sequence.size(); ++pos) {
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
                         break;
-                    JobId j = local_scheme_0_.jobs(solution)[pos];
+                    JobId j = solution.sequence[pos];
                     // Add job to solution_tmp_.
                     local_scheme_0_.append(solution_tmp_, j);
                 }
@@ -1196,7 +1196,7 @@ private:
             }
 
             // Add j1 to solution_cur_.
-            JobId j1 = local_scheme_0_.jobs(solution)[pos_1];
+            JobId j1 = solution.sequence[pos_1];
             local_scheme_0_.append(solution_cur_, j1);
         }
     }

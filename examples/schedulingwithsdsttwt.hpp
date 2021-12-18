@@ -40,7 +40,7 @@ public:
 
     struct Solution
     {
-        std::vector<JobId> jobs;
+        std::vector<JobId> sequence;
         Time time = 0;
         Weight total_weighted_tardiness = 0;
     };
@@ -114,22 +114,20 @@ public:
 
     inline JobPos number_of_jobs() const { return instance_.number_of_jobs(); }
 
-    inline const std::vector<JobId>& jobs(const Solution& solution) const { return solution.jobs; }
-
     inline void append(
             Solution& solution,
             JobId j) const
     {
-        if (solution.jobs.size() == 0)
+        if (solution.sequence.size() == 0)
             solution.total_weighted_tardiness = 0;
         // Update time.
-        JobId j_prev = (solution.jobs.size() > 0)?
-            solution.jobs.back():
+        JobId j_prev = (solution.sequence.size() > 0)?
+            solution.sequence.back():
             instance_.number_of_jobs();
         solution.time += instance_.setup_time(j_prev, j);
         solution.time += instance_.job(j).processing_time;
         // Update jobs.
-        solution.jobs.push_back(j);
+        solution.sequence.push_back(j);
         // Update total weighted tardiness.
         if (solution.time > instance_.job(j).due_date)
             solution.total_weighted_tardiness

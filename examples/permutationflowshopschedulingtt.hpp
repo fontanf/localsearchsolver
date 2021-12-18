@@ -38,7 +38,7 @@ public:
 
     struct Solution
     {
-        std::vector<JobId> jobs;
+        std::vector<JobId> sequence;
         std::vector<Time> times;
         Time total_tardiness = 0;
     };
@@ -113,17 +113,15 @@ public:
 
     inline JobPos number_of_jobs() const { return instance_.number_of_jobs(); }
 
-    inline const std::vector<JobId>& jobs(const Solution& solution) const { return solution.jobs; }
-
     inline void append(
             Solution& solution,
             JobId j) const
     {
-        if (solution.jobs.size() == 0)
+        if (solution.sequence.size() == 0)
             solution.total_tardiness = 0;
         MachineId m = instance_.number_of_machines();
-        // Update jobs.
-        solution.jobs.push_back(j);
+        // Update sequence.
+        solution.sequence.push_back(j);
         // Update times.
         solution.times[0] = solution.times[0] + instance_.job(j).processing_times[0];
         for (MachineId i = 1; i < m; ++i) {
