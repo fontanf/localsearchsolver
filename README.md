@@ -34,16 +34,16 @@ Implemented algorithms:
 ## Sequencing module
 
 A specific implementation is also available for sequencing problems. The neighborhoods, crossovers and perturbations are already implemented, it is only required to provide an `append(solution, j)` method to use them:
-* Perturbation: swap two blocs (double-bridge)
+* Perturbation: swap two blocks (double-bridge)
 * Crossover algorithms:
   * OX crossover
   * SJOX crossover
   * SBOX crossover
 * Local search neighborhoods:
-  * Shift a bloc of `k` consecutive jobs
-  * Swap a bloc of `k1` consecutive jobs with another bloc of `k2` consecutive jobs
-  * Reverse a bloc of consecutive jobs
-  * Shift and reverse a bloc of `k` consecutive jobs
+  * Shift a block of `k` consecutive jobs
+  * Swap a block of `k1` consecutive jobs with another block of `k2` consecutive jobs
+  * Reverse a block of consecutive jobs
+  * Shift and reverse a block of `k` consecutive jobs
 
 ### Examples
 
@@ -146,9 +146,9 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
 [Travelling Salesman Problem](examples/travellingsalesman.hpp)
 * Three field classification: `1 | sᵢⱼ | Cₘₐₓ`
 * Algorithm:
-  * Perturbation: swap two blocs (double-bridge)
+  * Perturbation: swap two blocks (double-bridge)
   * Local search neighborhoods:
-    * Shift a bloc of `k` consecutive vertices, `k = 1..8` (or-opt)
+    * Shift a block of `k` consecutive vertices, `k = 1..8` (or-opt)
     * Swap vertex `j1` with vertex `j2`
     * Replace edges `(j1, j2)` and `(j3, j4)` by edges `(j1, j3)` and `(j2, j4)` (2-opt)
   * The local search implementation avoids recomputing moves which have not change since the last neighborhood exploration
@@ -172,7 +172,7 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
 [Permutation flow shop scheduling problem, Makespan](examples/permutationflowshopschedulingmakespan.hpp)
 * This one is not considered as a sequencing problem since the dedicated acceleration strategy makes it possible to explore the neighborhoods more efficiently
 * Algorithm:
-  * Perturbation: swap two blocs (double-bridge)
+  * Perturbation: swap two blocks (double-bridge)
   * Local search neighborhoods:
     * Move `k` consecutive jobs, `k = 1..4`
 

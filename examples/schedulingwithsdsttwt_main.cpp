@@ -10,8 +10,8 @@ inline LocalScheme::Parameters read_local_scheme_args(
     LocalScheme::Parameters parameters;
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
-        ("shift-bloc-maximum-length,", boost::program_options::value<schedulingwithsdsttwt::JobPos>(&parameters.sequencing_parameters.shift_bloc_maximum_length), "")
-        ("swap-bloc-maximum-length,", boost::program_options::value<schedulingwithsdsttwt::JobPos>(&parameters.sequencing_parameters.swap_bloc_maximum_length), "")
+        ("shift-block-maximum-length,", boost::program_options::value<schedulingwithsdsttwt::JobPos>(&parameters.sequencing_parameters.shift_block_maximum_length), "")
+        ("swap-block-maximum-length,", boost::program_options::value<schedulingwithsdsttwt::JobPos>(&parameters.sequencing_parameters.swap_block_maximum_length), "")
         ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line((Counter)argv.size(), argv.data(), desc), vm);

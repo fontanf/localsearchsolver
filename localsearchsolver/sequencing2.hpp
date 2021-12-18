@@ -19,16 +19,16 @@ enum class Neighborhoods { Shift, SwapK, SwapK1K2, Reverse, ShiftReverse };
 
 struct Parameters
 {
-    JobPos shift_bloc_maximum_length = 3;
+    JobPos shift_block_maximum_length = 3;
     JobPos shift_maximum_distance = 1024;
 
     JobPos swap_maximum_distance = 1024;
-    JobPos swap_bloc_maximum_length = 2;
+    JobPos swap_block_maximum_length = 2;
 
     bool reverse = false;
     JobPos reverse_maximum_length = 1024;
 
-    JobPos shift_reverse_bloc_maximum_length = 0;
+    JobPos shift_reverse_block_maximum_length = 0;
 
     bool shuffle_neighborhood_order = true;
     Counter number_of_perturbations = 10;
@@ -121,21 +121,21 @@ public:
 
         // Initialize statistics structures.
         shift_number_of_explorations_ = std::vector<Counter>(
-                parameters_.shift_bloc_maximum_length + 1, 0);
+                parameters_.shift_block_maximum_length + 1, 0);
         shift_number_of_sucesses_ = std::vector<Counter>(
-                parameters_.shift_bloc_maximum_length + 1, 0);
+                parameters_.shift_block_maximum_length + 1, 0);
         swap_number_of_explorations_ = std::vector<std::vector<Counter>>(
-                parameters_.swap_bloc_maximum_length + 1);
+                parameters_.swap_block_maximum_length + 1);
         swap_number_of_sucesses_ = std::vector<std::vector<Counter>>(
-                parameters_.swap_bloc_maximum_length + 1);
-        for (JobPos p = 0; p <= parameters_.swap_bloc_maximum_length; ++p) {
+                parameters_.swap_block_maximum_length + 1);
+        for (JobPos p = 0; p <= parameters_.swap_block_maximum_length; ++p) {
             swap_number_of_explorations_[p] = std::vector<Counter>(p + 1, 0);
             swap_number_of_sucesses_[p] = std::vector<Counter>(p + 1, 0);
         }
         shift_reverse_number_of_explorations_ = std::vector<Counter>(
-                parameters_.shift_bloc_maximum_length + 1, 0);
+                parameters_.shift_block_maximum_length + 1, 0);
         shift_reverse_number_of_sucesses_ = std::vector<Counter>(
-                parameters_.shift_bloc_maximum_length + 1, 0);
+                parameters_.shift_block_maximum_length + 1, 0);
     }
 
     LocalScheme(const LocalScheme& sequencing_scheme):
@@ -474,17 +474,17 @@ public:
 
         // Get neighborhoods.
         std::vector<std::tuple<Neighborhoods, JobPos, JobPos>> neighborhoods;
-        for (JobPos bloc_size = 1; bloc_size <= parameters_.shift_bloc_maximum_length; ++bloc_size)
-            neighborhoods.push_back({Neighborhoods::Shift, bloc_size, 0});
-        for (JobPos bloc_size = 1; bloc_size <= parameters_.swap_bloc_maximum_length; ++bloc_size)
-            neighborhoods.push_back({Neighborhoods::SwapK, bloc_size, 0});
-        for (JobPos bloc_size_1 = 1; bloc_size_1 <= parameters_.swap_bloc_maximum_length; ++bloc_size_1)
-            for (JobPos bloc_size_2 = 1; bloc_size_2 < bloc_size_1; ++bloc_size_2)
-                neighborhoods.push_back({Neighborhoods::SwapK1K2, bloc_size_1, bloc_size_2});
+        for (JobPos block_size = 1; block_size <= parameters_.shift_block_maximum_length; ++block_size)
+            neighborhoods.push_back({Neighborhoods::Shift, block_size, 0});
+        for (JobPos block_size = 1; block_size <= parameters_.swap_block_maximum_length; ++block_size)
+            neighborhoods.push_back({Neighborhoods::SwapK, block_size, 0});
+        for (JobPos block_size_1 = 1; block_size_1 <= parameters_.swap_block_maximum_length; ++block_size_1)
+            for (JobPos block_size_2 = 1; block_size_2 < block_size_1; ++block_size_2)
+                neighborhoods.push_back({Neighborhoods::SwapK1K2, block_size_1, block_size_2});
         if (parameters_.reverse)
             neighborhoods.push_back({Neighborhoods::Reverse, 0, 0});
-        for (JobPos bloc_size = 2; bloc_size <= parameters_.shift_reverse_bloc_maximum_length; ++bloc_size)
-            neighborhoods.push_back({Neighborhoods::ShiftReverse, bloc_size, 0});
+        for (JobPos block_size = 2; block_size <= parameters_.shift_reverse_block_maximum_length; ++block_size)
+            neighborhoods.push_back({Neighborhoods::ShiftReverse, block_size, 0});
 
         Counter it = 0;
         for (;; ++it) {
@@ -500,18 +500,18 @@ public:
             for (auto neighborhood: neighborhoods) {
                 switch (std::get<0>(neighborhood)) {
                 case Neighborhoods::Shift: {
-                    JobPos bloc_size = std::get<1>(neighborhood);
+                    JobPos block_size = std::get<1>(neighborhood);
                     std::shuffle(positions1_.begin(), positions1_.end(), generator);
                     std::shuffle(positions2_.begin(), positions2_.end(), generator);
                     JobPos pos_best = -1;
                     JobPos pos_new_best = -1;
                     GlobalCost c_best = global_cost(solution);
                     for (JobPos pos: positions1_) {
-                        if (pos > (JobPos)local_scheme_0_.jobs(solution).size() - bloc_size)
+                        if (pos > (JobPos)local_scheme_0_.jobs(solution).size() - block_size)
                             continue;
-                        compute_cost_shift(solution, pos, bloc_size);
+                        compute_cost_shift(solution, pos, block_size);
                         for (JobPos pos_new: positions2_) {
-                            if (pos == pos_new || pos_new > (JobPos)local_scheme_0_.jobs(solution).size() - bloc_size)
+                            if (pos == pos_new || pos_new > (JobPos)local_scheme_0_.jobs(solution).size() - block_size)
                                 continue;
                             GlobalCost c = global_costs_shift_[pos_new];
                             if (c >= c_best)
@@ -531,44 +531,44 @@ public:
                         improved = true;
                         assert(c_best < local_scheme_0_.global_cost(solution));
                         // Apply best move.
-                        //std::cout << bloc_size << std::endl;
+                        //std::cout << block_size << std::endl;
                         solution_tmp_ = local_scheme_0_.empty_solution();
                         if (pos_best > pos_new_best) {
                             for (JobPos p = 0; p < pos_new_best; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_best; p < pos_best + bloc_size; ++p)
+                            for (JobPos p = pos_best; p < pos_best + block_size; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
                             for (JobPos p = pos_new_best; p < pos_best; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_best + bloc_size; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
+                            for (JobPos p = pos_best + block_size; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
                         } else {
                             for (JobPos p = 0; p < pos_best; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_best + bloc_size; p < pos_new_best + bloc_size; ++p)
+                            for (JobPos p = pos_best + block_size; p < pos_new_best + block_size; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_best; p < pos_best + bloc_size; ++p)
+                            for (JobPos p = pos_best; p < pos_best + block_size; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_new_best + bloc_size; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
+                            for (JobPos p = pos_new_best + block_size; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
                         }
                         solution = solution_tmp_;
                         assert((JobPos)local_scheme_0_.jobs(solution).size() <= local_scheme_0_.number_of_jobs());
                         if (local_scheme_0_.global_cost(solution) != c_best) {
                             throw std::logic_error(
-                                    std::to_string(bloc_size)
+                                    std::to_string(block_size)
                                     + "-shift. Costs do not match:\n"
                                     + "* Expected new cost: " + to_string(c_best) + "\n"
                                     + "* Actual new cost: " + to_string(global_cost(solution)) + "\n");
                         }
-                        shift_number_of_sucesses_[bloc_size]++;
+                        shift_number_of_sucesses_[block_size]++;
                     }
-                    shift_number_of_explorations_[bloc_size]++;
+                    shift_number_of_explorations_[block_size]++;
                     break;
                 } case Neighborhoods::SwapK: {
-                    JobPos bloc_size = std::get<1>(neighborhood);
+                    JobPos block_size = std::get<1>(neighborhood);
                     std::shuffle(pairs_.begin(), pairs_.end(), generator);
-                    compute_cost_swap(solution, bloc_size);
+                    compute_cost_swap(solution, block_size);
                     JobPos pos_1_best = -1;
                     JobPos pos_2_best = -1;
                     GlobalCost c_best = global_cost(solution);
@@ -592,11 +592,11 @@ public:
                         solution_tmp_ = local_scheme_0_.empty_solution();
                         for (JobPos pos = 0; pos < local_scheme_0_.number_of_jobs(); ++pos) {
                             JobId j = local_scheme_0_.jobs(solution)[pos];
-                            if (pos_1_best <= pos && pos < pos_1_best + bloc_size) {
+                            if (pos_1_best <= pos && pos < pos_1_best + block_size) {
                                 JobPos diff = pos - pos_1_best;
                                 j = local_scheme_0_.jobs(solution)[pos_2_best + diff];
                             }
-                            if (pos_2_best <= pos && pos < pos_2_best + bloc_size) {
+                            if (pos_2_best <= pos && pos < pos_2_best + block_size) {
                                 JobPos diff = pos - pos_2_best;
                                 j = local_scheme_0_.jobs(solution)[pos_1_best + diff];
                             }
@@ -605,20 +605,20 @@ public:
                         solution = solution_tmp_;
                         if (local_scheme_0_.global_cost(solution) != c_best) {
                             throw std::logic_error(
-                                    std::to_string(bloc_size)
+                                    std::to_string(block_size)
                                     + "-swap. Costs do not match:\n"
                                     + "* Expected new cost: " + to_string(c_best) + "\n"
                                     + "* Actual new cost: " + to_string(global_cost(solution)) + "\n");
                         }
-                        swap_number_of_sucesses_[bloc_size][bloc_size]++;
+                        swap_number_of_sucesses_[block_size][block_size]++;
                     }
-                    swap_number_of_explorations_[bloc_size][bloc_size]++;
+                    swap_number_of_explorations_[block_size][block_size]++;
                     break;
                 } case Neighborhoods::SwapK1K2: {
-                    JobPos bloc_size_1 = std::get<1>(neighborhood);
-                    JobPos bloc_size_2 = std::get<2>(neighborhood);
+                    JobPos block_size_1 = std::get<1>(neighborhood);
+                    JobPos block_size_2 = std::get<2>(neighborhood);
                     std::shuffle(pairs_2_.begin(), pairs_2_.end(), generator);
-                    compute_cost_swap(solution, bloc_size_1, bloc_size_2);
+                    compute_cost_swap(solution, block_size_1, block_size_2);
                     JobPos pos_1_best = -1;
                     JobPos pos_2_best = -1;
                     GlobalCost c_best = global_cost(solution);
@@ -634,7 +634,7 @@ public:
                     }
                     if (pos_1_best != -1) {
                         //std::cout << "swap "
-                        //    << bloc_size_1 << " " << bloc_size_2
+                        //    << block_size_1 << " " << block_size_2
                         //    << " pos_1_best " << pos_1_best
                         //    << " pos_2_best " << pos_2_best
                         //    << " c_best " << to_string(c_best)
@@ -645,24 +645,24 @@ public:
                         if (pos_1_best < pos_2_best) {
                             for (JobPos p = 0; p < pos_1_best; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_2_best; p < pos_2_best + bloc_size_2; ++p)
+                            for (JobPos p = pos_2_best; p < pos_2_best + block_size_2; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_1_best + bloc_size_1; p < pos_2_best; ++p)
+                            for (JobPos p = pos_1_best + block_size_1; p < pos_2_best; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_1_best; p < pos_1_best + bloc_size_1; ++p)
+                            for (JobPos p = pos_1_best; p < pos_1_best + block_size_1; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_2_best + bloc_size_2; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
+                            for (JobPos p = pos_2_best + block_size_2; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
                         } else {
                             for (JobPos p = 0; p < pos_2_best; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_1_best; p < pos_1_best + bloc_size_1; ++p)
+                            for (JobPos p = pos_1_best; p < pos_1_best + block_size_1; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_2_best + bloc_size_2; p < pos_1_best; ++p)
+                            for (JobPos p = pos_2_best + block_size_2; p < pos_1_best; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_2_best; p < pos_2_best + bloc_size_2; ++p)
+                            for (JobPos p = pos_2_best; p < pos_2_best + block_size_2; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_1_best + bloc_size_1; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
+                            for (JobPos p = pos_1_best + block_size_1; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
                         }
                         solution = solution_tmp_;
@@ -672,15 +672,15 @@ public:
                             //    std::cout << " " << j;
                             //std::cout << std::endl;
                             throw std::logic_error(
-                                    "(" + std::to_string(bloc_size_1)
-                                    + "," + std::to_string(bloc_size_2)
+                                    "(" + std::to_string(block_size_1)
+                                    + "," + std::to_string(block_size_2)
                                     + ")-swap. Costs do not match:\n"
                                     + "* Expected new cost: " + to_string(c_best) + "\n"
                                     + "* Actual new cost: " + to_string(global_cost(solution)) + "\n");
                         }
-                        swap_number_of_sucesses_[bloc_size_1][bloc_size_2]++;
+                        swap_number_of_sucesses_[block_size_1][block_size_2]++;
                     }
-                    swap_number_of_explorations_[bloc_size_1][bloc_size_2]++;
+                    swap_number_of_explorations_[block_size_1][block_size_2]++;
                     break;
                 } case Neighborhoods::Reverse: {
                     std::shuffle(pairs_.begin(), pairs_.end(), generator);
@@ -730,18 +730,18 @@ public:
                     reverse_number_of_explorations_++;
                     break;
                 } case Neighborhoods::ShiftReverse: {
-                    JobPos bloc_size = std::get<1>(neighborhood);
+                    JobPos block_size = std::get<1>(neighborhood);
                     std::shuffle(positions1_.begin(), positions1_.end(), generator);
                     std::shuffle(positions2_.begin(), positions2_.end(), generator);
                     JobPos pos_best = -1;
                     JobPos pos_new_best = -1;
                     GlobalCost c_best = global_cost(solution);
                     for (JobPos pos: positions1_) {
-                        if (pos > (JobPos)local_scheme_0_.jobs(solution).size() - bloc_size)
+                        if (pos > (JobPos)local_scheme_0_.jobs(solution).size() - block_size)
                             continue;
-                        compute_cost_shift(solution, pos, bloc_size, true);
+                        compute_cost_shift(solution, pos, block_size, true);
                         for (JobPos pos_new: positions2_) {
-                            if (pos == pos_new || pos_new > (JobPos)local_scheme_0_.jobs(solution).size() - bloc_size)
+                            if (pos == pos_new || pos_new > (JobPos)local_scheme_0_.jobs(solution).size() - block_size)
                                 continue;
                             GlobalCost c = global_costs_shift_[pos_new];
                             if (c >= c_best)
@@ -761,39 +761,39 @@ public:
                         improved = true;
                         assert(c_best < local_scheme_0_.global_cost(solution));
                         // Apply best move.
-                        //std::cout << bloc_size << std::endl;
+                        //std::cout << block_size << std::endl;
                         solution_tmp_ = local_scheme_0_.empty_solution();
                         if (pos_best > pos_new_best) {
                             for (JobPos p = 0; p < pos_new_best; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_best + bloc_size - 1; p >= pos_best; --p)
+                            for (JobPos p = pos_best + block_size - 1; p >= pos_best; --p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
                             for (JobPos p = pos_new_best; p < pos_best; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_best + bloc_size; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
+                            for (JobPos p = pos_best + block_size; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
                         } else {
                             for (JobPos p = 0; p < pos_best; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_best + bloc_size; p < pos_new_best + bloc_size; ++p)
+                            for (JobPos p = pos_best + block_size; p < pos_new_best + block_size; ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_best + bloc_size - 1; p >= pos_best; --p)
+                            for (JobPos p = pos_best + block_size - 1; p >= pos_best; --p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
-                            for (JobPos p = pos_new_best + bloc_size; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
+                            for (JobPos p = pos_new_best + block_size; p < (JobPos)local_scheme_0_.jobs(solution).size(); ++p)
                                 local_scheme_0_.append(solution_tmp_, local_scheme_0_.jobs(solution)[p]);
                         }
                         solution = solution_tmp_;
                         assert((JobPos)local_scheme_0_.jobs(solution).size() <= local_scheme_0_.number_of_jobs());
                         if (local_scheme_0_.global_cost(solution) != c_best) {
                             throw std::logic_error(
-                                    std::to_string(bloc_size)
+                                    std::to_string(block_size)
                                     + "-shift-reverse. Costs do not match:\n"
                                     + "* Expected new cost: " + to_string(c_best) + "\n"
                                     + "* Actual new cost: " + to_string(global_cost(solution)) + "\n");
                         }
-                        shift_reverse_number_of_sucesses_[bloc_size]++;
+                        shift_reverse_number_of_sucesses_[block_size]++;
                     }
-                    shift_reverse_number_of_explorations_[bloc_size]++;
+                    shift_reverse_number_of_explorations_[block_size]++;
                     break;
                 }
                 }
@@ -829,34 +829,34 @@ public:
         VER(info, std::endl
                 << "Sequencing statistics" << std::endl
                 << "---------------------" << std::endl);
-        for (JobPos bloc_size = 1; bloc_size <= parameters_.shift_bloc_maximum_length; ++bloc_size) {
+        for (JobPos block_size = 1; block_size <= parameters_.shift_block_maximum_length; ++block_size) {
             VER(info,
-                    std::left << std::setw(28) << ("Shift " + std::to_string(bloc_size) + ":")
-                    << shift_number_of_explorations_[bloc_size]
-                    << " / " << shift_number_of_sucesses_[bloc_size]
-                    << " / " << (double)shift_number_of_sucesses_[bloc_size] / shift_number_of_explorations_[bloc_size] * 100 << "%"
+                    std::left << std::setw(28) << ("Shift " + std::to_string(block_size) + ":")
+                    << shift_number_of_explorations_[block_size]
+                    << " / " << shift_number_of_sucesses_[block_size]
+                    << " / " << (double)shift_number_of_sucesses_[block_size] / shift_number_of_explorations_[block_size] * 100 << "%"
                     << std::endl);
             PUT(info,
-                    "Algorithm", ("Shift" + std::to_string(bloc_size) + "NumberOfExplorations"),
-                    shift_number_of_explorations_[bloc_size]);
+                    "Algorithm", ("Shift" + std::to_string(block_size) + "NumberOfExplorations"),
+                    shift_number_of_explorations_[block_size]);
             PUT(info,
-                    "Algorithm", ("Shift" + std::to_string(bloc_size) + "NumberOfSuccesses"),
-                    shift_number_of_explorations_[bloc_size]);
+                    "Algorithm", ("Shift" + std::to_string(block_size) + "NumberOfSuccesses"),
+                    shift_number_of_explorations_[block_size]);
         }
-        for (JobPos bloc_size_1 = 1; bloc_size_1 <= parameters_.swap_bloc_maximum_length; ++bloc_size_1) {
-            for (JobPos bloc_size_2 = 1; bloc_size_2 <= bloc_size_1; ++bloc_size_2) {
+        for (JobPos block_size_1 = 1; block_size_1 <= parameters_.swap_block_maximum_length; ++block_size_1) {
+            for (JobPos block_size_2 = 1; block_size_2 <= block_size_1; ++block_size_2) {
                 VER(info,
-                        std::left << std::setw(28) << ("Swap " + std::to_string(bloc_size_1) + "," + std::to_string(bloc_size_2) + ":")
-                        << swap_number_of_explorations_[bloc_size_1][bloc_size_2]
-                        << " / " << swap_number_of_sucesses_[bloc_size_1][bloc_size_2]
-                        << " / " << (double)swap_number_of_sucesses_[bloc_size_1][bloc_size_2] / swap_number_of_explorations_[bloc_size_1][bloc_size_2] * 100 << "%"
+                        std::left << std::setw(28) << ("Swap " + std::to_string(block_size_1) + "," + std::to_string(block_size_2) + ":")
+                        << swap_number_of_explorations_[block_size_1][block_size_2]
+                        << " / " << swap_number_of_sucesses_[block_size_1][block_size_2]
+                        << " / " << (double)swap_number_of_sucesses_[block_size_1][block_size_2] / swap_number_of_explorations_[block_size_1][block_size_2] * 100 << "%"
                         << std::endl);
                 PUT(info,
-                        "Algorithm", ("Swap" + std::to_string(bloc_size_1) + "," + std::to_string(bloc_size_2) + "NumberOfExplorations"),
-                        swap_number_of_explorations_[bloc_size_1][bloc_size_2]);
+                        "Algorithm", ("Swap" + std::to_string(block_size_1) + "," + std::to_string(block_size_2) + "NumberOfExplorations"),
+                        swap_number_of_explorations_[block_size_1][block_size_2]);
                 PUT(info,
-                        "Algorithm", ("Shift" + std::to_string(bloc_size_1) + "," + std::to_string(bloc_size_2) + "NumberOfSuccesses"),
-                        swap_number_of_explorations_[bloc_size_1][bloc_size_2]);
+                        "Algorithm", ("Shift" + std::to_string(block_size_1) + "," + std::to_string(block_size_2) + "NumberOfSuccesses"),
+                        swap_number_of_explorations_[block_size_1][block_size_2]);
             }
         }
         if (parameters_.reverse) {
@@ -873,19 +873,19 @@ public:
                     "Algorithm", ("ReverseNumberOfSuccesses"),
                     reverse_number_of_explorations_);
         }
-        for (JobPos bloc_size = 2; bloc_size <= parameters_.shift_reverse_bloc_maximum_length; ++bloc_size) {
+        for (JobPos block_size = 2; block_size <= parameters_.shift_reverse_block_maximum_length; ++block_size) {
             VER(info,
-                    std::left << std::setw(28) << ("Shift-reverse " + std::to_string(bloc_size) + ":")
-                    << shift_reverse_number_of_explorations_[bloc_size]
-                    << " / " << shift_reverse_number_of_sucesses_[bloc_size]
-                    << " / " << (double)shift_reverse_number_of_sucesses_[bloc_size] / shift_reverse_number_of_explorations_[bloc_size] * 100 << "%"
+                    std::left << std::setw(28) << ("Shift-reverse " + std::to_string(block_size) + ":")
+                    << shift_reverse_number_of_explorations_[block_size]
+                    << " / " << shift_reverse_number_of_sucesses_[block_size]
+                    << " / " << (double)shift_reverse_number_of_sucesses_[block_size] / shift_reverse_number_of_explorations_[block_size] * 100 << "%"
                     << std::endl);
             PUT(info,
-                    "Algorithm", ("ShiftReverse" + std::to_string(bloc_size) + "NumberOfExplorations"),
-                    shift_reverse_number_of_explorations_[bloc_size]);
+                    "Algorithm", ("ShiftReverse" + std::to_string(block_size) + "NumberOfExplorations"),
+                    shift_reverse_number_of_explorations_[block_size]);
             PUT(info,
-                    "Algorithm", ("ShiftReverse" + std::to_string(bloc_size) + "NumberOfSuccesses"),
-                    shift_reverse_number_of_explorations_[bloc_size]);
+                    "Algorithm", ("ShiftReverse" + std::to_string(block_size) + "NumberOfSuccesses"),
+                    shift_reverse_number_of_explorations_[block_size]);
         }
     }
 
@@ -1016,8 +1016,8 @@ private:
 
     inline void compute_cost_swap(
             const Solution& solution,
-            Counter bloc_size_1,
-            Counter bloc_size_2)
+            Counter block_size_1,
+            Counter block_size_2)
     {
         JobPos n = (JobPos)local_scheme_0_.jobs(solution).size();
         // Initialize solution_cur_.
@@ -1032,16 +1032,16 @@ private:
         // Loop through all pairs.
         for (JobPos pos = 0; pos < n; ++pos) {
 
-            // bloc 1 is at [pos, pos + bloc_size_1[.
+            // bloc 1 is at [pos, pos + block_size_1[.
             JobPos pos_1 = pos;
             JobPos pos_2_max = std::min(
-                    n - bloc_size_2,
-                    pos + bloc_size_1 + parameters_.swap_maximum_distance);
-            for (JobPos pos_2 = pos + bloc_size_1; pos_2 <= pos_2_max; ++pos_2) {
+                    n - block_size_2,
+                    pos + block_size_1 + parameters_.swap_maximum_distance);
+            for (JobPos pos_2 = pos + block_size_1; pos_2 <= pos_2_max; ++pos_2) {
                 // Initialize solution_tmp_.
                 solution_tmp_ = solution_cur_;
                 // Add bloc 2.
-                for (JobPos p = pos_2; p < pos_2 + bloc_size_2 ; ++p) {
+                for (JobPos p = pos_2; p < pos_2 + block_size_2 ; ++p) {
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
                         break;
@@ -1050,7 +1050,7 @@ private:
                     local_scheme_0_.append(solution_tmp_, j);
                 }
                 // Add middle jobs.
-                for (JobPos p = pos_1 + bloc_size_1; p < pos_2; ++p) {
+                for (JobPos p = pos_1 + block_size_1; p < pos_2; ++p) {
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
                         break;
@@ -1059,7 +1059,7 @@ private:
                     local_scheme_0_.append(solution_tmp_, j);
                 }
                 // Add bloc 1.
-                for (JobPos p = pos_1; p < pos_1 + bloc_size_1 ; ++p) {
+                for (JobPos p = pos_1; p < pos_1 + block_size_1 ; ++p) {
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
                         break;
@@ -1068,7 +1068,7 @@ private:
                     local_scheme_0_.append(solution_tmp_, j);
                 }
                 // Add end jobs.
-                for (JobPos p = pos_2 + bloc_size_2; p < n; ++p) {
+                for (JobPos p = pos_2 + block_size_2; p < n; ++p) {
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
                         break;
@@ -1078,16 +1078,16 @@ private:
                 }
             }
 
-            // bloc 2 is at [pos, pos + bloc_size_2[.
+            // bloc 2 is at [pos, pos + block_size_2[.
             JobPos pos_2 = pos;
             JobPos pos_1_max = std::min(
-                    n - bloc_size_1,
-                    pos + bloc_size_2 + parameters_.swap_maximum_distance);
-            for (JobPos pos_1 = pos + bloc_size_2; pos_1 <= pos_1_max; ++pos_1) {
+                    n - block_size_1,
+                    pos + block_size_2 + parameters_.swap_maximum_distance);
+            for (JobPos pos_1 = pos + block_size_2; pos_1 <= pos_1_max; ++pos_1) {
                 // Initialize solution_tmp_.
                 solution_tmp_ = solution_cur_;
                 // Add bloc 1.
-                for (JobPos p = pos_1; p < pos_1 + bloc_size_1 ; ++p) {
+                for (JobPos p = pos_1; p < pos_1 + block_size_1 ; ++p) {
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
                         break;
@@ -1096,7 +1096,7 @@ private:
                     local_scheme_0_.append(solution_tmp_, j);
                 }
                 // Add middle jobs.
-                for (JobPos p = pos_2 + bloc_size_2; p < pos_1; ++p) {
+                for (JobPos p = pos_2 + block_size_2; p < pos_1; ++p) {
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
                         break;
@@ -1105,7 +1105,7 @@ private:
                     local_scheme_0_.append(solution_tmp_, j);
                 }
                 // Add bloc 2.
-                for (JobPos p = pos_2; p < pos_2 + bloc_size_2 ; ++p) {
+                for (JobPos p = pos_2; p < pos_2 + block_size_2 ; ++p) {
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
                         break;
@@ -1114,7 +1114,7 @@ private:
                     local_scheme_0_.append(solution_tmp_, j);
                 }
                 // Add end jobs.
-                for (JobPos p = pos_1 + bloc_size_1; p < n; ++p) {
+                for (JobPos p = pos_1 + block_size_1; p < n; ++p) {
                     // Check early termination.
                     if (global_cost(solution_tmp_) >= global_cost(solution))
                         break;

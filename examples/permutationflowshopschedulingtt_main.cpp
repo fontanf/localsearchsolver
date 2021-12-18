@@ -10,8 +10,8 @@ inline LocalScheme::Parameters read_local_scheme_args(
     LocalScheme::Parameters parameters;
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
-        ("shift-bloc-maximum-length,", boost::program_options::value<permutationflowshopschedulingtt::JobPos>(&parameters.sequencing_parameters.shift_bloc_maximum_length), "")
-        ("swap-bloc-maximum-length,", boost::program_options::value<permutationflowshopschedulingtt::JobPos>(&parameters.sequencing_parameters.swap_bloc_maximum_length), "")
+        ("shift-block-maximum-length,", boost::program_options::value<permutationflowshopschedulingtt::JobPos>(&parameters.sequencing_parameters.shift_block_maximum_length), "")
+        ("swap-block-maximum-length,", boost::program_options::value<permutationflowshopschedulingtt::JobPos>(&parameters.sequencing_parameters.swap_block_maximum_length), "")
         ("crossover-ox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_ox_weight), "")
         ("crossover-sjox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_sjox_weight), "")
         ("crossover-sbox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_sbox_weight), "")

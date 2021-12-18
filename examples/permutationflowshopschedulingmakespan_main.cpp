@@ -10,7 +10,7 @@ inline LocalScheme::Parameters read_local_scheme_args(
     LocalScheme::Parameters parameters;
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
-        ("bloc-size-max,b", boost::program_options::value<JobPos>(&parameters.bloc_size_max), "")
+        ("block-size-max,b", boost::program_options::value<JobPos>(&parameters.block_size_max), "")
         ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line((Counter)argv.size(), argv.data(), desc), vm);

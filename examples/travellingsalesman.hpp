@@ -302,8 +302,8 @@ public:
             neighborhoods.push_back(-1);
         if (parameters_.swap)
             neighborhoods.push_back(0);
-        for (VertexPos bloc_size = 1; bloc_size <= parameters_.oropt_size_max; ++bloc_size)
-            neighborhoods.push_back(bloc_size);
+        for (VertexPos block_size = 1; block_size <= parameters_.oropt_size_max; ++block_size)
+            neighborhoods.push_back(block_size);
 
         // Strucutres for the 2-opt neighborhood.
         // Edges added to the solution since the last neighborhood exploration.
@@ -349,8 +349,8 @@ public:
                 VertexId j2 = solution.vertices[pos + 1];
                 twoopt_new_edges.push_back({j1, j2});
                 swap_new_edges.push_back({j1, j2});
-                for (VertexPos bloc_size = 1; bloc_size <= parameters_.oropt_size_max; ++bloc_size)
-                    oropt_new_edges[bloc_size].push_back({j1, j2});
+                for (VertexPos block_size = 1; block_size <= parameters_.oropt_size_max; ++block_size)
+                    oropt_new_edges[block_size].push_back({j1, j2});
             }
         } else {
             twoopt_new_edges.push_back({perturbation.j11, perturbation.j12});
@@ -361,11 +361,11 @@ public:
             swap_new_edges.push_back({perturbation.j21, perturbation.j22});
             swap_new_edges.push_back({perturbation.j31, perturbation.j32});
             swap_new_edges.push_back({perturbation.j41, perturbation.j42});
-            for (VertexPos bloc_size = 1; bloc_size <= parameters_.oropt_size_max; ++bloc_size) {
-                oropt_new_edges[bloc_size].push_back({perturbation.j11, perturbation.j12});
-                oropt_new_edges[bloc_size].push_back({perturbation.j21, perturbation.j22});
-                oropt_new_edges[bloc_size].push_back({perturbation.j31, perturbation.j32});
-                oropt_new_edges[bloc_size].push_back({perturbation.j41, perturbation.j42});
+            for (VertexPos block_size = 1; block_size <= parameters_.oropt_size_max; ++block_size) {
+                oropt_new_edges[block_size].push_back({perturbation.j11, perturbation.j12});
+                oropt_new_edges[block_size].push_back({perturbation.j21, perturbation.j22});
+                oropt_new_edges[block_size].push_back({perturbation.j31, perturbation.j32});
+                oropt_new_edges[block_size].push_back({perturbation.j41, perturbation.j42});
             }
         }
 
@@ -518,9 +518,9 @@ public:
                     twoopt_new_edges.push_back({it_best->j22, it_best->j12});
                     swap_new_edges.push_back({it_best->j11, it_best->j21});
                     swap_new_edges.push_back({it_best->j22, it_best->j12});
-                    for (VertexPos bloc_size = 1; bloc_size <= parameters_.oropt_size_max; ++bloc_size) {
-                        oropt_new_edges[bloc_size].push_back({it_best->j11, it_best->j21});
-                        oropt_new_edges[bloc_size].push_back({it_best->j22, it_best->j12});
+                    for (VertexPos block_size = 1; block_size <= parameters_.oropt_size_max; ++block_size) {
+                        oropt_new_edges[block_size].push_back({it_best->j11, it_best->j21});
+                        oropt_new_edges[block_size].push_back({it_best->j22, it_best->j12});
                     }
 
                     //std::cout << "Improve with 2-opt." << std::endl;
@@ -673,22 +673,22 @@ public:
                     swap_new_edges.push_back({it_best->j22, it_best->j13});
                     swap_new_edges.push_back({it_best->j21, it_best->j12});
                     swap_new_edges.push_back({it_best->j12, it_best->j23});
-                    for (VertexPos bloc_size = 1; bloc_size <= parameters_.oropt_size_max; ++bloc_size) {
-                        oropt_new_edges[bloc_size].push_back({it_best->j11, it_best->j22});
-                        oropt_new_edges[bloc_size].push_back({it_best->j22, it_best->j13});
-                        oropt_new_edges[bloc_size].push_back({it_best->j21, it_best->j12});
-                        oropt_new_edges[bloc_size].push_back({it_best->j12, it_best->j23});
+                    for (VertexPos block_size = 1; block_size <= parameters_.oropt_size_max; ++block_size) {
+                        oropt_new_edges[block_size].push_back({it_best->j11, it_best->j22});
+                        oropt_new_edges[block_size].push_back({it_best->j22, it_best->j13});
+                        oropt_new_edges[block_size].push_back({it_best->j21, it_best->j12});
+                        oropt_new_edges[block_size].push_back({it_best->j12, it_best->j23});
                     }
 
                     //std::cout << "Improve with swap." << std::endl;
                     break;
                 } default: { // Or-opt neighborhood.
-                    VertexPos bloc_size = neighborhood;
-                    //std::cout << "Explore or-opt neighborhood " << bloc_size << "." << std::endl;
+                    VertexPos block_size = neighborhood;
+                    //std::cout << "Explore or-opt neighborhood " << block_size << "." << std::endl;
 
                     // Remove obsolete moves.
-                    for (auto it = oropt_improving_moves[bloc_size].begin();
-                            it != oropt_improving_moves[bloc_size].end();) {
+                    for (auto it = oropt_improving_moves[block_size].begin();
+                            it != oropt_improving_moves[block_size].end();) {
                         VertexPos p111 = solution.positions[it->j111];
                         VertexPos p121 = solution.positions[it->j121];
                         VertexPos p122 = solution.positions[it->j122];
@@ -703,8 +703,8 @@ public:
                                 || solution.vertices[p21 + 1] != it->j22
                                 || (p22 > p111 && p21 < p122)
                                 || p111 >= p122) {
-                            *it = *std::prev(oropt_improving_moves[bloc_size].end());
-                            oropt_improving_moves[bloc_size].pop_back();
+                            *it = *std::prev(oropt_improving_moves[block_size].end());
+                            oropt_improving_moves[block_size].pop_back();
                         } else {
                             ++it;
                         }
@@ -712,10 +712,10 @@ public:
 
                     // Evaluate new moves.
                     // For each new edge, we add or-opt moves with the edge +
-                    // bloc_size / edge - bloc_size and all other edges, and
-                    // or-opt moves with all other edge and edge + bloc_size.
+                    // block_size / edge - block_size and all other edges, and
+                    // or-opt moves with all other edge and edge + block_size.
                     std::fill(oropt_is_edge_new.begin(), oropt_is_edge_new.end(), 0);
-                    for (auto edge: oropt_new_edges[bloc_size]) {
+                    for (auto edge: oropt_new_edges[block_size]) {
                         VertexId j1 = edge.first;
                         VertexId j2 = edge.second;
                         VertexPos p1 = solution.positions[j1];
@@ -740,11 +740,11 @@ public:
                             VertexId jb2 = solution.vertices[pos_2 + 1];
                             // ja1 = j111
                             // jb1 = j21
-                            if (pos_1 + bloc_size + 1 < (VertexPos)solution.vertices.size()) {
+                            if (pos_1 + block_size + 1 < (VertexPos)solution.vertices.size()) {
                                 VertexId j111 = ja1;
                                 VertexId j112 = ja2;
-                                VertexId j121 = solution.vertices[pos_1 + bloc_size];
-                                VertexId j122 = solution.vertices[pos_1 + bloc_size + 1];
+                                VertexId j121 = solution.vertices[pos_1 + block_size];
+                                VertexId j122 = solution.vertices[pos_1 + block_size + 1];
                                 VertexId j21 = jb1;
                                 VertexId j22 = jb2;
 
@@ -778,18 +778,18 @@ public:
                                         move.j21 = j21;
                                         move.j22 = j22;
                                         move.cost_difference = {0, length_difference};
-                                        oropt_improving_moves[bloc_size].push_back(move);
+                                        oropt_improving_moves[block_size].push_back(move);
                                     }
                                 }
                             }
                             // ja1 = j111
                             // jb1 = j21
                             // reverse
-                            if (pos_1 + bloc_size + 1 < (VertexPos)solution.vertices.size()) {
+                            if (pos_1 + block_size + 1 < (VertexPos)solution.vertices.size()) {
                                 VertexId j111 = ja1;
                                 VertexId j112 = ja2;
-                                VertexId j121 = solution.vertices[pos_1 + bloc_size];
-                                VertexId j122 = solution.vertices[pos_1 + bloc_size + 1];
+                                VertexId j121 = solution.vertices[pos_1 + block_size];
+                                VertexId j122 = solution.vertices[pos_1 + block_size + 1];
                                 VertexId j21 = jb1;
                                 VertexId j22 = jb2;
 
@@ -824,15 +824,15 @@ public:
                                         move.j22 = j22;
                                         move.reverse = true;
                                         move.cost_difference = {0, length_difference};
-                                        oropt_improving_moves[bloc_size].push_back(move);
+                                        oropt_improving_moves[block_size].push_back(move);
                                     }
                                 }
                             }
                             // ja1 = j121
                             // jb1 = j21
-                            if (pos_1 - bloc_size >= 0) {
-                                VertexId j111 = solution.vertices[pos_1 - bloc_size];
-                                VertexId j112 = solution.vertices[pos_1 - bloc_size + 1];
+                            if (pos_1 - block_size >= 0) {
+                                VertexId j111 = solution.vertices[pos_1 - block_size];
+                                VertexId j112 = solution.vertices[pos_1 - block_size + 1];
                                 VertexId j121 = ja1;
                                 VertexId j122 = ja2;
                                 VertexId j21 = jb1;
@@ -855,7 +855,7 @@ public:
                                     if (p111 >= p122)
                                         throw std::logic_error(
                                                 "ja1 = j121, jb1 = j21."
-                                                " In an or-opt move with bloc size 1,"
+                                                " In an or-opt move with block size 1,"
                                                 " j112 must be equal to j121.");
                                     Distance length_difference =
                                         - instance_.distance(j111, j112)
@@ -873,16 +873,16 @@ public:
                                         move.j21 = j21;
                                         move.j22 = j22;
                                         move.cost_difference = {0, length_difference};
-                                        oropt_improving_moves[bloc_size].push_back(move);
+                                        oropt_improving_moves[block_size].push_back(move);
                                     }
                                 }
                             }
                             // ja1 = j121
                             // jb1 = j21
                             // reverse
-                            if (pos_1 - bloc_size >= 0) {
-                                VertexId j111 = solution.vertices[pos_1 - bloc_size];
-                                VertexId j112 = solution.vertices[pos_1 - bloc_size + 1];
+                            if (pos_1 - block_size >= 0) {
+                                VertexId j111 = solution.vertices[pos_1 - block_size];
+                                VertexId j112 = solution.vertices[pos_1 - block_size + 1];
                                 VertexId j121 = ja1;
                                 VertexId j122 = ja2;
                                 VertexId j21 = jb1;
@@ -905,7 +905,7 @@ public:
                                     if (p111 >= p122)
                                         throw std::logic_error(
                                                 "ja1 = j121, jb1 = j21, reverse."
-                                                " In an or-opt move with bloc size 1,"
+                                                " In an or-opt move with block size 1,"
                                                 " j112 must be equal to j121.");
                                     Distance length_difference =
                                         - instance_.distance(j111, j112)
@@ -924,17 +924,17 @@ public:
                                         move.j22 = j22;
                                         move.reverse = true;
                                         move.cost_difference = {0, length_difference};
-                                        oropt_improving_moves[bloc_size].push_back(move);
+                                        oropt_improving_moves[block_size].push_back(move);
                                     }
                                 }
                             }
                             // ja1 = j21
                             // jb1 = j111
-                            if (pos_2 + bloc_size + 1 < (VertexPos)solution.vertices.size()) {
+                            if (pos_2 + block_size + 1 < (VertexPos)solution.vertices.size()) {
                                 VertexId j111 = jb1;
                                 VertexId j112 = jb2;
-                                VertexId j121 = solution.vertices[pos_2 + bloc_size];
-                                VertexId j122 = solution.vertices[pos_2 + bloc_size + 1];
+                                VertexId j121 = solution.vertices[pos_2 + block_size];
+                                VertexId j122 = solution.vertices[pos_2 + block_size + 1];
                                 VertexId j21 = ja1;
                                 VertexId j22 = ja2;
 
@@ -968,18 +968,18 @@ public:
                                         move.j21 = j21;
                                         move.j22 = j22;
                                         move.cost_difference = {0, length_difference};
-                                        oropt_improving_moves[bloc_size].push_back(move);
+                                        oropt_improving_moves[block_size].push_back(move);
                                     }
                                 }
                             }
                             // ja1 = j21
                             // jb1 = j111
                             // reverse
-                            if (pos_2 + bloc_size + 1 < (VertexPos)solution.vertices.size()) {
+                            if (pos_2 + block_size + 1 < (VertexPos)solution.vertices.size()) {
                                 VertexId j111 = jb1;
                                 VertexId j112 = jb2;
-                                VertexId j121 = solution.vertices[pos_2 + bloc_size];
-                                VertexId j122 = solution.vertices[pos_2 + bloc_size + 1];
+                                VertexId j121 = solution.vertices[pos_2 + block_size];
+                                VertexId j122 = solution.vertices[pos_2 + block_size + 1];
                                 VertexId j21 = ja1;
                                 VertexId j22 = ja2;
 
@@ -1014,26 +1014,26 @@ public:
                                         move.j22 = j22;
                                         move.reverse = true;
                                         move.cost_difference = {0, length_difference};
-                                        oropt_improving_moves[bloc_size].push_back(move);
+                                        oropt_improving_moves[block_size].push_back(move);
                                     }
                                 }
                             }
                         }
                     }
-                    oropt_new_edges[bloc_size].clear();
+                    oropt_new_edges[block_size].clear();
 
                     // If there is no improving move, then stop here.
-                    if (oropt_improving_moves[bloc_size].empty())
+                    if (oropt_improving_moves[block_size].empty())
                         break;
 
                     // Otherwise, look for a pareto improving move.
                     //std::shuffle(
-                    //        oropt_improving_moves[bloc_size].begin(),
-                    //        oropt_improving_moves[bloc_size].end(),
+                    //        oropt_improving_moves[block_size].begin(),
+                    //        oropt_improving_moves[block_size].end(),
                     //        generator);
-                    auto it_best = oropt_improving_moves[bloc_size].begin();
-                    for (auto it = oropt_improving_moves[bloc_size].begin() + 1;
-                            it != oropt_improving_moves[bloc_size].end(); ++it) {
+                    auto it_best = oropt_improving_moves[block_size].begin();
+                    for (auto it = oropt_improving_moves[block_size].begin() + 1;
+                            it != oropt_improving_moves[block_size].end(); ++it) {
                         if (it->cost_difference >= it_best->cost_difference
                                 || !dominates(it->cost_difference, it_best->cost_difference))
                             continue;
@@ -1106,7 +1106,7 @@ public:
                     //std::cout << std::endl;
                     compute(solution, vertices);
                     if (global_cost(solution) != c_cur + it_best->cost_difference) {
-                        throw std::logic_error("Or-opt " + std::to_string(bloc_size) + ". Costs do not match:\n"
+                        throw std::logic_error("Or-opt " + std::to_string(block_size) + ". Costs do not match:\n"
                                 "* Current cost: " + to_string(c_cur) + "\n"
                                 + "* Move cost difference: " + to_string(it_best->cost_difference) + "\n"
                                 + "* Expected new cost: " + to_string(c_cur + it_best->cost_difference) + "\n"
@@ -1121,10 +1121,10 @@ public:
                         swap_new_edges.push_back({it_best->j111, it_best->j122});
                         swap_new_edges.push_back({it_best->j21, it_best->j112});
                         swap_new_edges.push_back({it_best->j121, it_best->j22});
-                        for (VertexPos bloc_size = 1; bloc_size <= parameters_.oropt_size_max; ++bloc_size) {
-                            oropt_new_edges[bloc_size].push_back({it_best->j111, it_best->j122});
-                            oropt_new_edges[bloc_size].push_back({it_best->j21, it_best->j112});
-                            oropt_new_edges[bloc_size].push_back({it_best->j121, it_best->j22});
+                        for (VertexPos block_size = 1; block_size <= parameters_.oropt_size_max; ++block_size) {
+                            oropt_new_edges[block_size].push_back({it_best->j111, it_best->j122});
+                            oropt_new_edges[block_size].push_back({it_best->j21, it_best->j112});
+                            oropt_new_edges[block_size].push_back({it_best->j121, it_best->j22});
                         }
                     } else {
                         twoopt_new_edges.push_back({it_best->j111, it_best->j122});
@@ -1133,14 +1133,14 @@ public:
                         swap_new_edges.push_back({it_best->j111, it_best->j122});
                         swap_new_edges.push_back({it_best->j21, it_best->j121});
                         swap_new_edges.push_back({it_best->j112, it_best->j22});
-                        for (VertexPos bloc_size = 1; bloc_size <= parameters_.oropt_size_max; ++bloc_size) {
-                            oropt_new_edges[bloc_size].push_back({it_best->j111, it_best->j122});
-                            oropt_new_edges[bloc_size].push_back({it_best->j21, it_best->j121});
-                            oropt_new_edges[bloc_size].push_back({it_best->j112, it_best->j22});
+                        for (VertexPos block_size = 1; block_size <= parameters_.oropt_size_max; ++block_size) {
+                            oropt_new_edges[block_size].push_back({it_best->j111, it_best->j122});
+                            oropt_new_edges[block_size].push_back({it_best->j21, it_best->j121});
+                            oropt_new_edges[block_size].push_back({it_best->j112, it_best->j22});
                         }
                     }
 
-                    //std::cout << "Improve with or-opt " << bloc_size << "." << std::endl;
+                    //std::cout << "Improve with or-opt " << block_size << "." << std::endl;
                     break;
                 }
                 }
