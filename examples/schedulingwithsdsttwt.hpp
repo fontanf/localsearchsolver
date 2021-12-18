@@ -84,19 +84,6 @@ public:
         return solution;
     }
 
-    inline Solution initial_solution(
-            Counter,
-            std::mt19937_64& generator)
-    {
-        std::vector<JobId> jobs(instance_.number_of_jobs());
-        std::iota(jobs.begin(), jobs.end(), 0);
-        std::shuffle(jobs.begin(), jobs.end(), generator);
-        Solution solution = empty_solution();
-        for (JobId j: jobs)
-            append(solution, j);
-        return solution;
-    }
-
     /*
      * Solution properties.
      */

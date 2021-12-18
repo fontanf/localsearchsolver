@@ -145,11 +145,47 @@ public:
 
     inline Solution empty_solution() const { return local_scheme_0_.empty_solution(); }
 
+    template<typename T>
+    struct HasInitialSolutionMethod
+    {
+        template<typename U, size_t (U::*)() const> struct SFINAE {};
+        template<typename U> static char Test(SFINAE<U, &U::initial_solution>*);
+        template<typename U> static int Test(...);
+        static const bool Has = sizeof(Test<T>(0)) == sizeof(char);
+    };
+
+    Solution initial_solution(
+            Counter,
+            std::mt19937_64& generator,
+            std::false_type)
+    {
+        std::vector<JobId> elements(local_scheme_0_.number_of_elements());
+        std::iota(elements.begin(), elements.end(), 0);
+        std::shuffle(elements.begin(), elements.end(), generator);
+        Solution solution = local_scheme_0_.empty_solution();
+        for (JobId j: elements)
+            local_scheme_0_.append(solution, j);
+        return solution;
+    }
+
+    Solution initial_solution(
+            Counter initial_solution_id,
+            std::mt19937_64& generator,
+            std::true_type)
+    {
+        if (initial_solution_id != 0)
+            return local_scheme_0_.initial_solution(initial_solution_id, generator);
+        return initial_solution(initial_solution_id, generator, false);
+    }
+
     inline Solution initial_solution(
             Counter initial_solution_id,
             std::mt19937_64& generator)
     {
-        return local_scheme_0_.initial_solution(initial_solution_id, generator);
+        return initial_solution(
+                initial_solution_id,
+                generator,
+                std::integral_constant<bool, HasInitialSolutionMethod<LocalScheme0>::Has>());
     }
 
     inline Solution crossover(
