@@ -111,7 +111,7 @@ public:
      * Methods required by sequencing2::LocalScheme.
      */
 
-    inline JobPos number_of_jobs() const { return instance_.number_of_jobs(); }
+    inline JobPos number_of_elements() const { return instance_.number_of_jobs(); }
 
     inline void append(
             Solution& solution,

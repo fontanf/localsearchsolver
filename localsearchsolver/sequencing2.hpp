@@ -95,28 +95,28 @@ public:
             Parameters parameters):
         local_scheme_0_(local_scheme_0),
         parameters_(parameters),
-        positions1_(local_scheme_0_.number_of_jobs()),
-        positions2_(local_scheme_0_.number_of_jobs()),
-        global_costs_shift_(local_scheme_0_.number_of_jobs() + 1, worst<GlobalCost>()),
-        global_costs_swap_(local_scheme_0_.number_of_jobs()),
+        positions1_(local_scheme_0_.number_of_elements()),
+        positions2_(local_scheme_0_.number_of_elements()),
+        global_costs_shift_(local_scheme_0_.number_of_elements() + 1, worst<GlobalCost>()),
+        global_costs_swap_(local_scheme_0_.number_of_elements()),
         global_costs_swap_2_(
-                local_scheme_0_.number_of_jobs(),
+                local_scheme_0_.number_of_elements(),
                 std::vector<GlobalCost>(
-                    local_scheme_0_.number_of_jobs(),
+                    local_scheme_0_.number_of_elements(),
                     worst<GlobalCost>()))
     {
         std::iota(positions1_.begin(), positions1_.end(), 0);
         std::iota(positions2_.begin(), positions2_.end(), 0);
-        for (JobPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_jobs(); ++pos_1)
-            for (JobPos pos_2 = pos_1 + 1; pos_2 < local_scheme_0_.number_of_jobs(); ++pos_2)
+        for (JobPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1)
+            for (JobPos pos_2 = pos_1 + 1; pos_2 < local_scheme_0_.number_of_elements(); ++pos_2)
                 pairs_.push_back({pos_1, pos_2});
-        for (JobPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_jobs(); ++pos_1)
-            for (JobPos pos_2 = 0; pos_2 < local_scheme_0_.number_of_jobs(); ++pos_2)
+        for (JobPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1)
+            for (JobPos pos_2 = 0; pos_2 < local_scheme_0_.number_of_elements(); ++pos_2)
                 if (pos_1 != pos_2)
                     pairs_2_.push_back({pos_1, pos_2});
-        for (JobPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_jobs(); ++pos_1)
+        for (JobPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1)
             global_costs_swap_[pos_1].resize(
-                    local_scheme_0_.number_of_jobs() - pos_1,
+                    local_scheme_0_.number_of_elements() - pos_1,
                     worst<GlobalCost>());
 
         // Initialize statistics structures.
@@ -458,7 +458,7 @@ public:
         for (JobPos pos = move.pos_4; pos < (JobPos)solution.sequence.size(); ++pos)
             local_scheme_0_.append(solution_tmp_, solution.sequence[pos]);
         solution = solution_tmp_;
-        assert((JobPos)solution.sequence.size() <= local_scheme_0_.number_of_jobs());
+        assert((JobPos)solution.sequence.size() <= local_scheme_0_.number_of_elements());
     }
 
     inline void local_search(
@@ -553,7 +553,7 @@ public:
                                 local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                         }
                         solution = solution_tmp_;
-                        assert((JobPos)solution.sequence.size() <= local_scheme_0_.number_of_jobs());
+                        assert((JobPos)solution.sequence.size() <= local_scheme_0_.number_of_elements());
                         if (local_scheme_0_.global_cost(solution) != c_best) {
                             throw std::logic_error(
                                     std::to_string(block_size)
@@ -590,7 +590,7 @@ public:
                         improved = true;
                         // Apply best move.
                         solution_tmp_ = local_scheme_0_.empty_solution();
-                        for (JobPos pos = 0; pos < local_scheme_0_.number_of_jobs(); ++pos) {
+                        for (JobPos pos = 0; pos < local_scheme_0_.number_of_elements(); ++pos) {
                             JobId j = solution.sequence[pos];
                             if (pos_1_best <= pos && pos < pos_1_best + block_size) {
                                 JobPos diff = pos - pos_1_best;
@@ -714,7 +714,7 @@ public:
                             JobId j = solution.sequence[pos];
                             local_scheme_0_.append(solution_tmp_, j);
                         }
-                        for (JobPos pos = pos_2_best + 1; pos < local_scheme_0_.number_of_jobs(); ++pos) {
+                        for (JobPos pos = pos_2_best + 1; pos < local_scheme_0_.number_of_elements(); ++pos) {
                             JobId j = solution.sequence[pos];
                             local_scheme_0_.append(solution_tmp_, j);
                         }
@@ -783,7 +783,7 @@ public:
                                 local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
                         }
                         solution = solution_tmp_;
-                        assert((JobPos)solution.sequence.size() <= local_scheme_0_.number_of_jobs());
+                        assert((JobPos)solution.sequence.size() <= local_scheme_0_.number_of_elements());
                         if (local_scheme_0_.global_cost(solution) != c_best) {
                             throw std::logic_error(
                                     std::to_string(block_size)
