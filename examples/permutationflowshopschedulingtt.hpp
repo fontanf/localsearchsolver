@@ -138,38 +138,6 @@ public:
             solution.total_tardiness += (solution.times[m - 1] - instance_.job(j).due_date);
     }
 
-    /*
-     * Outputs.
-     */
-
-    std::ostream& print(
-            std::ostream &os,
-            const Solution& solution) const
-    {
-        os << "jobs:";
-        for (JobId j: solution.jobs)
-            os << " " << j;
-        os << std::endl;
-        os << "total tardiness: " << solution.total_tardiness << std::endl;
-        return os;
-    }
-
-    inline void write(
-            const Solution& solution,
-            std::string filepath) const
-    {
-        if (filepath.empty())
-            return;
-        std::ofstream cert(filepath);
-        if (!cert.good()) {
-            std::cerr << "\033[31m" << "ERROR, unable to open file \"" << filepath << "\"" << "\033[0m" << std::endl;
-            return;
-        }
-
-        for (JobId j: solution.jobs)
-            cert << j << " ";
-    }
-
 private:
 
     /*

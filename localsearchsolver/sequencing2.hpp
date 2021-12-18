@@ -814,14 +814,28 @@ public:
             std::ostream &os,
             const Solution& solution) const
     {
-        return local_scheme_0_.print(os, solution);
+        os << "sequence:";
+        for (JobId j: local_scheme_0_.jobs(solution))
+            os << " " << j;
+        os << std::endl;
+        os << "cost: " << to_string(global_cost(solution)) << std::endl;
+        return os;
     }
 
     inline void write(
             const Solution& solution,
             std::string certificate_path) const
     {
-        local_scheme_0_.write(solution, certificate_path);
+        if (certificate_path.empty())
+            return;
+        std::ofstream cert(certificate_path);
+        if (!cert.good()) {
+            std::cerr << "\033[31m" << "ERROR, unable to open file \"" << certificate_path << "\"" << "\033[0m" << std::endl;
+            return;
+        }
+
+        for (JobId j: local_scheme_0_.jobs(solution))
+            cert << j << " ";
     }
 
     inline void print_statistics(optimizationtools::Info& info)
