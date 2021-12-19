@@ -186,7 +186,7 @@ MainArgs read_args(int argc, char *argv[])
     std::string output_path = "";
     std::string certificate_path = "";
     std::string algorithm = "iterative_beam_search";
-    std::string local_scheme_parameters = "";
+    std::string local_scheme_parameters = "local_scheme";
     double time_limit = std::numeric_limits<double>::infinity();
 
     boost::program_options::options_description desc("Allowed options");
@@ -225,8 +225,6 @@ MainArgs read_args(int argc, char *argv[])
         main_args.algorithm_argv.push_back(const_cast<char*>(s.c_str()));
 
     main_args.local_scheme_args = boost::program_options::split_unix(local_scheme_parameters);
-    std::string dummy = "dummy";
-    main_args.local_scheme_argv.push_back(const_cast<char*>(dummy.c_str()));
     for (std::string& s: main_args.local_scheme_args)
         main_args.local_scheme_argv.push_back(const_cast<char*>(s.c_str()));
 

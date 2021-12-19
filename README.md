@@ -34,7 +34,9 @@ Implemented algorithms:
 ## Sequencing module
 
 A specific implementation is also available for sequencing problems. The neighborhoods, crossovers and perturbations are already implemented, it is only required to provide an `append(solution, j)` method to use them:
-* Perturbation: swap two blocks (double-bridge)
+* Perturbation:
+  * Swap two blocks (double-bridge)
+  * Remove `k` jobs and re-insert them (ruin-and-recreate)
 * Crossover algorithms:
   * OX crossover
   * SJOX crossover
