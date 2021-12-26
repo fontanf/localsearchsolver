@@ -150,6 +150,30 @@ cc_binary(
 
 
 cc_library(
+        name = "permutationflowshopschedulingtct",
+        hdrs = ["permutationflowshopschedulingtct.hpp"],
+        deps = [
+                "//localsearchsolver:localsearchsolver",
+                "@orproblems//orproblems:permutationflowshopschedulingtct",
+        ],
+        visibility = ["//visibility:public"],
+)
+
+cc_binary(
+        name = "permutationflowshopschedulingtct_main",
+        srcs = ["permutationflowshopschedulingtct_main.cpp"],
+        deps = [
+                ":permutationflowshopschedulingtct",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
+
+cc_library(
         name = "permutationflowshopschedulingtt",
         hdrs = ["permutationflowshopschedulingtt.hpp"],
         deps = [

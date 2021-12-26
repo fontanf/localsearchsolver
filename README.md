@@ -63,6 +63,18 @@ A specific implementation is also available for sequencing problems. The neighbo
 </p>
 </details>
 
+[Permutation flow shop scheduling problem, Total completion time](examples/permutationflowshopschedulingtct.hpp)
+
+<details><summary>Benchmarks</summary>
+<p>
+
+* Benchmarks:
+  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtct_main --csv ../ordata/permutationflowshopscheduling/data_totalcompletiontime.csv -l permutationflowshopschedulingtct --timelimitfield "Time limit"`
+  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_totalcompletiontime.csv -l permutationflowshopschedulingtct -b heuristiclong -t 500`
+
+</p>
+</details>
+
 [Permutation flow shop scheduling problem, Total tardiness](examples/permutationflowshopschedulingtt.hpp)
 
 <details><summary>Benchmarks</summary>
