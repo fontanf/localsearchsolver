@@ -35,8 +35,9 @@ Implemented algorithms:
 
 A specific implementation is also available for sequencing problems. The neighborhoods, crossovers and perturbations are already implemented, it is only required to provide an `append(solution, j)` method to use them:
 * Perturbation:
-  * Swap two blocks (double-bridge)
+  * Swap two blocks of consecutive jobs (double-bridge)
   * Remove `k` jobs and re-insert them (ruin-and-recreate)
+  * Force a job into the solution
 * Crossover algorithms:
   * OX crossover
   * SJOX crossover
@@ -46,6 +47,7 @@ A specific implementation is also available for sequencing problems. The neighbo
   * Swap a block of `k1` consecutive jobs with another block of `k2` consecutive jobs
   * Reverse a block of consecutive jobs
   * Shift and reverse a block of `k` consecutive jobs
+  * Remove a job from the solution / Add a job into the solution
 
 ### Examples
 
@@ -69,6 +71,18 @@ A specific implementation is also available for sequencing problems. The neighbo
 * Benchmarks:
   * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtt_main --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt --timelimitfield "Time limit"`
   * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt -b heuristiclong -t 500`
+
+</p>
+</details>
+
+[Single machine order acceptance and scheduling problem with time windows and sequence-dependent setup times, Total weighted tardiness](orproblems/orderacceptanceandscheduling.hpp)
+
+<details><summary>Benchmarks</summary>
+<p>
+
+* Benchmarks:
+  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/orderacceptanceandscheduling_main --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l orderacceptanceandscheduling --timelimit 60`
+  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l orderacceptanceandscheduling -b heuristiclong -t 500`
 
 </p>
 </details>

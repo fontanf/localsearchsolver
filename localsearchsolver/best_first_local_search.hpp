@@ -228,8 +228,8 @@ inline void best_first_local_search_worker(
                 || local_scheme.global_cost(data.output.solution_pool.worst())
                 > local_scheme.global_cost(solution)) {
             std::stringstream ss;
-            ss << "initial solution " << initial_solution_pos
-                << " (thread " << thread_id << ")";
+            ss << "s" << initial_solution_pos
+                << " (t" << thread_id << ")";
             int res = data.output.solution_pool.add(solution, ss, data.parameters.info);
             if (res == 2) {
                 data.output.solution_pool.display(ss, data.parameters.info);

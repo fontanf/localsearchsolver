@@ -26,11 +26,13 @@ class LocalScheme
 
 public:
 
-    /** Global cost: <Total tardiness>; */
-    using GlobalCost = std::tuple<Time>;
+    /** Global cost: <Number of jobs, Total tardiness>; */
+    using GlobalCost = std::tuple<JobPos, Time>;
 
-    inline Time&       total_tardiness(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Time  total_tardiness(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline JobPos&       number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline Time&        total_tardiness(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline JobPos  number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline Time   total_tardiness(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
 
     /*
      * Solutions.
@@ -79,7 +81,6 @@ public:
     {
         Solution solution;
         solution.times = std::vector<Time>(instance_.number_of_machines(), 0);
-        solution.total_tardiness = std::numeric_limits<Time>::max();
         return solution;
     }
 
@@ -90,6 +91,7 @@ public:
     inline GlobalCost global_cost(const Solution& solution) const
     {
         return {
+            -solution.sequence.size(),
             solution.total_tardiness,
         };
     }
@@ -100,12 +102,18 @@ public:
 
     inline JobPos number_of_elements() const { return instance_.number_of_jobs(); }
 
+    inline GlobalCost bound(const Solution& solution) const
+    {
+        return {
+            -instance_.number_of_jobs(),
+            solution.total_tardiness,
+        };
+    }
+
     inline void append(
             Solution& solution,
             JobId j) const
     {
-        if (solution.sequence.size() == 0)
-            solution.total_tardiness = 0;
         MachineId m = instance_.number_of_machines();
         // Update sequence.
         solution.sequence.push_back(j);

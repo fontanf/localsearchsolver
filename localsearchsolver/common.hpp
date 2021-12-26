@@ -259,8 +259,9 @@ public:
     void display(const std::stringstream& ss, optimizationtools::Info& info)
     {
         double t = info.elapsed_time();
+        std::streamsize precision = std::cout.precision();
         VER(info,
-                std::setw(10) << std::fixed << std::setprecision(3) << t
+                std::setw(10) << std::fixed << std::setprecision(3) << t << std::defaultfloat << std::setprecision(precision)
                 << std::setw(40) << to_string(scheme_.global_cost(best()))
                 << std::setw(40) << ss.str()
                 << std::endl);
@@ -269,8 +270,7 @@ public:
     void display_end(optimizationtools::Info& info)
     {
         double t = info.elapsed_time();
-        VER(info, std::defaultfloat
-                << std::endl
+        VER(info, std::endl
                 << "Final statistics" << std::endl
                 << "----------------" << std::endl
                 << "Value:                      " << to_string(scheme_.global_cost(best())) << std::endl

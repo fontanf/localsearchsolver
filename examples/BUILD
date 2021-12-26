@@ -102,6 +102,30 @@ cc_binary(
 
 
 cc_library(
+        name = "orderacceptanceandscheduling",
+        hdrs = ["orderacceptanceandscheduling.hpp"],
+        deps = [
+                "//localsearchsolver:localsearchsolver",
+                "@orproblems//orproblems:orderacceptanceandscheduling",
+        ],
+        visibility = ["//visibility:public"],
+)
+
+cc_binary(
+        name = "orderacceptanceandscheduling_main",
+        srcs = ["orderacceptanceandscheduling_main.cpp"],
+        deps = [
+                ":orderacceptanceandscheduling",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
+
+cc_library(
         name = "permutationflowshopschedulingmakespan",
         hdrs = ["permutationflowshopschedulingmakespan.hpp"],
         deps = [

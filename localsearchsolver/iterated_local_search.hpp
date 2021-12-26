@@ -143,7 +143,7 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
                         || local_scheme.global_cost(output.solution_pool.worst())
                         > local_scheme.global_cost(solution_tmp)) {
                     std::stringstream ss;
-                    ss << "initial solution " << initial_solution_pos;
+                    ss << "s" << output.number_of_restarts;
                     output.solution_pool.add(solution_tmp, ss, parameters.info);
                     output.solution_pool.display(ss, parameters.info);
                     parameters.new_solution_callback(solution_tmp);
