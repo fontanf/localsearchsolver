@@ -171,8 +171,10 @@ struct MainArgs
 {
     std::string instance_path = "";
     std::string format = "";
+    std::string algorithm = "iterated_local_search";
     std::vector<std::string> algorithm_args;
     std::vector<char*> algorithm_argv;
+    std::string local_scheme = "local_scheme";
     std::vector<std::string> local_scheme_args;
     std::vector<char*> local_scheme_argv;
     optimizationtools::Info info = optimizationtools::Info();
@@ -180,13 +182,10 @@ struct MainArgs
     bool print_solution = false;
 };
 
-MainArgs read_args(int argc, char *argv[])
+MainArgs read_args(int argc, char *argv[], MainArgs& main_args)
 {
-    MainArgs main_args;
     std::string output_path = "";
     std::string certificate_path = "";
-    std::string algorithm = "iterative_beam_search";
-    std::string local_scheme_parameters = "local_scheme";
     double time_limit = std::numeric_limits<double>::infinity();
 
     boost::program_options::options_description desc("Allowed options");
@@ -196,8 +195,8 @@ MainArgs read_args(int argc, char *argv[])
         ("output,o", boost::program_options::value<std::string>(&output_path), "set JSON output path")
         ("certificate,c", boost::program_options::value<std::string>(&certificate_path), "set certificate path")
         ("format,f", boost::program_options::value<std::string>(&main_args.format), "set input file format (default: orlibrary)")
-        ("algorithm,a", boost::program_options::value<std::string>(&algorithm), "set algorithm")
-        ("local-scheme,b", boost::program_options::value<std::string>(&local_scheme_parameters), "set localscheme parameters")
+        ("algorithm,a", boost::program_options::value<std::string>(&main_args.algorithm), "set algorithm")
+        ("local-scheme,b", boost::program_options::value<std::string>(&main_args.local_scheme), "set localscheme parameters")
         ("time-limit,t", boost::program_options::value<double>(&time_limit), "Time limit in seconds\n  ex: 3600")
         ("only-write-at-the-end,e", "Only write output and certificate files at the end")
         ("verbose,v", "")
@@ -220,11 +219,11 @@ MainArgs read_args(int argc, char *argv[])
     main_args.print_instance = (vm.count("print-instance"));
     main_args.print_solution = (vm.count("print-solution"));
 
-    main_args.algorithm_args = boost::program_options::split_unix(algorithm);
+    main_args.algorithm_args = boost::program_options::split_unix(main_args.algorithm);
     for (std::string& s: main_args.algorithm_args)
         main_args.algorithm_argv.push_back(const_cast<char*>(s.c_str()));
 
-    main_args.local_scheme_args = boost::program_options::split_unix(local_scheme_parameters);
+    main_args.local_scheme_args = boost::program_options::split_unix(main_args.local_scheme);
     for (std::string& s: main_args.local_scheme_args)
         main_args.local_scheme_argv.push_back(const_cast<char*>(s.c_str()));
 

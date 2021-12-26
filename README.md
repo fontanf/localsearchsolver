@@ -93,8 +93,8 @@ A specific implementation is also available for sequencing problems. The neighbo
 <p>
 
 * Benchmarks:
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/orderacceptanceandscheduling_main --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l orderacceptanceandscheduling --timelimit 60`
-  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l orderacceptanceandscheduling -b heuristiclong -t 500`
+  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/orderacceptanceandscheduling_main --csv ../ordata/orderacceptanceandscheduling/data.csv -l orderacceptanceandscheduling -t 60`
+  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/orderacceptanceandscheduling/data.csv -l orderacceptanceandscheduling -b heuristiclong -t 61`
 
 </p>
 </details>

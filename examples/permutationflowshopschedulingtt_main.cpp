@@ -34,7 +34,9 @@ inline LocalScheme::Parameters read_local_scheme_args(
 
 int main(int argc, char *argv[])
 {
-    auto main_args = read_args(argc, argv);
+    MainArgs main_args;
+    main_args.algorithm = "best_first_local_search";
+    read_args(argc, argv, main_args);
 
     // Create instance.
     Instance instance(main_args.instance_path, main_args.format);

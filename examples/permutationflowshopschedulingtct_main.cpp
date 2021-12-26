@@ -34,7 +34,9 @@ inline LocalScheme::Parameters read_local_scheme_args(
 
 int main(int argc, char *argv[])
 {
-    auto main_args = read_args(argc, argv);
+    MainArgs main_args;
+    main_args.algorithm = "best_first_local_search";
+    read_args(argc, argv, main_args);
 
     // Create instance.
     Instance instance(main_args.instance_path, main_args.format);
@@ -45,6 +47,7 @@ int main(int argc, char *argv[])
     auto parameters_local_scheme_0 = read_local_scheme_args(main_args.local_scheme_argv);
     LocalScheme local_scheme_0(instance, parameters_local_scheme_0);
     sequencing2::LocalScheme<LocalScheme> local_scheme(local_scheme_0, parameters_local_scheme_0.sequencing_parameters);
+    local_scheme.print_parameterss(main_args.info);
 
     // Run algorithm.
     auto solution_pool =

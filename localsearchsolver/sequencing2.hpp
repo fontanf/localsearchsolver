@@ -170,9 +170,9 @@ public:
             swap_number_of_sucesses_[p] = std::vector<Counter>(p + 1, 0);
         }
         shift_reverse_number_of_explorations_ = std::vector<Counter>(
-                parameters_.shift_block_maximum_length + 1, 0);
+                parameters_.shift_reverse_block_maximum_length + 1, 0);
         shift_reverse_number_of_sucesses_ = std::vector<Counter>(
-                parameters_.shift_block_maximum_length + 1, 0);
+                parameters_.shift_reverse_block_maximum_length + 1, 0);
     }
 
     LocalScheme(const LocalScheme& sequencing_scheme):
@@ -196,17 +196,53 @@ public:
     };
 
     Solution initial_solution(
-            Counter,
+            Counter initial_solution_id,
             std::mt19937_64& generator,
             std::false_type)
     {
-        std::vector<JobId> elements(local_scheme_0_.number_of_elements());
-        std::iota(elements.begin(), elements.end(), 0);
-        std::shuffle(elements.begin(), elements.end(), generator);
-        Solution solution = local_scheme_0_.empty_solution();
-        for (JobId j: elements)
-            local_scheme_0_.append(solution, j);
-        return solution;
+        switch (initial_solution_id) {
+        case 1: {
+            std::vector<JobId> elements(local_scheme_0_.number_of_elements());
+            std::iota(elements.begin(), elements.end(), 0);
+            std::shuffle(elements.begin(), elements.end(), generator);
+            Solution solution = local_scheme_0_.empty_solution();
+            for (JobId j: elements) {
+                compute_cost_add(solution, j);
+                GlobalCost c_best = global_cost(solution);
+                JobPos pos_best = -1;
+                std::shuffle(positions2_.begin(), positions2_.end(), generator);
+                for (JobPos pos: positions2_) {
+                    if (pos > (JobPos)solution.sequence.size())
+                        continue;
+                    GlobalCost c = global_costs_shift_[pos];
+                    if (c >= c_best)
+                        continue;
+                    if (pos_best != -1 && !dominates(c, c_best))
+                        continue;
+                    pos_best = pos;
+                    c_best = c;
+                }
+                if (pos_best != -1) {
+                    solution_tmp_ = local_scheme_0_.empty_solution();
+                    for (JobPos p = 0; p < pos_best; ++p)
+                        local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
+                    local_scheme_0_.append(solution_tmp_, j);
+                    for (JobPos p = pos_best; p < (JobPos)solution.sequence.size(); ++p)
+                        local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
+                    solution = solution_tmp_;
+                }
+            }
+            return solution;
+        } default: {
+            std::vector<JobId> elements(local_scheme_0_.number_of_elements());
+            std::iota(elements.begin(), elements.end(), 0);
+            std::shuffle(elements.begin(), elements.end(), generator);
+            Solution solution = local_scheme_0_.empty_solution();
+            for (JobId j: elements)
+                local_scheme_0_.append(solution, j);
+            return solution;
+        }
+        }
     }
 
     Solution initial_solution(
@@ -214,7 +250,7 @@ public:
             std::mt19937_64& generator,
             std::true_type)
     {
-        if (initial_solution_id != 0)
+        if (initial_solution_id >= 2)
             return local_scheme_0_.initial_solution(initial_solution_id, generator);
         return initial_solution(initial_solution_id, generator, false);
     }
@@ -583,6 +619,7 @@ public:
                 move.type = Perturbations::ForceAdd;
                 move.elements.push_back(j);
                 move.global_cost = global_cost(solution);
+                moves.push_back(move);
             }
         }
 
@@ -592,13 +629,12 @@ public:
 
     inline void apply_move(Solution& solution, const Move& move)
     {
-        solution_tmp_ = local_scheme_0_.empty_solution();
         switch (move.type) {
         case Perturbations::None: {
-            solution_tmp_ = solution;
             break;
 
         } case Perturbations::DoubleBridge: {
+            solution_tmp_ = local_scheme_0_.empty_solution();
             for (JobPos pos = 0; pos < move.elements[0]; ++pos)
                 local_scheme_0_.append(solution_tmp_, solution.sequence[pos]);
             for (JobPos pos = move.elements[2]; pos < move.elements[3]; ++pos)
@@ -609,26 +645,75 @@ public:
                 local_scheme_0_.append(solution_tmp_, solution.sequence[pos]);
             for (JobPos pos = move.elements[3]; pos < (JobPos)solution.sequence.size(); ++pos)
                 local_scheme_0_.append(solution_tmp_, solution.sequence[pos]);
+            solution = solution_tmp_;
             break;
 
         } case Perturbations::RuinAndRecreate: {
+            Solution solution_tmp = local_scheme_0_.empty_solution();
             for (JobPos pos = 0; pos < (JobPos)solution.sequence.size(); ++pos)
                 if (std::find(move.elements.begin(), move.elements.end(), pos) == move.elements.end())
-                    local_scheme_0_.append(solution_tmp_, solution.sequence[pos]);
+                    local_scheme_0_.append(solution_tmp, solution.sequence[pos]);
             // Add back removed elements.
-            for (JobPos pos: move.elements)
-                local_scheme_0_.append(solution_tmp_, solution.sequence[pos]);
+            std::mt19937_64 generator(0);
+            for (JobPos pos: move.elements) {
+                JobId j = solution.sequence[pos];
+                compute_cost_add(solution_tmp, j);
+                GlobalCost c_best = global_cost(solution_tmp);
+                JobPos pos_best = -1;
+                std::shuffle(positions2_.begin(), positions2_.end(), generator);
+                for (JobPos pos: positions2_) {
+                    if (pos > (JobPos)solution_tmp.sequence.size())
+                        continue;
+                    GlobalCost c = global_costs_shift_[pos];
+                    if (c >= c_best)
+                        continue;
+                    if (pos_best != -1 && !dominates(c, c_best))
+                        continue;
+                    pos_best = pos;
+                    c_best = c;
+                }
+                if (pos_best != -1) {
+                    solution_tmp_ = local_scheme_0_.empty_solution();
+                    for (JobPos p = 0; p < pos_best; ++p)
+                        local_scheme_0_.append(solution_tmp_, solution_tmp.sequence[p]);
+                    local_scheme_0_.append(solution_tmp_, j);
+                    for (JobPos p = pos_best; p < (JobPos)solution_tmp.sequence.size(); ++p)
+                        local_scheme_0_.append(solution_tmp_, solution_tmp.sequence[p]);
+                    solution_tmp = solution_tmp_;
+                }
+                solution = solution_tmp;
+            }
             break;
 
         } case Perturbations::ForceAdd: {
-            solution_tmp_ = solution;
             JobId j = move.elements[0];
-            local_scheme_0_.append(solution_tmp_, j);
+            compute_cost_add(solution, j);
+            GlobalCost c_best = global_cost(solution);
+            JobPos pos_best = -1;
+            std::mt19937_64 generator(0);
+            std::shuffle(positions2_.begin(), positions2_.end(), generator);
+            for (JobPos pos: positions2_) {
+                if (pos > (JobPos)solution.sequence.size())
+                    continue;
+                GlobalCost c = global_costs_shift_[pos];
+                if (pos_best != -1 && !dominates(c, c_best))
+                    continue;
+                pos_best = pos;
+                c_best = c;
+            }
+            if (pos_best != -1) {
+                solution_tmp_ = local_scheme_0_.empty_solution();
+                for (JobPos p = 0; p < pos_best; ++p)
+                    local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
+                local_scheme_0_.append(solution_tmp_, j);
+                for (JobPos p = pos_best; p < (JobPos)solution.sequence.size(); ++p)
+                    local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
+                solution = solution_tmp_;
+            }
             break;
         }
         }
 
-        solution = solution_tmp_;
         assert((JobPos)solution.sequence.size() <= local_scheme_0_.number_of_elements());
     }
 
@@ -1124,6 +1209,24 @@ public:
 
         for (JobId j: solution.sequence)
             cert << j << " ";
+    }
+
+    inline void print_parameterss(optimizationtools::Info& info)
+    {
+        VER(info, std::endl
+                << "Sequencing parameters" << std::endl
+                << "---------------------" << std::endl
+                << std::endl
+                << "Shift, block maximum length:                     " << parameters_.shift_block_maximum_length << std::endl
+                << "Swap, block maximum length:                      " << parameters_.swap_block_maximum_length << std::endl
+                << "Reverse:                                         " << parameters_.reverse << std::endl
+                << "Shift reverse, block maximum length:             " << parameters_.shift_reverse_block_maximum_length << std::endl
+                << "Add/Remove:                                      " << parameters_.add_remove << std::endl
+                << "Double-bridge, number of perturbations:          " << parameters_.double_bridge_number_of_perturbations << std::endl
+                << "Ruin-and-recreate, number of perturbations:      " << parameters_.ruin_and_recreate_number_of_perturbations << std::endl
+                << "Ruin-and-recreate, number of elements removed:   " << parameters_.ruin_and_recreate_number_of_elements_removed << std::endl
+                << "Force-add:                                       " << parameters_.force_add << std::endl
+                );
     }
 
     inline void print_statistics(optimizationtools::Info& info)
