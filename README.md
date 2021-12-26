@@ -75,7 +75,7 @@ A specific implementation is also available for sequencing problems. The neighbo
 </p>
 </details>
 
-[Single machine order acceptance and scheduling problem with time windows and sequence-dependent setup times, Total weighted tardiness](orproblems/orderacceptanceandscheduling.hpp)
+[Single machine order acceptance and scheduling problem with time windows and sequence-dependent setup times, Total weighted tardiness](examples/orderacceptanceandscheduling.hpp)
 
 <details><summary>Benchmarks</summary>
 <p>
