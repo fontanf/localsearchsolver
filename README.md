@@ -65,6 +65,8 @@ DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/optimizationtool
 python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/schedulingwithsdsttwt/data.csv -l "${DATE}_schedulingwithsdsttwt" -b heuristiclong -t 62
 ```
 
+![schedulingwithsdsttwt](img/schedulingwithsdsttwt.png?raw=true "schedulingwithsdsttwt")
+
 </p>
 </details>
 
@@ -128,6 +130,8 @@ DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/optimizationtool
 python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/multidimensionalmultiplechoiceknapsack/data.csv -l "${DATE}_multidimensionalmultiplechoiceknapsack" -b heuristiclong -t 62
 ```
 
+![multidimensionalmultiplechoiceknapsack](img/multidimensionalmultiplechoiceknapsack.png?raw=true "multidimensionalmultiplechoiceknapsack")
+
 </p>
 </details>
 
@@ -148,6 +152,8 @@ python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/
 DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/quadraticassignment_main --csv ../ordata/quadraticassignment/data.csv -l "${DATE}_quadraticassignment" -t 60
 python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/quadraticassignment/data.csv -l "${DATE}_quadraticassignment" -b heuristiclong -t 62
 ```
+
+![quadraticassignment](img/quadraticassignment.png?raw=true "quadraticassignment")
 
 </p>
 </details>
