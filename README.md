@@ -107,7 +107,7 @@ python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/
 </p>
 </details>
 
-[Time-dependent orienteering problem](orproblems/timedependentorienteering.hpp)
+[Time-dependent orienteering problem](examples/timedependentorienteering.hpp)
 
 ## Other examples
 

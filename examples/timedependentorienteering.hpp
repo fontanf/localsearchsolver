@@ -88,8 +88,7 @@ public:
 
     inline Solution empty_solution() const
     {
-        Solution solution;
-        return solution;
+        return Solution();
     }
 
     /*
@@ -128,9 +127,7 @@ public:
         LocationId j_prev = (solution.sequence.size() > 0)?
             solution.sequence.back():
             -1;
-        //std::cout << solution.time_cur << std::endl;
         solution.time_cur = instance_.arrival_time(j_prev + 1, j + 1, solution.time_cur);
-        //std::cout << solution.time_cur << std::endl;
         // Update sequence.
         solution.sequence.push_back(j);
         // Update profit.
