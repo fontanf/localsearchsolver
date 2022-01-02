@@ -40,7 +40,7 @@ A specific implementation is also available for sequencing problems. The neighbo
   * Reverse a block of consecutive jobs
   * Shift and reverse a block of `k` consecutive jobs
   * Remove a job from the solution / Add a job into the solution
-* Perturbation:
+* Perturbations:
   * Swap two blocks of consecutive jobs (double-bridge)
   * Remove `k` jobs and re-insert them (ruin-and-recreate)
   * Force a job into the solution
@@ -58,9 +58,7 @@ A specific implementation is also available for sequencing problems. The neighbo
 <details><summary>Benchmarks</summary>
 <p>
 
-* Benchmarks:
-
-```
+```shell
 DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/schedulingwithsdsttwt_main --csv ../ordata/schedulingwithsdsttwt/data.csv -l "${DATE}_schedulingwithsdsttwt" -t 60
 python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/schedulingwithsdsttwt/data.csv -l "${DATE}_schedulingwithsdsttwt" -b heuristiclong -t 62
 ```
@@ -75,9 +73,10 @@ python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/
 <details><summary>Benchmarks</summary>
 <p>
 
-* Benchmarks:
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtct_main --csv ../ordata/permutationflowshopscheduling/data_totalcompletiontime.csv -l permutationflowshopschedulingtct --timelimitfield "Time limit"`
-  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_totalcompletiontime.csv -l permutationflowshopschedulingtct -b heuristiclong -t 500`
+```shell
+python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtct_main --csv ../ordata/permutationflowshopscheduling/data_totalcompletiontime.csv -l permutationflowshopschedulingtct --timelimitfield "Time limit"
+python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_totalcompletiontime.csv -l permutationflowshopschedulingtct -b heuristiclong -t 500
+```
 
 </p>
 </details>
@@ -87,9 +86,10 @@ python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/
 <details><summary>Benchmarks</summary>
 <p>
 
-* Benchmarks:
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtt_main --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt --timelimitfield "Time limit"`
-  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt -b heuristiclong -t 800`
+```shell
+python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtt_main --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt --timelimitfield "Time limit"
+python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt -b heuristiclong -t 800
+```
 
 </p>
 </details>
@@ -99,9 +99,10 @@ python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/
 <details><summary>Benchmarks</summary>
 <p>
 
-* Benchmarks:
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/orderacceptanceandscheduling_main --csv ../ordata/orderacceptanceandscheduling/data.csv -l orderacceptanceandscheduling -t 60`
-  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/orderacceptanceandscheduling/data.csv -l orderacceptanceandscheduling -b heuristiclong -t 61`
+```shell
+python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/orderacceptanceandscheduling_main --csv ../ordata/orderacceptanceandscheduling/data.csv -l orderacceptanceandscheduling -t 60
+python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/orderacceptanceandscheduling/data.csv -l orderacceptanceandscheduling -b heuristiclong -t 61
+```
 
 </p>
 </details>
@@ -123,9 +124,7 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
 <details><summary>Benchmarks</summary>
 <p>
 
-* Benchmarks:
-
-```
+```shell
 DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/multidimensionalmultiplechoiceknapsack_main --csv ../ordata/multidimensionalmultiplechoiceknapsack/data.csv -l "${DATE}_multidimensionalmultiplechoiceknapsack" -t 60
 python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/multidimensionalmultiplechoiceknapsack/data.csv -l "${DATE}_multidimensionalmultiplechoiceknapsack" -b heuristiclong -t 62
 ```
@@ -138,17 +137,14 @@ python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/
 [Quadratic Assignment Problem](examples/quadraticassignment.hpp)
 * Example which implements a problem specific acceleration strategy to compute the move costs
 * Algorithm:
-  * Local search neighborhoods:
-    * Swap two assignments
+  * Local search neighborhood: swap two assignments
   * Perturbation: ejection chain
   * Crossover algorithm: UX crossover
 
 <details><summary>Benchmarks</summary>
 <p>
 
-* Benchmarks:
-
-```
+```shell
 DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/quadraticassignment_main --csv ../ordata/quadraticassignment/data.csv -l "${DATE}_quadraticassignment" -t 60
 python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/quadraticassignment/data.csv -l "${DATE}_quadraticassignment" -b heuristiclong -t 62
 ```
@@ -171,11 +167,12 @@ python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/
 <details><summary>Benchmarks</summary>
 <p>
 
-* Benchmarks:
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/knapsackwithconflicts_main --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'hifi2006'" -l knapsackwithconflicts -t 300`
-  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'hifi2006'" -l knapsackwithconflicts -b heuristiclong -t 310`
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/knapsackwithconflicts_main --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -t 5`
-  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -b heuristiclong -t 6`
+```shell
+python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/knapsackwithconflicts_main --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'hifi2006'" -l knapsackwithconflicts -t 300
+python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'hifi2006'" -l knapsackwithconflicts -b heuristiclong -t 310
+python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/knapsackwithconflicts_main --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -t 5
+python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -b heuristiclong -t 6
+```
 
 </p>
 </details>
@@ -201,9 +198,10 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
 <details><summary>Benchmarks</summary>
 <p>
 
-* Benchmarks:
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/travellingsalesman_main --csv ../ordata/travellingsalesman/data.csv -l travellingsalesman -t 60`
-  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/travellingsalesman/data.csv -l travellingsalesman -b heuristiclong -t 62`
+```shell
+python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/travellingsalesman_main --csv ../ordata/travellingsalesman/data.csv -l travellingsalesman -t 60
+python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/travellingsalesman/data.csv -l travellingsalesman -b heuristiclong -t 62
+```
 
 </p>
 </details>
@@ -221,9 +219,10 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
 <details><summary>Benchmarks</summary>
 <p>
 
-* Benchmarks:
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingmakespan_main --csv ../ordata/permutationflowshopscheduling/data_makespan.csv -f "row['Dataset'] == 'vallada2015_large'" -l permutationflowshopschedulingmakespan --timelimitfield "Time limit"`
-  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_makespan.csv -f "row['Dataset'] == 'vallada2015_large' and int(row['Job number']) <= 100" -l permutationflowshopschedulingmakespan -b heuristiclong -t 500`
+```shell
+python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingmakespan_main --csv ../ordata/permutationflowshopscheduling/data_makespan.csv -f "row['Dataset'] == 'vallada2015_large'" -l permutationflowshopschedulingmakespan --timelimitfield "Time limit"
+python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_makespan.csv -f "row['Dataset'] == 'vallada2015_large' and int(row['Job number']) <= 100" -l permutationflowshopschedulingmakespan -b heuristiclong -t 500
+```
 
 </p>
 </details>
@@ -239,9 +238,10 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
 <details><summary>Benchmarks</summary>
 <p>
 
-* Benchmarks:
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main "./bazel-bin/examples/roadef2020_main -w 0 -y 1 " --csv ../ordata/roadef2020/data/data.csv -l roadef2020 -t 900 -f "'A' not in row['Dataset']"`
-  * `python3 ../optimizationtools/optimizationtools/bench_process.py -b heuristiclong --csv ../ordata/roadef2020/data.csv -l roadef2020 -t 920 -f "'A' not in row['Dataset']"`
+```shell
+python3 ../optimizationtools/optimizationtools/bench_run.py --main "./bazel-bin/examples/roadef2020_main -w 0 -y 1 " --csv ../ordata/roadef2020/data/data.csv -l roadef2020 -t 900 -f "'A' not in row['Dataset']"
+python3 ../optimizationtools/optimizationtools/bench_process.py -b heuristiclong --csv ../ordata/roadef2020/data.csv -l roadef2020 -t 920 -f "'A' not in row['Dataset']"
+```
 
 </p>
 </details>
