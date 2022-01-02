@@ -15,6 +15,7 @@ template <typename LocalScheme>
 struct IteratedLocalSearchOptionalParameters
 {
     typedef typename LocalScheme::Solution Solution;
+    typedef typename LocalScheme::GlobalCost GlobalCost;
 
     /** Maximum number of iterations. */
     Counter maximum_number_of_iterations = -1;
@@ -39,6 +40,8 @@ struct IteratedLocalSearchOptionalParameters
     Counter maximum_size_of_the_solution_pool = 1;
     /** Seed. */
     Seed seed = 0;
+    /** Cutoff. */
+    GlobalCost cutoff = best<GlobalCost>();
     /** Callback function called when a new best solution is found. */
     IteratedLocalSearchCallback<LocalScheme> new_solution_callback
         = [](const Solution& solution) { (void)solution; };
@@ -81,8 +84,8 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
     typedef typename LocalScheme::Move Move;
 
     // Initial display.
-    VER(parameters.info,
-               "=======================================" << std::endl
+    VER(parameters.info, ""
+            << "=======================================" << std::endl
             << "          Local Search Solver          " << std::endl
             << "=======================================" << std::endl
             << std::endl
@@ -97,9 +100,9 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
             << "Minimum number of perturbations:  " << parameters.minimum_number_of_perturbations << std::endl
             << "Seed:                             " << parameters.seed << std::endl
             << "Maximum size of the pool:         " << parameters.maximum_size_of_the_solution_pool << std::endl
-            << "Time limit:                       " << parameters.info.time_limit << std::endl
-            << std::endl
-       );
+            << "Time limit:                       " << parameters.info.time_limit << std::endl);
+    print_local_scheme_parameters(local_scheme, parameters.info);
+    VER(parameters.info, std::endl);
 
     auto move_compare = [](const Move& move_1, const Move& move_2) -> bool
     {
@@ -123,8 +126,14 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
         if (parameters.maximum_number_of_restarts >= 0
                 && output.number_of_restarts > parameters.maximum_number_of_restarts)
             break;
+
         // Check time.
         if (parameters.info.needs_to_end())
+            break;
+
+        // Check cutoff.
+        if (local_scheme.global_cost(output.solution_pool.best())
+                <= parameters.cutoff)
             break;
 
         // Generate initial solutions.
@@ -180,6 +189,11 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
             if (parameters.info.needs_to_end())
                 break;
 
+            // Check cutoff.
+            if (local_scheme.global_cost(output.solution_pool.best())
+                    <= parameters.cutoff)
+                break;
+
             if (perturbation_id >= parameters.minimum_number_of_perturbations
                     && better_found) {
                 solution_cur = solution_next;
@@ -232,6 +246,7 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
     VER(parameters.info, "Number of iterations:       " << output.number_of_iterations << std::endl);
     PUT(parameters.info, "Algorithm", "NumberOfRestarts", output.number_of_restarts);
     PUT(parameters.info, "Algorithm", "NumberOfIterations", output.number_of_iterations);
+    print_local_scheme_statistics(local_scheme, parameters.info);
     return output;
 }
 

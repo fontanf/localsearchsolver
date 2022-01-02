@@ -154,10 +154,18 @@ struct Helper<std::tuple<Ts...>>
     {
         return { std::numeric_limits<Ts>::max()... };
     }
+
+    static std::tuple<Ts...> min()
+    {
+        return { std::numeric_limits<Ts>::min()... };
+    }
 };
 
 template <typename T>
 T worst() { return Helper<T>::max(); }
+
+template <typename T>
+T best() { return Helper<T>::min(); }
 
 
 template <typename Scheme>
@@ -293,6 +301,186 @@ private:
     Solution best_;
 
 };
+
+
+template<typename, typename T>
+struct HasGlobalCostCutoffMethod
+{
+    static_assert(
+        std::integral_constant<T, false>::value,
+        "Second template parameter needs to be of function type.");
+};
+
+template<typename C, typename Ret, typename... Args>
+struct HasGlobalCostCutoffMethod<C, Ret(Args...)>
+{
+
+private:
+
+    template<typename T>
+    static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().global_cost_cutoff(std::declval<Args>()...)), Ret>::type;
+
+    template<typename>
+    static constexpr std::false_type check(...);
+
+    typedef decltype(check<C>(0)) type;
+
+public:
+
+    static constexpr bool value = type::value;
+
+};
+
+template<typename LocalScheme>
+typename LocalScheme::GlobalCost global_cost_cutoff(
+        const LocalScheme&,
+        double,
+        std::false_type)
+{
+    return best<typename LocalScheme::GlobalCost>();
+}
+
+template<typename LocalScheme>
+typename LocalScheme::GlobalCost global_cost_cutoff(
+        const LocalScheme& local_scheme,
+        double cutoff,
+        std::true_type)
+{
+    return local_scheme.global_cost_cutoff(cutoff);
+}
+
+template<typename LocalScheme>
+typename LocalScheme::GlobalCost global_cost_cutoff(
+        const LocalScheme& local_scheme,
+        double cutoff)
+{
+    typedef typename LocalScheme::GlobalCost GlobalCost;
+
+    return global_cost_cutoff(
+            local_scheme,
+            cutoff,
+            std::integral_constant<bool, HasGlobalCostCutoffMethod<LocalScheme, GlobalCost(double)>::value>());
+}
+
+
+template<typename, typename T>
+struct HasPrintParametersMethod
+{
+    static_assert(
+        std::integral_constant<T, false>::value,
+        "Second template parameter needs to be of function type.");
+};
+
+template<typename C, typename Ret, typename... Args>
+struct HasPrintParametersMethod<C, Ret(Args...)>
+{
+
+private:
+
+    template<typename T>
+    static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().print_parameters(std::declval<Args>()...)), Ret>::type;
+
+    template<typename>
+    static constexpr std::false_type check(...);
+
+    typedef decltype(check<C>(0)) type;
+
+public:
+
+    static constexpr bool value = type::value;
+
+};
+
+template<typename LocalScheme>
+void print_local_scheme_parameters(
+        LocalScheme&,
+        optimizationtools::Info&,
+        std::false_type)
+{
+}
+
+template<typename LocalScheme>
+void print_local_scheme_parameters(
+        LocalScheme& local_scheme,
+        optimizationtools::Info& info,
+        std::true_type)
+{
+    VER(info, std::endl
+            << "Local scheme parameters" << std::endl
+            << "-----------------------" << std::endl);
+    local_scheme.print_parameters(info);
+}
+
+template<typename LocalScheme>
+void print_local_scheme_parameters(
+        LocalScheme& local_scheme,
+        optimizationtools::Info& info)
+{
+    print_local_scheme_parameters(
+            local_scheme,
+            info,
+            std::integral_constant<bool, HasPrintParametersMethod<LocalScheme, void(optimizationtools::Info&)>::value>());
+}
+
+
+template<typename, typename T>
+struct HasPrintStatisticsMethod
+{
+    static_assert(
+        std::integral_constant<T, false>::value,
+        "Second template parameter needs to be of function type.");
+};
+
+template<typename C, typename Ret, typename... Args>
+struct HasPrintStatisticsMethod<C, Ret(Args...)>
+{
+
+private:
+
+    template<typename T>
+    static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().print_statistics(std::declval<Args>()...)), Ret>::type;
+
+    template<typename>
+    static constexpr std::false_type check(...);
+
+    typedef decltype(check<C>(0)) type;
+
+public:
+
+    static constexpr bool value = type::value;
+
+};
+
+template<typename LocalScheme>
+void print_local_scheme_statistics(
+        LocalScheme&,
+        optimizationtools::Info&,
+        std::false_type)
+{
+}
+
+template<typename LocalScheme>
+void print_local_scheme_statistics(
+        LocalScheme& local_scheme,
+        optimizationtools::Info& info,
+        std::true_type)
+{
+    VER(info, std::endl
+            << "Local scheme statistics" << std::endl
+            << "-----------------------" << std::endl);
+    local_scheme.print_statistics(info);
+}
+
+template<typename LocalScheme>
+void print_local_scheme_statistics(
+        LocalScheme& local_scheme,
+        optimizationtools::Info& info)
+{
+    print_local_scheme_statistics(
+            local_scheme,
+            info,
+            std::integral_constant<bool, HasPrintStatisticsMethod<LocalScheme, void(optimizationtools::Info&)>::value>());
+}
 
 }
 

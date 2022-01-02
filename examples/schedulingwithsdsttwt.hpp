@@ -56,9 +56,10 @@ public:
         Parameters()
         {
             sequencing_parameters.shift_block_maximum_length = 13;
-            sequencing_parameters.swap_block_maximum_length = 1;
+            sequencing_parameters.swap_block_maximum_length = 3;
             sequencing_parameters.shuffle_neighborhood_order = true;
-            sequencing_parameters.double_bridge_number_of_perturbations = 10;
+            sequencing_parameters.double_bridge_number_of_perturbations = 0;
+            sequencing_parameters.ruin_and_recreate_number_of_perturbations = 10;
         }
 
         sequencing2::Parameters sequencing_parameters;
@@ -96,6 +97,14 @@ public:
         };
     }
 
+    inline GlobalCost global_cost_cutoff(double cutoff) const
+    {
+        return {
+            -instance_.number_of_jobs(),
+            cutoff,
+        };
+    }
+
     /*
      * Methods required by sequencing::LocalScheme.
      */
@@ -114,8 +123,9 @@ public:
             Solution& solution,
             JobId j) const
     {
+        JobPos ns = solution.sequence.size();
         // Update time.
-        JobId j_prev = (solution.sequence.size() > 0)?
+        JobId j_prev = (ns)?
             solution.sequence.back():
             instance_.number_of_jobs();
         solution.time += instance_.setup_time(j_prev, j);
@@ -127,6 +137,10 @@ public:
             solution.total_weighted_tardiness
                 += instance_.job(j).weight
                 * (solution.time - instance_.job(j).due_date);
+        if (ns > 2
+                && instance_.job(solution.sequence[ns - 1]).weight > 0
+                && instance_.job(solution.sequence[ns - 2]).weight == 0)
+            solution.total_weighted_tardiness += 1000000;
     }
 
 private:

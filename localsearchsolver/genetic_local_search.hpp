@@ -14,6 +14,7 @@ template <typename LocalScheme>
 struct GeneticLocalSearchOptionalParameters
 {
     typedef typename LocalScheme::Solution Solution;
+    typedef typename LocalScheme::GlobalCost GlobalCost;
 
     /** Number of threads. */
     Counter number_of_threads = 1;
@@ -22,13 +23,15 @@ struct GeneticLocalSearchOptionalParameters
     /** Maximum size of the population. */
     Counter maximum_size_of_the_population = 10;
     /** Ids of generated initial solutions. */
-    std::vector<Counter> initial_solution_ids = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    std::vector<Counter> initial_solution_ids = {0};
     /** User-provided initial solutions. */
     std::vector<Solution> initial_solutions;
     /** Maximum size of the solution pool. */
     Counter maximum_size_of_the_solution_pool = 1;
     /** Seed. */
     Seed seed = 0;
+    /** Cutoff. */
+    GlobalCost cutoff = best<GlobalCost>();
     /** Callback function called when a new best solution is found. */
     GeneticLocalSearchCallback<LocalScheme> new_solution_callback
         = [](const Solution&) { };
@@ -302,22 +305,36 @@ inline void genetic_local_search_worker(
 {
     LocalScheme local_scheme(data.local_scheme);
     std::mt19937_64 generator(data.parameters.seed + thread_id);
+    Counter number_of_initial_solutions
+        = (Counter)data.parameters.initial_solution_ids.size()
+        + (Counter)data.parameters.initial_solutions.size();
 
     // Generate initial solutions.
     for (;;) {
+
+        // Check end.
+        if (data.parameters.info.needs_to_end())
+            break;
+
+        // Check cutoff.
+        if (local_scheme.global_cost(data.output.solution_pool.best())
+                <= data.parameters.cutoff)
+            break;
+
         data.mutex.lock();
         // No more initial solutions to generate.
-        if (data.initial_solution_pos >= (Counter)data.parameters.initial_solution_ids.size()) {
+        if (data.initial_solution_pos >= (Counter)data.parameters.maximum_size_of_the_population) {
             data.mutex.unlock();
             break;
         }
-        Counter initial_solution_pos = data.initial_solution_pos;
+        Counter initial_solution_pos = data.initial_solution_pos % number_of_initial_solutions;
         data.initial_solution_pos++;
         data.mutex.unlock();
 
         // Generate initial solution.
-        auto solution = local_scheme.initial_solution(
-                data.parameters.initial_solution_ids[initial_solution_pos], generator);
+        auto solution = (initial_solution_pos < (Counter)data.parameters.initial_solution_ids.size())?
+            local_scheme.initial_solution(data.parameters.initial_solution_ids[initial_solution_pos], generator):
+            data.parameters.initial_solutions[initial_solution_pos - (Counter)data.parameters.initial_solution_ids.size()];
         // Run A* Local Search.
         local_scheme.local_search(solution, generator);
         //std::cout << to_string(local_scheme.global_cost(solution)) << std::endl;
@@ -346,6 +363,11 @@ inline void genetic_local_search_worker(
 
         // Check end.
         if (data.parameters.info.needs_to_end())
+            break;
+
+        // Check cutoff.
+        if (local_scheme.global_cost(data.output.solution_pool.best())
+                <= data.parameters.cutoff)
             break;
 
         data.mutex.lock();

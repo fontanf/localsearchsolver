@@ -51,12 +51,12 @@ int main(int argc, char *argv[])
     // Run algorithm.
     auto solution_pool =
         (strcmp(main_args.algorithm_argv[0], "restarting_local_search") == 0)?
-        run_restarting_local_search(main_args.algorithm_args, local_scheme, main_args.info):
+        run_restarting_local_search(main_args, local_scheme, main_args.info):
         (strcmp(main_args.algorithm_argv[0], "iterated_local_search") == 0)?
-        run_iterated_local_search(main_args.algorithm_args, local_scheme, main_args.info):
+        run_iterated_local_search(main_args, local_scheme, main_args.info):
         (strcmp(main_args.algorithm_argv[0], "best_first_local_search") == 0)?
-        run_best_first_local_search(main_args.algorithm_args, local_scheme, main_args.info):
-        run_genetic_local_search(main_args.algorithm_args, local_scheme, main_args.info);
+        run_best_first_local_search(main_args, local_scheme, main_args.info):
+        run_genetic_local_search(main_args, local_scheme, main_args.info);
 
     // Write solution.
     local_scheme.write(solution_pool.best(), main_args.info.output->certificate_path);

@@ -78,6 +78,30 @@ cc_binary(
 
 
 cc_library(
+        name = "sequentialordering",
+        hdrs = ["sequentialordering.hpp"],
+        deps = [
+                "//localsearchsolver:localsearchsolver",
+                "@orproblems//orproblems:sequentialordering",
+        ],
+        visibility = ["//visibility:public"],
+)
+
+cc_binary(
+        name = "sequentialordering_main",
+        srcs = ["sequentialordering_main.cpp"],
+        deps = [
+                ":sequentialordering",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
+
+cc_library(
         name = "schedulingwithsdsttwt",
         hdrs = ["schedulingwithsdsttwt.hpp"],
         deps = [

@@ -83,9 +83,11 @@ public:
     Solution compact2solution(const CompactSolution& compact_solution)
     {
         Solution solution = empty_solution();
-        for (ItemId j: compact_solution)
+        for (GroupId group_id = 0; group_id < instance_.number_of_groups(); ++group_id) {
+            ItemId j = compact_solution[group_id];
             if (j != -1)
-                add(solution, j);
+                add(solution, group_id, j);
+        }
         return solution;
     }
 
@@ -102,10 +104,11 @@ public:
             Parameters parameters):
         instance_(instance),
         parameters_(parameters),
-        items_(instance.number_of_groups())
+        groups_(instance.number_of_groups()),
+        items_(instance.largest_group_size())
     {
-        for (GroupId group_id = 0; group_id < instance.number_of_groups(); ++group_id)
-            items_[group_id] = instance.items(group_id);
+        std::iota(groups_.begin(), groups_.end(), 0);
+        std::iota(items_.begin(), items_.end(), 0);
     }
 
     LocalScheme(const LocalScheme& local_scheme):
@@ -131,9 +134,26 @@ public:
     {
         Solution solution = empty_solution();
         for (GroupId group_id = 0; group_id < instance_.number_of_groups(); ++group_id) {
-            std::uniform_int_distribution<ItemId> d(0, instance_.items(group_id).size() - 1);
-            ItemId j = instance_.items(group_id)[d(generator)];
-            add(solution, j);
+            std::uniform_int_distribution<ItemId> d(0, instance_.number_of_items(group_id) - 1);
+            ItemId j = d(generator);
+            add(solution, group_id, j);
+        }
+        return solution;
+    }
+
+    inline Solution crossover(
+            const Solution& solution_parent_1,
+            const Solution& solution_parent_2,
+            std::mt19937_64& generator)
+    {
+        Solution solution = empty_solution();
+        std::uniform_int_distribution<int> distribution(0, 1);
+        for (GroupId group_id = 0; group_id < instance_.number_of_groups(); ++group_id) {
+            if (distribution(generator) == 0) {
+                add(solution, group_id, solution_parent_1.items[group_id]);
+            } else {
+                add(solution, group_id, solution_parent_2.items[group_id]);
+            }
         }
         return solution;
     }
@@ -151,14 +171,26 @@ public:
         };
     }
 
+    inline ItemId distance(
+            const Solution& solution_1,
+            const Solution& solution_2) const
+    {
+        ItemId d = 0;
+        for (GroupId group_id = 0; group_id < instance_.number_of_groups(); ++group_id)
+            if (solution_1.items[group_id] != solution_2.items[group_id])
+                d++;
+        return d;
+    }
+
     /*
      * Local search.
      */
 
     struct Move
     {
-        Move(): j(-1), global_cost(worst<GlobalCost>()) { }
+        Move(): group_id(-1), global_cost(worst<GlobalCost>()) { }
 
+        GroupId group_id;
         ItemId j;
         GlobalCost global_cost;
     };
@@ -173,13 +205,16 @@ public:
                 const Move& move_1,
                 const Move& move_2) const
         {
-            return move_1.j == move_2.j;
+            return move_1.group_id == move_2.group_id
+                && move_1.j == move_2.j;
         }
 
         inline std::size_t operator()(
                 const Move& move) const
         {
-            return hasher(move.j);
+            std::size_t hash = hasher(move.group_id);
+            optimizationtools::hash_combine(hash, move.j);
+            return hash;
         }
     };
 
@@ -192,25 +227,25 @@ public:
         std::vector<Move> moves;
         for (GroupId group_id = 0; group_id < instance_.number_of_groups(); ++group_id) {
             ItemId j_old = solution.items[group_id];
-            remove(solution, j_old);
-            for (ItemId j: instance_.items(group_id)) {
+            remove(solution, group_id, j_old);
+            for (ItemId j = 0; j < instance_.number_of_items(group_id); ++j) {
                 if (j == j_old)
                     continue;
                 Move move;
+                move.group_id = group_id;
                 move.j = j;
-                move.global_cost = cost_add(solution, j);
+                move.global_cost = cost_add(solution, group_id, j);
                 moves.push_back(move);
             }
-            add(solution, j_old);
+            add(solution, group_id, j_old);
         }
         return moves;
     }
 
     inline void apply_move(Solution& solution, const Move& move) const
     {
-        GroupId group_id = instance_.item(move.j).group_id;
-        remove(solution, solution.items[group_id]);
-        add(solution, move.j);
+        remove(solution, move.group_id, solution.items[move.group_id]);
+        add(solution, move.group_id, move.j);
     }
 
     inline void local_search(
@@ -222,33 +257,36 @@ public:
         for (;; ++it) {
             //std::cout << "it " << it << " cost " << to_string(global_cost(solution)) << std::endl;
             std::shuffle(items_.begin(), items_.end(), generator);
+            std::shuffle(groups_.begin(), groups_.end(), generator);
+            GroupId group_id_best = -1;
             ItemId j_best = -1;
             GlobalCost c_best = global_cost(solution);
-            for (auto& items: items_) {
-                std::shuffle(items.begin(), items.end(), generator);
-                GroupId group_id = instance_.item(items[0]).group_id;
-                if (tabu.j != -1 && group_id == instance_.item(tabu.j).group_id)
+            for (GroupId group_id: groups_) {
+                if (tabu.group_id != -1
+                        && group_id == tabu.group_id)
                     continue;
                 ItemId j_old = solution.items[group_id];
-                remove(solution, j_old);
-                for (ItemId j: items) {
+                remove(solution, group_id, j_old);
+                for (ItemId j: items_) {
+                    if (j >= instance_.number_of_items(group_id))
+                        continue;
                     if (j == j_old)
                         continue;
-                    GlobalCost c = cost_add(solution, j);
+                    GlobalCost c = cost_add(solution, group_id, j);
                     if (c >= c_best)
                         continue;
-                    if (j_best != -1 && !dominates(c, c_best))
+                    if (group_id_best != -1 && !dominates(c, c_best))
                         continue;
+                    group_id_best = group_id;
                     j_best = j;
                     c_best = c;
                 }
-                add(solution, j_old);
+                add(solution, group_id, j_old);
             }
-            if (j_best == -1)
+            if (group_id_best == -1)
                 break;
-            GroupId group_id = instance_.item(j_best).group_id;
-            remove(solution, solution.items[group_id]);
-            add(solution, j_best);
+            remove(solution, group_id_best, solution.items[group_id_best]);
+            add(solution, group_id_best, j_best);
         }
     }
 
@@ -296,18 +334,18 @@ private:
      * Manipulate solutions.
      */
 
-    inline void add(Solution& solution, ItemId j) const
+    inline void add(
+            Solution& solution,
+            GroupId group_id,
+            ItemId j) const
     {
-        assert(j >= 0);
-        assert(j < instance_.number_of_items());
-        GroupId group_id = instance_.item(j).group_id;
         assert(solution.items[group_id] == -1);
         // Update number_of_groups.
         solution.number_of_groups++;
         // Update weights.
         for (ResourceId r = 0; r < instance_.number_of_resources(); ++r) {
             Weight w_max = instance_.capacity(r);
-            Weight w = instance_.item(j).weights[r];
+            Weight w = instance_.item(group_id, j).weights[r];
             if (solution.weights[r] >= w_max) {
                 solution.overweight += w;
             } else if (solution.weights[r] + w <= w_max) {
@@ -317,21 +355,23 @@ private:
             solution.weights[r] += w;
         }
         // Update profit.
-        solution.profit += instance_.item(j).profit;
+        solution.profit += instance_.item(group_id, j).profit;
         // Update items.
         solution.items[group_id] = j;
     }
 
-    inline void remove(Solution& solution, ItemId j) const
+    inline void remove(
+            Solution& solution,
+            GroupId group_id,
+            ItemId j) const
     {
-        GroupId group_id = instance_.item(j).group_id;
         assert(solution.items[group_id] == j);
         // Update number_of_groups.
         solution.number_of_groups--;
         // Update weights.
         for (ResourceId r = 0; r < instance_.number_of_resources(); ++r) {
             Weight w_max = instance_.capacity(r);
-            Weight w = instance_.item(j).weights[r];
+            Weight w = instance_.item(group_id, j).weights[r];
             if (solution.weights[r] - w >= w_max) {
                 solution.overweight -= w;
             } else if (solution.weights[r] <= w_max) {
@@ -341,7 +381,7 @@ private:
             solution.weights[r] -= w;
         }
         // Update profit.
-        solution.profit -= instance_.item(j).profit;
+        solution.profit -= instance_.item(group_id, j).profit;
         // Update items.
         solution.items[group_id] = -1;
     }
@@ -352,16 +392,17 @@ private:
 
     inline GlobalCost cost_add(
             const Solution& solution,
+            GroupId group_id,
             ItemId j) const
     {
         GlobalCost gc = global_cost(solution);
-        assert(solution.items[instance_.item(j).group_id] == -1);
+        assert(solution.items[group_id] == -1);
         // Update number_of_groups.
         number_of_groups(gc)--;
         // Update overweigt.
         for (ResourceId r = 0; r < instance_.number_of_resources(); ++r) {
             Weight w_max = instance_.capacity(r);
-            Weight w = instance_.item(j).weights[r];
+            Weight w = instance_.item(group_id, j).weights[r];
             if (solution.weights[r] >= w_max) {
                 overweight(gc) += w;
             } else if (solution.weights[r] + w <= w_max) {
@@ -370,7 +411,7 @@ private:
             }
         }
         // Update profit.
-        profit(gc) -= instance_.item(j).profit;
+        profit(gc) -= instance_.item(group_id, j).profit;
         return gc;
     }
 
@@ -381,7 +422,8 @@ private:
     const Instance& instance_;
     Parameters parameters_;
 
-    std::vector<std::vector<ItemId>> items_;
+    std::vector<GroupId> groups_;
+    std::vector<ItemId> items_;
 
 };
 

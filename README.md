@@ -34,6 +34,12 @@ Implemented algorithms:
 ## Sequencing module
 
 A specific implementation is also available for sequencing problems. The neighborhoods, crossovers and perturbations are already implemented, it is only required to provide an `append(solution, j)` method to use them:
+* Local search neighborhoods:
+  * Shift a block of `k` consecutive jobs
+  * Swap a block of `k1` consecutive jobs with another block of `k2` consecutive jobs
+  * Reverse a block of consecutive jobs
+  * Shift and reverse a block of `k` consecutive jobs
+  * Remove a job from the solution / Add a job into the solution
 * Perturbation:
   * Swap two blocks of consecutive jobs (double-bridge)
   * Remove `k` jobs and re-insert them (ruin-and-recreate)
@@ -42,14 +48,10 @@ A specific implementation is also available for sequencing problems. The neighbo
   * OX crossover
   * SJOX crossover
   * SBOX crossover
-* Local search neighborhoods:
-  * Shift a block of `k` consecutive jobs
-  * Swap a block of `k1` consecutive jobs with another block of `k2` consecutive jobs
-  * Reverse a block of consecutive jobs
-  * Shift and reverse a block of `k` consecutive jobs
-  * Remove a job from the solution / Add a job into the solution
 
 ### Examples
+
+[Sequential Ordering Problem](examples/sequentialordering.hpp)
 
 [Single machine scheduling problem with sequence-dependent setup times, Total weighted tardiness](examples/schedulingwithsdsttwt.hpp)
 
@@ -57,8 +59,11 @@ A specific implementation is also available for sequencing problems. The neighbo
 <p>
 
 * Benchmarks:
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/schedulingwithsdsttwt_main --csv ../ordata/schedulingwithsdsttwt/data.csv -l schedulingwithsdsttwt -t 60`
-  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/schedulingwithsdsttwt/data.csv -l schedulingwithsdsttwt -b heuristiclong -t 31`
+
+```
+DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/schedulingwithsdsttwt_main --csv ../ordata/schedulingwithsdsttwt/data.csv -l "${DATE}_schedulingwithsdsttwt" -t 60
+python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/schedulingwithsdsttwt/data.csv -l "${DATE}_schedulingwithsdsttwt" -b heuristiclong -t 62
+```
 
 </p>
 </details>
@@ -82,7 +87,7 @@ A specific implementation is also available for sequencing problems. The neighbo
 
 * Benchmarks:
   * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtt_main --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt --timelimitfield "Time limit"`
-  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt -b heuristiclong -t 500`
+  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt -b heuristiclong -t 800`
 
 </p>
 </details>
@@ -108,16 +113,20 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
 [Multidimensional Multiple-choice Knapsack Problem](examples/multidimensionalmultiplechoiceknapsack.hpp)
 * Straightforward example: single neighborhood, simple perturbation, basic operators
 * Algorithm:
-  * Perturbation: force item `j` in the knapsack
   * Local search neighborhoods:
     * Add item `j` in the knapsack
+  * Perturbation: force item `j` in the knapsack
+  * Crossover algorithm
 
 <details><summary>Benchmarks</summary>
 <p>
 
 * Benchmarks:
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/multidimensionalmultiplechoiceknapsack_main --csv ../ordata/multidimensionalmultiplechoiceknapsack/data.csv -l multidimensionalmultiplechoiceknapsack -t 60`
-  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/multidimensionalmultiplechoiceknapsack/data.csv -l multidimensionalmultiplechoiceknapsack -b heuristiclong -t 62`
+
+```
+DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/multidimensionalmultiplechoiceknapsack_main --csv ../ordata/multidimensionalmultiplechoiceknapsack/data.csv -l "${DATE}_multidimensionalmultiplechoiceknapsack" -t 60
+python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/multidimensionalmultiplechoiceknapsack/data.csv -l "${DATE}_multidimensionalmultiplechoiceknapsack" -b heuristiclong -t 62
+```
 
 </p>
 </details>
@@ -125,17 +134,20 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
 [Quadratic Assignment Problem](examples/quadraticassignment.hpp)
 * Example which implements a problem specific acceleration strategy to compute the move costs
 * Algorithm:
-  * Perturbation: ejection chain
-  * Crossover algorithm: UX crossover
   * Local search neighborhoods:
     * Swap two assignments
+  * Perturbation: ejection chain
+  * Crossover algorithm: UX crossover
 
 <details><summary>Benchmarks</summary>
 <p>
 
 * Benchmarks:
-  * `python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/quadraticassignment_main --csv ../ordata/quadraticassignment/data.csv -l quadraticassignment --timelimitfield "Time limit" -a "genetic_local_search -x 6"`
-  * `python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/quadraticassignment/data.csv -l quadraticassignment -b heuristiclong -t 185`
+
+```
+DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/quadraticassignment_main --csv ../ordata/quadraticassignment/data.csv -l "${DATE}_quadraticassignment" -t 60
+python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/quadraticassignment/data.csv -l "${DATE}_quadraticassignment" -b heuristiclong -t 62
+```
 
 </p>
 </details>
@@ -143,12 +155,12 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
 [Knapsack Problem with Conflicts](examples/knapsackwithconflicts.hpp)
 * Example with multiple neigborhoods
 * Algorithm:
-  * Perturbation: force item `j` in/out of the solution
-  * Crossover algorithm: double backbone-based crossover
   * Local search neighborhoods:
     * Move item `j` in/out of the solution (and remove conflicting items)
     * Swap two non-conflicting items
     * Remove one item and add two non-conflicting items from its neighbors
+  * Perturbation: force item `j` in/out of the solution
+  * Crossover algorithm: double backbone-based crossover
 
 <details><summary>Benchmarks</summary>
 <p>
@@ -165,20 +177,19 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
 Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https://github.com/fontanf/generalizedassignmentsolver/blob/master/generalizedassignmentsolver/algorithms/localsearch.cpp)
 * Example which implements a generic strategy for very large problems to avoid recomputing moves which have not change since the last neighborhood exploration
 * Algorithm:
+  * Local search neighborhoods: shift item `j` to agent `i`
   * Perturbation: shift 8 random jobs
-  * Local search neighborhoods:
-    * Shift item `j` to agent `i`
 
 ### Routing
 
 [Travelling Salesman Problem](examples/travellingsalesman.hpp)
 * Three field classification: `1 | sᵢⱼ | Cₘₐₓ`
 * Algorithm:
-  * Perturbation: swap two blocks (double-bridge)
   * Local search neighborhoods:
     * Shift a block of `k` consecutive vertices, `k = 1..8` (or-opt)
     * Swap vertex `j1` with vertex `j2`
     * Replace edges `(j1, j2)` and `(j3, j4)` by edges `(j1, j3)` and `(j2, j4)` (2-opt)
+  * Perturbation: swap two blocks (double-bridge)
   * The local search implementation avoids recomputing moves which have not change since the last neighborhood exploration
 
 <details><summary>Benchmarks</summary>
@@ -193,16 +204,13 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
 
 ### Scheduling
 
-#### Single machine scheduling
-
 #### Flow shop scheduling
 
 [Permutation flow shop scheduling problem, Makespan](examples/permutationflowshopschedulingmakespan.hpp)
 * This one is not considered as a sequencing problem since the dedicated acceleration strategy makes it possible to explore the neighborhoods more efficiently
 * Algorithm:
+  * Local search neighborhood: move a block of `k` consecutive jobs, `k = 1..4`
   * Perturbation: swap two blocks (double-bridge)
-  * Local search neighborhoods:
-    * Move `k` consecutive jobs, `k = 1..4`
 
 <details><summary>Benchmarks</summary>
 <p>
@@ -219,9 +227,8 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
 [ROADEF/EURO Challenge 2020: Maintenance Planning Problem](examples/roadef2020.hpp)
 * Example of a problem with expensive move evaluations
 * Algorithm:
+  * Local search neighborhood: shift intervention `j` to time `t_start`
   * Perturbation: force intervention `j` to start at time `t_start`
-  * Local search neighborhoods:
-    * Shift intervention `j` to time `t_start`
 
 <details><summary>Benchmarks</summary>
 <p>
@@ -237,19 +244,18 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
 
 Maximum-Weight Independent Set Problem from [fontanf/stablesolver](https://github.com/fontanf/stablesolver/blob/master/stablesolver/algorithms/localsearch.cpp)
 * Algorithm:
-  * Perturbation: force vertex `v` in/out of the solution
   * Local search neighborhoods:
     * Move vertex `v` in/out of the solution (and remove conflicting vertices)
     * Remove one vertex and add two non-conflicting vertices from its neighbors
+  * Perturbation: force vertex `v` in/out of the solution
 
 Graph Coloring Problem from [fontanf/coloringsolver](https://github.com/fontanf/coloringsolver/blob/master/coloringsolver/algorithms/localsearch.cpp)
 * Example of a problem with a granular objective
 * Algorithm:
+  * Local search neighborhood: change the color of a conflicting vertex
   * Perturbation:
     * If the solution is feasible, merge two colors
     * If the solution is infeasible, change the color of a conflicting vertex
-  * Local search neighborhoods:
-    * Change the color of a conflicting vertex
 
 ## Usage, running examples from command line
 

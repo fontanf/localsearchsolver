@@ -109,6 +109,9 @@ public:
 
     struct Parameters
     {
+        double crossover_ux_weight = 1.0;
+        double crossover_swap_weight = 0.0;
+        double crossover_insert_weight = 0.0;
     };
 
     LocalScheme(
@@ -156,7 +159,7 @@ public:
         return solution;
     }
 
-    inline Solution crossover(
+    inline Solution crossover_ux(
             const Solution& solution_parent_1,
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
@@ -221,6 +224,64 @@ public:
         return solution;
     }
 
+    /**
+     * References:
+     * - "A greedy genetic algorithm for the quadratic assignment problem"
+     *   (Ahuja et al., 2000)
+     *   https://doi.org/10.1016/S0305-0548(99)00067-2
+     */
+    inline Solution crossover_swap(
+            const Solution& solution_parent_1,
+            const Solution& solution_parent_2,
+            std::mt19937_64& generator)
+    {
+        Solution solution = empty_solution();
+        (void)solution_parent_1;
+        (void)solution_parent_2;
+        (void)generator;
+        return solution;
+    }
+
+    /**
+     * References:
+     * - "A greedy genetic algorithm for the quadratic assignment problem"
+     *   (Ahuja et al., 2000)
+     *   https://doi.org/10.1016/S0305-0548(99)00067-2
+     */
+    inline Solution crossover_insert(
+            const Solution& solution_parent_1,
+            const Solution& solution_parent_2,
+            std::mt19937_64& generator)
+    {
+        Solution solution = empty_solution();
+        (void)solution_parent_1;
+        (void)solution_parent_2;
+        (void)generator;
+        return solution;
+    }
+
+    inline Solution crossover(
+            const Solution& solution_parent_1,
+            const Solution& solution_parent_2,
+            std::mt19937_64& generator)
+    {
+        std::discrete_distribution<Counter> d_crossover({
+                parameters_.crossover_ux_weight,
+                parameters_.crossover_swap_weight,
+                parameters_.crossover_insert_weight,
+                });
+        Counter x = d_crossover(generator);
+        switch (x) {
+        case 1: {
+            return crossover_swap(solution_parent_1, solution_parent_2, generator);
+        } case 2: {
+            return crossover_insert(solution_parent_1, solution_parent_2, generator);
+        } default: {
+            return crossover_ux(solution_parent_1, solution_parent_2, generator);
+        }
+        }
+    }
+
     /*
      * Solution properties.
      */
@@ -230,6 +291,14 @@ public:
         return {
             -solution.number_of_facilities,
             solution.cost,
+        };
+    }
+
+    inline GlobalCost global_cost_cutoff(double cutoff) const
+    {
+        return {
+            -instance_.number_of_facilities(),
+            cutoff,
         };
     }
 

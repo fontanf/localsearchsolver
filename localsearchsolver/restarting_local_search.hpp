@@ -15,6 +15,7 @@ template <typename LocalScheme>
 struct RestartingLocalSearchOptionalParameters
 {
     typedef typename LocalScheme::Solution Solution;
+    typedef typename LocalScheme::GlobalCost GlobalCost;
 
     /** Maximum number of restarts. */
     Counter maximum_number_of_restarts = -1;
@@ -26,6 +27,8 @@ struct RestartingLocalSearchOptionalParameters
     Counter maximum_size_of_the_solution_pool = 1;
     /** Seed. */
     Seed seed = 0;
+    /** Cutoff. */
+    GlobalCost cutoff = best<GlobalCost>();
     /** Callback function called when a new best solution is found. */
     RestartingLocalSearchCallback<LocalScheme> new_solution_callback
         = [](const Solution& solution) { (void)solution; };
@@ -97,8 +100,14 @@ inline RestartingLocalSearchOutput<LocalScheme> restarting_local_search(
         if (parameters.maximum_number_of_restarts >= 0
                 && output.number_of_restarts > parameters.maximum_number_of_restarts)
             break;
+
         // Check time.
         if (parameters.info.needs_to_end())
+            break;
+
+        // Check cutoff.
+        if (local_scheme.global_cost(output.solution_pool.best())
+                <= parameters.cutoff)
             break;
 
         // Generate initial solution.

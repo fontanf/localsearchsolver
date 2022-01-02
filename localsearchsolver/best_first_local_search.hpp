@@ -15,6 +15,7 @@ template <typename LocalScheme>
 struct BestFirstLocalSearchOptionalParameters
 {
     typedef typename LocalScheme::Solution Solution;
+    typedef typename LocalScheme::GlobalCost GlobalCost;
 
     /** Maximum number of nodes. */
     Counter maximum_number_of_nodes = -1;
@@ -30,6 +31,8 @@ struct BestFirstLocalSearchOptionalParameters
     Counter maximum_size_of_the_solution_pool = 1;
     /** Seed. */
     Seed seed = 0;
+    /** Cutoff. */
+    GlobalCost cutoff = best<GlobalCost>();
     /** Callback function called when a new best solution is found. */
     BestFirstLocalSearchCallback<LocalScheme> new_solution_callback
         = [](const Solution& solution) { (void)solution; };
@@ -266,6 +269,11 @@ inline void best_first_local_search_worker(
         if (data.parameters.info.needs_to_end())
             break;
 
+        // Check cutoff.
+        if (local_scheme.global_cost(data.output.solution_pool.best())
+                    <= data.parameters.cutoff)
+            break;
+
         data.mutex.lock();
 
         // Check node limit.
@@ -300,6 +308,11 @@ inline void best_first_local_search_worker(
             data.mutex.unlock();
             break;
         }
+
+        // Check cutoff.
+        if (local_scheme.global_cost(data.output.solution_pool.best())
+                    <= data.parameters.cutoff)
+            break;
 
         if (data.q.empty()) {
             data.mutex.unlock();
@@ -430,8 +443,8 @@ inline BestFirstLocalSearchOutput<LocalScheme> best_first_local_search(
         BestFirstLocalSearchOptionalParameters<LocalScheme> parameters)
 {
     // Initial display.
-    VER(parameters.info,
-               "=======================================" << std::endl
+    VER(parameters.info, ""
+            << "=======================================" << std::endl
             << "          Local Search Solver          " << std::endl
             << "=======================================" << std::endl
             << std::endl
@@ -444,9 +457,10 @@ inline BestFirstLocalSearchOutput<LocalScheme> best_first_local_search(
             << "Maximum number of nodes:     " << parameters.maximum_number_of_nodes << std::endl
             << "Seed:                        " << parameters.seed << std::endl
             << "Maximum size of the pool:    " << parameters.maximum_size_of_the_solution_pool << std::endl
-            << "Time limit:                  " << parameters.info.time_limit << std::endl
-            << std::endl
-       );
+            << "Time limit:                  " << parameters.info.time_limit << std::endl);
+    print_local_scheme_parameters(local_scheme, parameters.info);
+    VER(parameters.info, std::endl);
+
 
     //std::cout << "best_first_local_search start" << std::endl;
     BestFirstLocalSearchOutput<LocalScheme> output(
@@ -473,6 +487,7 @@ inline BestFirstLocalSearchOutput<LocalScheme> best_first_local_search(
     output.solution_pool.display_end(parameters.info);
     //VER(parameters.info, "Number of nodes:            " << output.number_of_nodes << std::endl);
     //PUT(parameters.info, "Algorithm", "NumberOfNodes", output.number_of_nodes);
+    print_local_scheme_statistics(local_scheme, parameters.info);
     return output;
 }
 

@@ -12,9 +12,14 @@ inline LocalScheme::Parameters read_local_scheme_args(
     desc.add_options()
         ("shift-block-maximum-length,", boost::program_options::value<JobPos>(&parameters.sequencing_parameters.shift_block_maximum_length), "")
         ("swap-block-maximum-length,", boost::program_options::value<JobPos>(&parameters.sequencing_parameters.swap_block_maximum_length), "")
-        ("double-bridge-number-of-pertubrations", boost::program_options::value<JobPos>(&parameters.sequencing_parameters.double_bridge_number_of_perturbations), "")
-        ("ruin-and-recreate-number-of-pertubrations", boost::program_options::value<JobPos>(&parameters.sequencing_parameters.ruin_and_recreate_number_of_perturbations), "")
-        ("ruin-and-recreate-number-of-elements-removed", boost::program_options::value<JobPos>(&parameters.sequencing_parameters.ruin_and_recreate_number_of_elements_removed), "")
+        ("reverse,", boost::program_options::value<bool>(&parameters.sequencing_parameters.reverse), "")
+        ("shift-reverse-block-maximum-length,", boost::program_options::value<JobPos>(&(parameters.sequencing_parameters.shift_reverse_block_maximum_length)), "")
+        ("double-bridge-number-of-perturbations,", boost::program_options::value<JobPos>(&parameters.sequencing_parameters.double_bridge_number_of_perturbations), "")
+        ("ruin-and-recreate-number-of-perturbations,", boost::program_options::value<JobPos>(&parameters.sequencing_parameters.ruin_and_recreate_number_of_perturbations), "")
+        ("ruin-and-recreate-number-of-elements-removed,", boost::program_options::value<JobPos>(&parameters.sequencing_parameters.ruin_and_recreate_number_of_elements_removed), "")
+        ("crossover-ox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_ox_weight), "")
+        ("crossover-sjox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_sjox_weight), "")
+        ("crossover-sbox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_sbox_weight), "")
         ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line((Counter)argv.size(), argv.data(), desc), vm);
@@ -46,12 +51,12 @@ int main(int argc, char *argv[])
     // Run algorithm.
     auto solution_pool =
         (strcmp(main_args.algorithm_argv[0], "restarting_local_search") == 0)?
-        run_restarting_local_search(main_args.algorithm_args, local_scheme, main_args.info):
+        run_restarting_local_search(main_args, local_scheme, main_args.info):
         (strcmp(main_args.algorithm_argv[0], "iterated_local_search") == 0)?
-        run_iterated_local_search(main_args.algorithm_args, local_scheme, main_args.info):
+        run_iterated_local_search(main_args, local_scheme, main_args.info):
         (strcmp(main_args.algorithm_argv[0], "best_first_local_search") == 0)?
-        run_best_first_local_search(main_args.algorithm_args, local_scheme, main_args.info):
-        run_genetic_local_search(main_args.algorithm_args, local_scheme, main_args.info);
+        run_best_first_local_search(main_args, local_scheme, main_args.info):
+        run_genetic_local_search(main_args, local_scheme, main_args.info);
 
     // Write solution.
     local_scheme.write(solution_pool.best(), main_args.info.output->certificate_path);

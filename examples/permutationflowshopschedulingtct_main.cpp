@@ -47,17 +47,16 @@ int main(int argc, char *argv[])
     auto parameters_local_scheme_0 = read_local_scheme_args(main_args.local_scheme_argv);
     LocalScheme local_scheme_0(instance, parameters_local_scheme_0);
     sequencing2::LocalScheme<LocalScheme> local_scheme(local_scheme_0, parameters_local_scheme_0.sequencing_parameters);
-    local_scheme.print_parameterss(main_args.info);
 
     // Run algorithm.
     auto solution_pool =
         (strcmp(main_args.algorithm_argv[0], "restarting_local_search") == 0)?
-        run_restarting_local_search(main_args.algorithm_args, local_scheme, main_args.info):
+        run_restarting_local_search(main_args, local_scheme, main_args.info):
         (strcmp(main_args.algorithm_argv[0], "iterated_local_search") == 0)?
-        run_iterated_local_search(main_args.algorithm_args, local_scheme, main_args.info):
+        run_iterated_local_search(main_args, local_scheme, main_args.info):
         (strcmp(main_args.algorithm_argv[0], "best_first_local_search") == 0)?
-        run_best_first_local_search(main_args.algorithm_args, local_scheme, main_args.info):
-        run_genetic_local_search(main_args.algorithm_args, local_scheme, main_args.info);
+        run_best_first_local_search(main_args, local_scheme, main_args.info):
+        run_genetic_local_search(main_args, local_scheme, main_args.info);
 
     // Write solution.
     local_scheme.write(solution_pool.best(), main_args.info.output->certificate_path);

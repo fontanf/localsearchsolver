@@ -202,6 +202,7 @@ public:
     {
         switch (initial_solution_id) {
         case 1: {
+            // Fix a random order, find the best position.
             std::vector<JobId> elements(local_scheme_0_.number_of_elements());
             std::iota(elements.begin(), elements.end(), 0);
             std::shuffle(elements.begin(), elements.end(), generator);
@@ -233,7 +234,77 @@ public:
                 }
             }
             return solution;
+        } case 2: {
+            // Insert at the end, find the best element.
+            std::vector<uint8_t> contains(local_scheme_0_.number_of_elements(), 0);
+            Solution solution = local_scheme_0_.empty_solution();
+            for (;;) {
+                GlobalCost c_best = global_cost(solution);
+                //std::cout << to_string(c_best) << std::endl;
+                JobId j_best = -1;
+                std::shuffle(positions1_.begin(), positions1_.end(), generator);
+                for (JobId j: positions1_) {
+                    if (contains[j])
+                        continue;
+                    solution_tmp_ = solution;
+                    local_scheme_0_.append(solution_tmp_, j);
+                    GlobalCost c = global_cost(solution_tmp_);
+                    if (c >= c_best)
+                        continue;
+                    c_best = c;
+                    j_best = j;
+                }
+                if (j_best != -1) {
+                    local_scheme_0_.append(solution, j_best);
+                    contains[j_best] = 1;
+                    continue;
+                }
+                break;
+            }
+            return solution;
+        } case 3: {
+            // Find the best element x position.
+            // Warning, this one can be expensive.
+            std::vector<uint8_t> contains(local_scheme_0_.number_of_elements(), 0);
+            Solution solution = local_scheme_0_.empty_solution();
+            for (;;) {
+                GlobalCost c_best = global_cost(solution);
+                //std::cout << to_string(c_best) << std::endl;
+                JobId j_best = -1;
+                JobPos pos_best = -1;
+                std::shuffle(positions1_.begin(), positions1_.end(), generator);
+                std::shuffle(positions2_.begin(), positions2_.end(), generator);
+                for (JobId j: positions1_) {
+                    if (contains[j])
+                        continue;
+                    compute_cost_add(solution, j);
+                    for (JobPos pos: positions2_) {
+                        if (pos > (JobPos)solution.sequence.size())
+                            continue;
+                        GlobalCost c = global_costs_shift_[pos];
+                        if (c >= c_best)
+                            continue;
+                        pos_best = pos;
+                        c_best = c;
+                        j_best = j;
+                    }
+                }
+                if (pos_best != -1) {
+                    solution_tmp_ = local_scheme_0_.empty_solution();
+                    for (JobPos p = 0; p < pos_best; ++p)
+                        local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
+                    local_scheme_0_.append(solution_tmp_, j_best);
+                    for (JobPos p = pos_best; p < (JobPos)solution.sequence.size(); ++p)
+                        local_scheme_0_.append(solution_tmp_, solution.sequence[p]);
+                    solution = solution_tmp_;
+                    contains[j_best] = 1;
+                    continue;
+                }
+                break;
+            }
+            return solution;
         } default: {
+            // Random permutation.
             std::vector<JobId> elements(local_scheme_0_.number_of_elements());
             std::iota(elements.begin(), elements.end(), 0);
             std::shuffle(elements.begin(), elements.end(), generator);
@@ -250,7 +321,7 @@ public:
             std::mt19937_64& generator,
             std::true_type)
     {
-        if (initial_solution_id >= 2)
+        if (initial_solution_id >= 3)
             return local_scheme_0_.initial_solution(initial_solution_id, generator);
         return initial_solution(initial_solution_id, generator, false);
     }
@@ -486,6 +557,11 @@ public:
         return local_scheme_0_.bound(solution);
     }
 
+    GlobalCost global_cost_cutoff(double cutoff) const
+    {
+        return localsearchsolver::global_cost_cutoff(local_scheme_0_, cutoff);
+    }
+
     /**
      * Return the distance between two solutions.
      *
@@ -661,15 +737,18 @@ public:
                 GlobalCost c_best = global_cost(solution_tmp);
                 JobPos pos_best = -1;
                 std::shuffle(positions2_.begin(), positions2_.end(), generator);
-                for (JobPos pos: positions2_) {
-                    if (pos > (JobPos)solution_tmp.sequence.size())
+                for (JobPos pos_new: positions2_) {
+                    if (pos_new > (JobPos)solution_tmp.sequence.size())
                         continue;
-                    GlobalCost c = global_costs_shift_[pos];
+                    if ((pos_new == 0 && pos == 0)
+                            || (pos_new != 0 && pos != 0 && solution_tmp.sequence[pos_new - 1] == solution.sequence[pos - 1]))
+                        continue;
+                    GlobalCost c = global_costs_shift_[pos_new];
                     if (c >= c_best)
                         continue;
                     if (pos_best != -1 && !dominates(c, c_best))
                         continue;
-                    pos_best = pos;
+                    pos_best = pos_new;
                     c_best = c;
                 }
                 if (pos_best != -1) {
@@ -681,8 +760,8 @@ public:
                         local_scheme_0_.append(solution_tmp_, solution_tmp.sequence[p]);
                     solution_tmp = solution_tmp_;
                 }
-                solution = solution_tmp;
             }
+            solution = solution_tmp;
             break;
 
         } case Perturbations::ForceAdd: {
@@ -1211,12 +1290,10 @@ public:
             cert << j << " ";
     }
 
-    inline void print_parameterss(optimizationtools::Info& info)
+    void print_parameters(
+            optimizationtools::Info& info) const
     {
-        VER(info, std::endl
-                << "Sequencing parameters" << std::endl
-                << "---------------------" << std::endl
-                << std::endl
+        VER(info, ""
                 << "Shift, block maximum length:                     " << parameters_.shift_block_maximum_length << std::endl
                 << "Swap, block maximum length:                      " << parameters_.swap_block_maximum_length << std::endl
                 << "Reverse:                                         " << parameters_.reverse << std::endl
@@ -1229,11 +1306,9 @@ public:
                 );
     }
 
-    inline void print_statistics(optimizationtools::Info& info)
+    void print_statistics(
+            optimizationtools::Info& info) const
     {
-        VER(info, std::endl
-                << "Sequencing statistics" << std::endl
-                << "---------------------" << std::endl);
         for (JobPos block_size = 1; block_size <= parameters_.shift_block_maximum_length; ++block_size) {
             VER(info,
                     std::left << std::setw(28) << ("Shift " + std::to_string(block_size) + ":")

@@ -53,10 +53,13 @@ public:
     {
         Parameters()
         {
-            sequencing_parameters.shift_block_maximum_length = 7;
-            sequencing_parameters.swap_block_maximum_length = 2;
-            sequencing_parameters.reverse = true;
-            sequencing_parameters.shift_reverse_block_maximum_length = 4;
+            sequencing_parameters.shift_block_maximum_length = 2;
+            sequencing_parameters.swap_block_maximum_length = 1;
+            sequencing_parameters.reverse = false;
+            sequencing_parameters.shift_reverse_block_maximum_length = 0;
+            sequencing_parameters.double_bridge_number_of_perturbations = 0;
+            sequencing_parameters.ruin_and_recreate_number_of_perturbations = 4;
+            sequencing_parameters.ruin_and_recreate_number_of_elements_removed = 4;
         }
 
         sequencing2::Parameters sequencing_parameters;

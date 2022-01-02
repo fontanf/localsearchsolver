@@ -18,7 +18,6 @@ inline RestartingLocalSearchOptionalParameters<LocalScheme> read_restarting_loca
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
         ("seed,s", boost::program_options::value<Seed>(&parameters.seed), "")
-        (",i", boost::program_options::value<std::vector<Counter>>(&parameters.initial_solution_ids)->multitoken(), "")
         ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line((Counter)argv.size(), argv.data(), desc), vm);
@@ -39,7 +38,6 @@ inline IteratedLocalSearchOptionalParameters<LocalScheme> read_iterated_local_se
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
         ("seed,s", boost::program_options::value<Seed>(&parameters.seed), "")
-        (",i", boost::program_options::value<std::vector<Counter>>(&parameters.initial_solution_ids)->multitoken(), "")
         ("maximum-number-of-restarts,r", boost::program_options::value<Counter>(&parameters.maximum_number_of_restarts), "")
         ("maximum-number-of-iterations,n", boost::program_options::value<Counter>(&parameters.maximum_number_of_iterations), "")
         ("minimum-number-of-perturbations,p", boost::program_options::value<Counter>(&parameters.minimum_number_of_perturbations), "")
@@ -65,7 +63,6 @@ inline BestFirstLocalSearchOptionalParameters<LocalScheme> read_best_first_local
         ("seed,s", boost::program_options::value<Seed>(&parameters.seed), "")
         (",x", boost::program_options::value<Seed>(&parameters.number_of_threads_1), "")
         (",y", boost::program_options::value<Seed>(&parameters.number_of_threads_2), "")
-        (",i", boost::program_options::value<std::vector<Counter>>(&parameters.initial_solution_ids)->multitoken(), "")
         ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line((Counter)argv.size(), argv.data(), desc), vm);
@@ -87,8 +84,7 @@ inline GeneticLocalSearchOptionalParameters<LocalScheme> read_genetic_local_sear
     desc.add_options()
         ("seed,s", boost::program_options::value<Seed>(&parameters.seed), "")
         (",t", boost::program_options::value<Seed>(&parameters.number_of_threads), "")
-        (",i", boost::program_options::value<std::vector<Counter>>(&parameters.initial_solution_ids)->multitoken(), "")
-        (",s", boost::program_options::value<Counter>(&parameters.maximum_size_of_the_population), "")
+        ("population-size,", boost::program_options::value<Counter>(&parameters.maximum_size_of_the_population), "")
         ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line((Counter)argv.size(), argv.data(), desc), vm);
@@ -99,72 +95,6 @@ inline GeneticLocalSearchOptionalParameters<LocalScheme> read_genetic_local_sear
         throw "";
     }
     return parameters;
-}
-
-template <typename LocalScheme>
-SolutionPool<LocalScheme> run_restarting_local_search(
-        const std::vector<std::string>& algorithm_args,
-        LocalScheme& local_scheme,
-        const optimizationtools::Info& info)
-{
-    std::vector<char*> algorithm_argv;
-    for (Counter i = 0; i < (Counter)algorithm_args.size(); ++i)
-        algorithm_argv.push_back(const_cast<char*>(algorithm_args[i].c_str()));
-
-    auto parameters = read_restarting_local_search_args<LocalScheme>(algorithm_argv);
-    parameters.info = info;
-    if (parameters.initial_solution_ids.empty())
-        parameters.initial_solution_ids = {0};
-    return restarting_local_search(local_scheme, parameters).solution_pool;
-}
-
-template <typename LocalScheme>
-SolutionPool<LocalScheme> run_iterated_local_search(
-        const std::vector<std::string>& algorithm_args,
-        LocalScheme& local_scheme,
-        const optimizationtools::Info& info)
-{
-    std::vector<char*> algorithm_argv;
-    for (Counter i = 0; i < (Counter)algorithm_args.size(); ++i)
-        algorithm_argv.push_back(const_cast<char*>(algorithm_args[i].c_str()));
-
-    auto parameters = read_iterated_local_search_args<LocalScheme>(algorithm_argv);
-    parameters.info = info;
-    if (parameters.initial_solution_ids.empty())
-        parameters.initial_solution_ids = {0};
-    return iterated_local_search(local_scheme, parameters).solution_pool;
-}
-
-template <typename LocalScheme>
-SolutionPool<LocalScheme> run_best_first_local_search(
-        const std::vector<std::string>& algorithm_args,
-        LocalScheme& local_scheme,
-        const optimizationtools::Info& info)
-{
-    std::vector<char*> algorithm_argv;
-    for (Counter i = 0; i < (Counter)algorithm_args.size(); ++i)
-        algorithm_argv.push_back(const_cast<char*>(algorithm_args[i].c_str()));
-
-    auto parameters = read_best_first_local_search_args<LocalScheme>(algorithm_argv);
-    parameters.info = info;
-    if (parameters.initial_solution_ids.empty())
-        parameters.initial_solution_ids = std::vector<Counter>(parameters.number_of_threads_2, 0);
-    return best_first_local_search(local_scheme, parameters).solution_pool;
-}
-
-template <typename LocalScheme>
-SolutionPool<LocalScheme> run_genetic_local_search(
-        const std::vector<std::string>& algorithm_args,
-        LocalScheme& local_scheme,
-        const optimizationtools::Info& info)
-{
-    std::vector<char*> algorithm_argv;
-    for (Counter i = 0; i < (Counter)algorithm_args.size(); ++i)
-        algorithm_argv.push_back(const_cast<char*>(algorithm_args[i].c_str()));
-
-    auto parameters = read_genetic_local_search_args<LocalScheme>(algorithm_argv);
-    parameters.info = info;
-    return genetic_local_search(local_scheme, parameters).solution_pool;
 }
 
 struct MainArgs
@@ -180,6 +110,9 @@ struct MainArgs
     optimizationtools::Info info = optimizationtools::Info();
     bool print_instance = false;
     bool print_solution = false;
+    bool has_cutoff = false;
+    std::vector<Counter> initial_solution_ids = {0};
+    double cutoff = 0;
 };
 
 MainArgs read_args(int argc, char *argv[], MainArgs& main_args)
@@ -196,8 +129,10 @@ MainArgs read_args(int argc, char *argv[], MainArgs& main_args)
         ("certificate,c", boost::program_options::value<std::string>(&certificate_path), "set certificate path")
         ("format,f", boost::program_options::value<std::string>(&main_args.format), "set input file format (default: orlibrary)")
         ("algorithm,a", boost::program_options::value<std::string>(&main_args.algorithm), "set algorithm")
-        ("local-scheme,b", boost::program_options::value<std::string>(&main_args.local_scheme), "set localscheme parameters")
+        ("local-scheme,s", boost::program_options::value<std::string>(&main_args.local_scheme), "set localscheme parameters")
+        ("initial-solutions,", boost::program_options::value<std::vector<Counter>>(&main_args.initial_solution_ids)->multitoken(), "")
         ("time-limit,t", boost::program_options::value<double>(&time_limit), "Time limit in seconds\n  ex: 3600")
+        ("cutoff,", boost::program_options::value<double>(&main_args.cutoff), "Time limit in seconds\n  ex: 3600")
         ("only-write-at-the-end,e", "Only write output and certificate files at the end")
         ("verbose,v", "")
         ("print-instance", "")
@@ -218,6 +153,7 @@ MainArgs read_args(int argc, char *argv[], MainArgs& main_args)
 
     main_args.print_instance = (vm.count("print-instance"));
     main_args.print_solution = (vm.count("print-solution"));
+    main_args.has_cutoff = (vm.count("cutoff"));
 
     main_args.algorithm_args = boost::program_options::split_unix(main_args.algorithm);
     for (std::string& s: main_args.algorithm_args)
@@ -238,6 +174,62 @@ MainArgs read_args(int argc, char *argv[], MainArgs& main_args)
         ;
 
     return main_args;
+}
+
+template <typename LocalScheme>
+SolutionPool<LocalScheme> run_restarting_local_search(
+        const MainArgs& main_args,
+        LocalScheme& local_scheme,
+        const optimizationtools::Info& info)
+{
+    auto parameters = read_restarting_local_search_args<LocalScheme>(main_args.algorithm_argv);
+    parameters.info = info;
+    parameters.initial_solution_ids = main_args.initial_solution_ids;
+    if (main_args.has_cutoff)
+        parameters.cutoff = global_cost_cutoff(local_scheme, main_args.cutoff);
+    return restarting_local_search(local_scheme, parameters).solution_pool;
+}
+
+template <typename LocalScheme>
+SolutionPool<LocalScheme> run_iterated_local_search(
+        const MainArgs& main_args,
+        LocalScheme& local_scheme,
+        const optimizationtools::Info& info)
+{
+    auto parameters = read_iterated_local_search_args<LocalScheme>(main_args.algorithm_argv);
+    parameters.info = info;
+    parameters.initial_solution_ids = main_args.initial_solution_ids;
+    if (main_args.has_cutoff)
+        parameters.cutoff = global_cost_cutoff(local_scheme, main_args.cutoff);
+    return iterated_local_search(local_scheme, parameters).solution_pool;
+}
+
+template <typename LocalScheme>
+SolutionPool<LocalScheme> run_best_first_local_search(
+        const MainArgs& main_args,
+        LocalScheme& local_scheme,
+        const optimizationtools::Info& info)
+{
+    auto parameters = read_best_first_local_search_args<LocalScheme>(main_args.algorithm_argv);
+    parameters.info = info;
+    parameters.initial_solution_ids = main_args.initial_solution_ids;
+    if (main_args.has_cutoff)
+        parameters.cutoff = global_cost_cutoff(local_scheme, main_args.cutoff);
+    return best_first_local_search(local_scheme, parameters).solution_pool;
+}
+
+template <typename LocalScheme>
+SolutionPool<LocalScheme> run_genetic_local_search(
+        const MainArgs& main_args,
+        LocalScheme& local_scheme,
+        const optimizationtools::Info& info)
+{
+    auto parameters = read_genetic_local_search_args<LocalScheme>(main_args.algorithm_argv);
+    parameters.info = info;
+    parameters.initial_solution_ids = main_args.initial_solution_ids;
+    if (main_args.has_cutoff)
+        parameters.cutoff = global_cost_cutoff(local_scheme, main_args.cutoff);
+    return genetic_local_search(local_scheme, parameters).solution_pool;
 }
 
 }
