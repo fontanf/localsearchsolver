@@ -845,6 +845,8 @@ public:
 
                 case Neighborhoods::Shift: {
                     JobPos block_size = std::get<1>(neighborhood);
+                    if ((JobPos)solution.sequence.size() <= block_size)
+                        break;
                     std::shuffle(positions1_.begin(), positions1_.end(), generator);
                     std::shuffle(positions2_.begin(), positions2_.end(), generator);
                     JobPos pos_best = -1;
@@ -912,6 +914,8 @@ public:
 
                 } case Neighborhoods::SwapK: {
                     JobPos block_size = std::get<1>(neighborhood);
+                    if ((JobPos)solution.sequence.size() <= block_size + block_size)
+                        break;
                     std::shuffle(pairs_.begin(), pairs_.end(), generator);
                     compute_cost_swap(solution, block_size);
                     JobPos pos_1_best = -1;
@@ -966,6 +970,8 @@ public:
                 } case Neighborhoods::SwapK1K2: {
                     JobPos block_size_1 = std::get<1>(neighborhood);
                     JobPos block_size_2 = std::get<2>(neighborhood);
+                    if ((JobPos)solution.sequence.size() <= block_size_1 + block_size_1)
+                        break;
                     std::shuffle(pairs_2_.begin(), pairs_2_.end(), generator);
                     compute_cost_swap(solution, block_size_1, block_size_2);
                     JobPos pos_1_best = -1;
@@ -1052,6 +1058,7 @@ public:
                         //std::cout << "reverse"
                         //    << " pos_1_best " << pos_1_best
                         //    << " pos_2_best " << pos_2_best
+                        //    << " n " << solution.sequence.size()
                         //    << std::endl;
                         improved = true;
                         // Apply best move.
@@ -1082,6 +1089,8 @@ public:
 
                 } case Neighborhoods::ShiftReverse: {
                     JobPos block_size = std::get<1>(neighborhood);
+                    if ((JobPos)solution.sequence.size() <= block_size)
+                        break;
                     std::shuffle(positions1_.begin(), positions1_.end(), generator);
                     std::shuffle(positions2_.begin(), positions2_.end(), generator);
                     JobPos pos_best = -1;
@@ -1148,6 +1157,8 @@ public:
                     break;
 
                 } case Neighborhoods::Add: {
+                    if ((JobPos)solution.sequence.size() == local_scheme_0_.number_of_elements())
+                        break;
                     std::vector<uint8_t> contains(local_scheme_0_.number_of_elements(), 0);
                     for (JobId j: solution.sequence)
                         contains[j] = 1;
@@ -1202,6 +1213,8 @@ public:
                     break;
 
                 } case Neighborhoods::Remove: {
+                    if ((JobPos)solution.sequence.size() == 0)
+                        break;
                     std::shuffle(positions1_.begin(), positions1_.end(), generator);
                     JobPos pos_best = -1;
                     GlobalCost c_best = global_cost(solution);
@@ -1657,7 +1670,7 @@ private:
         // Initialize solution_cur_.
         solution_cur_ = local_scheme_0_.empty_solution();
         // Reset global_costs_swap_.
-        for (JobPos pos_1 = 0; pos_1 < (JobPos)solution.sequence.size(); ++pos_1)
+        for (JobPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1)
             std::fill(
                     global_costs_swap_[pos_1].begin(),
                     global_costs_swap_[pos_1].end(),

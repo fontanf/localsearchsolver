@@ -118,7 +118,7 @@ public:
     {
         return {
             solution.reversed_time_curr,
-            std::numeric_limits<Profit>::min(),
+            std::numeric_limits<Profit>::lowest(),
         };
     }
 
@@ -179,7 +179,7 @@ public:
         JobId j_prev = -1;
         for (JobId j: solution.sequence) {
             append(solution_tmp_, j);
-            std::cout << "j " << j
+            os << "j " << j
                 << " rj " << instance_.job(j + 1).release_date
                 << " st " << instance_.setup_time(j_prev + 1, j + 1)
                 << " pj " << instance_.job(j + 1).processing_time

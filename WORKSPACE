@@ -46,8 +46,8 @@ local_repository(
 git_repository(
     name = "orproblems",
     remote = "https://github.com/fontanf/orproblems.git",
-    commit = "c1591c1702f50951b37b3f16ea715d0d973c1cd1",
-    shallow_since = "1641112857 +0100",
+    commit = "fc79928142b227d5da73c952061dd1bdafbb6b45",
+    shallow_since = "1641148752 +0100",
 )
 
 local_repository(

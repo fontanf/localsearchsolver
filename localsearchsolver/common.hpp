@@ -157,7 +157,7 @@ struct Helper<std::tuple<Ts...>>
 
     static std::tuple<Ts...> min()
     {
-        return { std::numeric_limits<Ts>::min()... };
+        return { std::numeric_limits<Ts>::lowest()... };
     }
 };
 

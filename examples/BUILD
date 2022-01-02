@@ -150,6 +150,30 @@ cc_binary(
 
 
 cc_library(
+        name = "timedependentorienteering",
+        hdrs = ["timedependentorienteering.hpp"],
+        deps = [
+                "//localsearchsolver:localsearchsolver",
+                "@orproblems//orproblems:timedependentorienteering",
+        ],
+        visibility = ["//visibility:public"],
+)
+
+cc_binary(
+        name = "timedependentorienteering_main",
+        srcs = ["timedependentorienteering_main.cpp"],
+        deps = [
+                ":timedependentorienteering",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
+
+cc_library(
         name = "permutationflowshopschedulingmakespan",
         hdrs = ["permutationflowshopschedulingmakespan.hpp"],
         deps = [
