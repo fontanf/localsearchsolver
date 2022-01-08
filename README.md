@@ -87,8 +87,8 @@ python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/
 <p>
 
 ```shell
-python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtt_main --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt --timelimitfield "Time limit"
-python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l permutationflowshopschedulingtt -b heuristiclong -t 800
+DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtt_main --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l "${DATE}_permutationflowshopschedulingtt" --timelimitfield "Time limit"
+python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l "${DATE}_permutationflowshopschedulingtt" -b heuristiclong -t 1400
 ```
 
 </p>
@@ -170,10 +170,15 @@ python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/
 <p>
 
 ```shell
-python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/knapsackwithconflicts_main --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'hifi2006'" -l knapsackwithconflicts -t 300
-python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'hifi2006'" -l knapsackwithconflicts -b heuristiclong -t 310
-python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/knapsackwithconflicts_main --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -t 5
-python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l knapsackwithconflicts -b heuristiclong -t 6
+DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/knapsackwithconflicts_main --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'hifi2006'" -l "${DATE}_knapsackwithconflicts_hifi2006" -t 60
+2022-01-06--22-54_knapsackwithconflictspython3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'hifi2006'" -l "${DATE}_knapsackwithconflicts_hifi2006" -b heuristiclong -t 62
+```
+
+![knapsackwithconflicts](img/knapsackwithconflicts_hifi2006.png?raw=true "knapsackwithconflicts_hifi2006")
+
+```shell
+DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/knapsackwithconflicts_main --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l "${DATE}_knapsackwithconflicts_bettinelli2017" -t 30
+python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l "${DATE}_knapsackwithconflicts_bettinelli2017" -b heuristiclong -t 32
 ```
 
 </p>

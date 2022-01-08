@@ -26,7 +26,7 @@ inline LocalScheme::Parameters read_local_scheme_args(
 int main(int argc, char *argv[])
 {
     MainArgs main_args;
-    main_args.algorithm = "genetic_local_search";
+    main_args.algorithm = "best_first_local_search";
     read_args(argc, argv, main_args);
 
     // Create instance.

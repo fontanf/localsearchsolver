@@ -12,7 +12,9 @@ namespace localsearchsolver
 using Seed = int64_t;
 using Counter = int64_t;
 
-/***************************** Tuple operations ******************************/
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////// Tuple operations ////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 template<typename T, T...>
 struct integer_sequence { };
@@ -168,6 +170,76 @@ template <typename T>
 T best() { return Helper<T>::min(); }
 
 
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////// Export global cost //////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+
+template<typename, typename T>
+struct HasPrintGlobalCostMethod
+{
+    static_assert(
+        std::integral_constant<T, false>::value,
+        "Second template parameter needs to be of function type.");
+};
+
+template<typename C, typename Ret, typename... Args>
+struct HasPrintGlobalCostMethod<C, Ret(Args...)>
+{
+
+private:
+
+    template<typename T>
+    static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().global_cost_export(std::declval<Args>()...)), Ret>::type;
+
+    template<typename>
+    static constexpr std::false_type check(...);
+
+    typedef decltype(check<C>(0)) type;
+
+public:
+
+    static constexpr bool value = type::value;
+
+};
+
+template<typename LocalScheme>
+std::string print_local_scheme_global_cost(
+        LocalScheme&,
+        const typename LocalScheme::GlobalCost& global_cost,
+        std::false_type)
+{
+    return to_string(global_cost);
+}
+
+template<typename LocalScheme>
+std::string print_local_scheme_global_cost(
+        LocalScheme& local_scheme,
+        const typename LocalScheme::GlobalCost& global_cost,
+        std::true_type)
+{
+    return local_scheme.global_cost_export(global_cost);
+}
+
+template<typename LocalScheme>
+std::string print_local_scheme_global_cost(
+        LocalScheme& local_scheme,
+        const typename LocalScheme::GlobalCost& global_cost)
+{
+    return print_local_scheme_global_cost(
+            local_scheme,
+            global_cost,
+            std::integral_constant<
+                bool,
+                HasPrintGlobalCostMethod<LocalScheme,
+                std::string(const typename LocalScheme::GlobalCost&)>::value>());
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////// Solution Pool /////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+
 template <typename Scheme>
 struct SolutionPoolComparator
 {
@@ -235,7 +307,7 @@ public:
             info.output->number_of_solutions++;
             double t = info.elapsed_time();
             std::string sol_str = "Solution" + std::to_string(info.output->number_of_solutions);
-            PUT(info, sol_str, "Value", to_string(scheme_.global_cost(solution)));
+            PUT(info, sol_str, "Value", print_local_scheme_global_cost(scheme_, scheme_.global_cost(solution)));
             PUT(info, sol_str, "Time", t);
             PUT(info, sol_str, "Comment", ss.str());
             if (!info.output->only_write_at_the_end) {
@@ -286,7 +358,7 @@ public:
 
         std::string sol_str = "Solution";
         PUT(info, sol_str, "Time", t);
-        PUT(info, sol_str, "Value", to_string(scheme_.global_cost(*solutions_.begin())));
+        PUT(info, sol_str, "Value", print_local_scheme_global_cost(scheme_, scheme_.global_cost(*solutions_.begin())));
         info.write_json_output();
         scheme_.write(best_, info.output->certificate_path);
     }

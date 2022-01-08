@@ -7,6 +7,12 @@
 namespace localsearchsolver
 {
 
+enum class ParentSelection
+{
+    Random,
+    BinaryTournament,
+};
+
 template <typename LocalScheme>
 using GeneticLocalSearchCallback = std::function<void(const typename LocalScheme::Solution&)>;
 
@@ -22,6 +28,8 @@ struct GeneticLocalSearchOptionalParameters
     Counter maximum_number_of_iterations = -1;
     /** Maximum size of the population. */
     Counter maximum_size_of_the_population = 10;
+    /** Parent selection. */
+    ParentSelection parent_selection = ParentSelection::Random;
     /** Ids of generated initial solutions. */
     std::vector<Counter> initial_solution_ids = {0};
     /** User-provided initial solutions. */
@@ -92,16 +100,23 @@ public:
     /** Return the current number of solutions in the solution pool. */
     Counter size() const { return solutions_.size(); }
 
-    /**
-     * Return a pair of distinct solutions to use as parents for a crossover
-     * operator.
-     */
-    std::pair<Solution, Solution> get_parents(
+    std::pair<Solution, Solution> get_parents_random(
+            std::mt19937_64& generator)
+    {
+        // Draw 2 random solutions.
+        auto solution_ids = optimizationtools::bob_floyd(
+                (Counter)2, size(), generator);
+        return {
+            solutions_[solution_ids[0]].solution,
+            solutions_[solution_ids[1]].solution};
+    }
+
+    std::pair<Solution, Solution> get_parents_binary_tournament(
             std::mt19937_64& generator)
     {
         // Draw 4 random solutions.
         auto solution_ids = optimizationtools::bob_floyd(
-                (Counter)4, size() - 1, generator);
+                (Counter)4, size(), generator);
         std::shuffle(solution_ids.begin(), solution_ids.end(), generator);
 
         // Compute solution_id_1.
@@ -125,6 +140,23 @@ public:
         return {
             solutions_[solution_id_1].solution,
             solutions_[solution_id_2].solution};
+    }
+
+    /**
+     * Return a pair of distinct solutions to use as parents for a crossover
+     * operator.
+     */
+    std::pair<Solution, Solution> get_parents(
+            ParentSelection parent_selection,
+            std::mt19937_64& generator)
+    {
+        switch (parent_selection) {
+        case ParentSelection::Random:
+            return get_parents_random(generator);
+        case ParentSelection::BinaryTournament:
+            return get_parents_binary_tournament(generator);
+        }
+        return get_parents_random(generator);
     }
 
     /**
@@ -390,7 +422,9 @@ inline void genetic_local_search_worker(
         data.output.number_of_iterations++;
 
         // Draw parent solutions.
-        auto p = data.population.get_parents(generator);
+        auto p = data.population.get_parents(
+                data.parameters.parent_selection,
+                generator);
         const auto& solution_parent_1 = p.first;
         const auto& solution_parent_2 = p.second;
 

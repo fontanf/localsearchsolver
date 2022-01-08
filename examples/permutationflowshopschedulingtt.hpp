@@ -113,6 +113,14 @@ public:
         };
     }
 
+    inline GlobalCost global_cost_cutoff(double cutoff) const
+    {
+        return {
+            -instance_.number_of_jobs(),
+            cutoff,
+        };
+    }
+
     inline void append(
             Solution& solution,
             JobId j) const
