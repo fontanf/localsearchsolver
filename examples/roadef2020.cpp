@@ -352,6 +352,9 @@ std::vector<LocalScheme::Move> LocalScheme::perturbations(
             move.j = j;
             move.t_start = t_start;
             move.global_cost = c;
+            number_of_conflicts(move.global_cost) = number_of_conflicts(global_cost(solution));
+            overwork(move.global_cost) = overwork(global_cost(solution));
+            underwork(move.global_cost) = underwork(global_cost(solution));
             moves.push_back(move);
         }
         add(solution, j, t_start_old);

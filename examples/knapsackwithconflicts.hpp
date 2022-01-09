@@ -46,14 +46,12 @@ class LocalScheme
 public:
 
     /** Global cost: <Overweight, Profit, Weight>; */
-    using GlobalCost = std::tuple<Weight, Profit, Weight>;
+    using GlobalCost = std::tuple<Weight, Profit>;
 
     inline Weight&       overweight(GlobalCost& global_cost) const { return std::get<0>(global_cost); }
     inline Profit&           profit(GlobalCost& global_cost) const { return std::get<1>(global_cost); }
-    inline Weight&           weight(GlobalCost& global_cost) const { return std::get<2>(global_cost); }
     inline Weight  overweight(const GlobalCost& global_cost) const { return std::get<0>(global_cost); }
     inline Profit      profit(const GlobalCost& global_cost) const { return std::get<1>(global_cost); }
-    inline Weight      weight(const GlobalCost& global_cost) const { return std::get<2>(global_cost); }
 
     /*
      * Solutions.
@@ -217,7 +215,6 @@ public:
         return {
             overweight(solution),
             -solution.profit,
-            solution.weight,
         };
     }
 
@@ -226,7 +223,6 @@ public:
         return {
             0,
             -cutoff,
-            std::numeric_limits<Weight>::max(),
         };
     }
 
@@ -295,10 +291,11 @@ public:
             Move move;
             move.j = j;
             if (contains(solution, j)) {
-                move.global_cost = cost_remove(solution, j);
+                move.global_cost = global_cost(solution);
                 move.add = false;
             } else {
                 move.global_cost = cost_add(solution, j);
+                overweight(move.global_cost) = overweight(solution);
                 move.add = true;
             }
             moves.push_back(move);
@@ -377,18 +374,10 @@ public:
                         improved = true;
                         // Apply move.
                         if (contains(solution, j_best)) {
-                            //std::cout << "remove " << j_best << std::endl;
                             remove(solution, j_best);
                         } else {
-                            //std::cout << "add " << j_best
-                            //    << " (remove";
-                            //for (ItemId j_neighbor: instance_.item(j_best).neighbors)
-                            //    if (contains(solution, j_neighbor))
-                            //        std::cout << " " << j_neighbor;
-                            //std::cout << ")" << std::endl;
                             add(solution, j_best);
                         }
-                        assert(global_cost(solution) == c_best);
                         toggle_number_of_sucesses_++;
                     }
                     toggle_number_of_explorations_++;
@@ -430,19 +419,10 @@ public:
                         }
                     }
                     if (j_in_best != -1) {
-                        //std::cout << "remove " << j_in_best
-                        //    << " add " << j_out_best
-                        //    << " (remove";
-                        //for (ItemId j_neighbor: instance_.item(j_out_best).neighbors)
-                        //    if (contains(solution, j_neighbor))
-                        //        std::cout << " " << j_neighbor;
-                        //std::cout << ")" << std::endl;
                         improved = true;
                         // Apply move.
                         remove(solution, j_in_best);
-                        assert(!contains(solution, j_out_best));
                         add(solution, j_out_best);
-                        assert(global_cost(solution) == c_best);
                         swap_number_of_sucesses_++;
                     }
                     swap_number_of_explorations_++;
@@ -451,10 +431,9 @@ public:
                     std::shuffle(items_.begin(), items_.end(), generator);
                     // Get items inside the knapsack.
                     items_in_.clear();
-                    for (ItemId j: items_) {
+                    for (ItemId j: items_)
                         if (contains(solution, j))
                             items_in_.push_back(j);
-                    }
 
                     ItemId j_in_best = -1;
                     ItemId j_out_1_best = -1;
@@ -475,7 +454,6 @@ public:
                         free_items_.shuffle_in(generator);
                         remove(solution, j_in);
                         for (ItemId j_out_1: free_items_) {
-                            assert(j_out_1 != j_in);
                             free_items_2_.clear();
                             for (ItemId j: free_items_)
                                 free_items_2_.add(j);
@@ -486,11 +464,8 @@ public:
                             if (free_items_2_.empty())
                                 continue;
                             free_items_2_.shuffle_in(generator);
-                            assert(!contains(solution, j_out_1));
                             add(solution, j_out_1);
                             for (ItemId j_out_2: free_items_2_) {
-                                assert(j_out_2 != j_in);
-                                assert(j_out_2 != j_out_1);
                                 GlobalCost c = cost_add(solution, j_out_2);
                                 if (c >= c_best)
                                     continue;
@@ -503,30 +478,14 @@ public:
                             }
                             remove(solution, j_out_1);
                         }
-                        assert(!contains(solution, j_in));
                         add(solution, j_in);
                     }
                     if (j_in_best != -1) {
-                        //std::cout << "remove " << j_in_best
-                        //    << " add " << j_out_1_best
-                        //    << " (remove";
-                        //for (ItemId j_neighbor: instance_.item(j_out_1_best).neighbors)
-                        //    if (contains(solution, j_neighbor))
-                        //        std::cout << " " << j_neighbor;
-                        //std::cout << ") add " << j_out_2_best
-                        //    << " (remove";
-                        //for (ItemId j_neighbor: instance_.item(j_out_2_best).neighbors)
-                        //    if (contains(solution, j_neighbor))
-                        //        std::cout << " " << j_neighbor;
-                        //std::cout << ")" << std::endl;
                         improved = true;
                         // Apply move.
                         remove(solution, j_in_best);
-                        assert(!contains(solution, j_out_1_best));
                         add(solution, j_out_1_best);
-                        assert(!contains(solution, j_out_2_best));
                         add(solution, j_out_2_best);
-                        assert(global_cost(solution) == c_best);
                         swap_2_1_number_of_sucesses_++;
                     }
                     swap_2_1_number_of_explorations_++;
@@ -649,8 +608,6 @@ private:
 
     inline void add(Solution& solution, ItemId j) const
     {
-        assert(j >= 0);
-        assert(!contains(solution, j));
         solution.items[j].in = true;
         Weight w = instance_.item(j).weight;
         Profit p = instance_.item(j).profit;
@@ -666,8 +623,6 @@ private:
 
     inline void remove(Solution& solution, ItemId j) const
     {
-        assert(j >= 0);
-        assert(contains(solution, j));
         solution.items[j].in = false;
         Weight w = instance_.item(j).weight;
         Profit p = instance_.item(j).profit;
@@ -687,7 +642,7 @@ private:
     {
         Weight w = solution.weight - instance_.item(j).weight;
         Profit p = solution.profit - instance_.item(j).profit;
-        return {std::max((Weight)0, w - instance_.capacity()), -p, w};
+        return {std::max((Weight)0, w - instance_.capacity()), -p};
     }
 
     inline GlobalCost cost_add(const Solution& solution, ItemId j) const
@@ -698,7 +653,7 @@ private:
         Profit p = solution.profit
             + instance_.item(j).profit
             - solution.items[j].neighbor_profit;
-        return {std::max((Weight)0, w - instance_.capacity()), -p, w};
+        return {std::max((Weight)0, w - instance_.capacity()), -p};
     }
 
     inline GlobalCost cost_swap(
@@ -715,7 +670,7 @@ private:
                     - instance_.item(j_in).profit
                     + instance_.item(j_out).profit
                     - solution.items[j_out].neighbor_profit;
-        return {std::max((Weight)0, w - instance_.capacity()), -p, w};
+        return {std::max((Weight)0, w - instance_.capacity()), -p};
     }
 
     /*

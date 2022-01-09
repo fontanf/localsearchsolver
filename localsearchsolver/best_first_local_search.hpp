@@ -70,6 +70,7 @@ struct BestFirstLocalSearchNode
 
     std::shared_ptr<CompactSolution> compact_solution;
     std::vector<Move> perturbations;
+    Counter id = -1;
     Counter depth;
     Counter next_child_pos = 0;
     Counter child_id;
@@ -86,8 +87,11 @@ struct BestFirstLocalSearchNodeComparator
     bool operator()(
             const std::shared_ptr<BestFirstLocalSearchNode<LocalScheme>>& node_1,
             const std::shared_ptr<BestFirstLocalSearchNode<LocalScheme>>& node_2) const {
-        return node_1->perturbations.back().global_cost
-            < node_2->perturbations.back().global_cost;
+        if (node_1->perturbations.back().global_cost
+            != node_2->perturbations.back().global_cost)
+            return node_1->perturbations.back().global_cost
+                < node_2->perturbations.back().global_cost;
+        return node_1->id < node_2->id;
     }
 };
 
@@ -178,10 +182,6 @@ std::vector<typename LocalScheme::Move> update_children(
     auto moves_0 = local_scheme.perturbations(solution, generator);
     if (next_child_pos >= (Counter)moves_0.size())
         return {};
-    // Update move costs.
-    auto global_cost_cur = local_scheme.global_cost(solution);
-    for (Move& move: moves_0)
-        move.global_cost = update_move_cost(move.global_cost, global_cost_cur);
     // Sort moves.
     std::sort(moves_0.begin(), moves_0.end(), move_compare);
     std::vector<Move> moves;
@@ -207,6 +207,16 @@ inline void best_first_local_search_worker(
 
     // Generate initial solutions.
     for (;;) {
+
+        // Check end.
+        if (data.parameters.info.needs_to_end())
+            break;
+
+        // Check cutoff.
+        if (local_scheme.global_cost(data.output.solution_pool.best())
+                    <= data.parameters.cutoff)
+            break;
+
         data.mutex.lock();
         // Store initial_solution_pos to use it after releasing the mutex.
         Counter initial_solution_pos = data.initial_solution_pos;
@@ -251,6 +261,7 @@ inline void best_first_local_search_worker(
         if (data.history.find(compact_solution) == data.history.end()
                 && moves.size() > 0) {
             BestFirstLocalSearchNode<LocalScheme> root;
+            root.id = -1;
             root.compact_solution = compact_solution;
             root.perturbations = moves;
             root.child_id = 0;
@@ -331,6 +342,7 @@ inline void best_first_local_search_worker(
             BestFirstLocalSearchNode<LocalScheme> node_tmp;
             node_tmp.compact_solution = node_cur->compact_solution;
             node_tmp.perturbations = {move};
+            node_tmp.id = node_cur->id;
             node_tmp.depth = node_cur->depth;
             node_tmp.child_id = node_cur->child_id;
             node_tmp.next_child_pos = -1;
@@ -422,6 +434,7 @@ inline void best_first_local_search_worker(
             BestFirstLocalSearchNode<LocalScheme> child;
             child.compact_solution = compact_solution;
             child.perturbations = moves;
+            child.id = node_id;
             child.depth = node_cur->depth + 1;
             child.child_id = node_cur->next_child_pos - 1;
             data.history.insert(compact_solution);

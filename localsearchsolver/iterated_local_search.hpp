@@ -175,9 +175,6 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
         initial_solutions.pop_back();
         Counter perturbation_id = 0;
         std::vector<Move> perturbations = local_scheme.perturbations(solution_cur, generator);
-        auto global_cost_cur = local_scheme.global_cost(solution_cur);
-        for (Move& move: perturbations)
-            move.global_cost = update_move_cost(move.global_cost, global_cost_cur);
         // Sort moves.
         std::sort(perturbations.begin(), perturbations.end(), move_compare);
         Counter depth = 1;
@@ -201,9 +198,6 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
                 perturbation_id = 0;
                 depth++;
                 perturbations = local_scheme.perturbations(solution_cur, generator);
-                auto global_cost_cur = local_scheme.global_cost(solution_cur);
-                for (Move& move: perturbations)
-                    move.global_cost = update_move_cost(move.global_cost, global_cost_cur);
                 // Sort moves.
                 std::sort(perturbations.begin(), perturbations.end(), move_compare);
             }

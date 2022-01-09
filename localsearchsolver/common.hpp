@@ -24,9 +24,7 @@ struct gen_indices : gen_indices<(N - 1), (N - 1), I...> { };
 template<std::size_t... I>
 struct gen_indices<0, I...> : integer_sequence<std::size_t, I...> { };
 
-/*
- * to_string(t)
- */
+// to_string(t) //
 
 template<typename H>
 std::stringstream& to_string_impl(std::stringstream& ss, H&& h)
@@ -60,32 +58,7 @@ std::string to_string(const std::tuple<T...>& tup)
     return to_string(tup, gen_indices<sizeof...(T)>{}).str();
 }
 
-/*
- * update_move_cost(t, t_ref)
- */
-
-template <typename ... T, std::size_t ... I>
-std::tuple<T...> update_move_cost_impl(
-        const std::tuple<T...>& t1,
-        const std::tuple<T...>& t2,
-        integer_sequence<std::size_t, I...>)
-{
-    return {
-        (std::min(std::get<I>(t1), std::get<I>(t2)))...,
-        std::get<sizeof...(I)>(t1) };
-}
-
-template <typename ... T>
-std::tuple<T...> update_move_cost(
-        const std::tuple<T...>& t1,
-        const std::tuple<T...>& t2)
-{
-    return update_move_cost_impl(t1, t2, gen_indices<sizeof...(T) - 1u>{});
-}
-
-/*
- * dominates(t1, t2)
- */
+// dominates(t1, t2) //
 
 template<typename... T, std::size_t... I>
 bool dominates(
@@ -110,6 +83,7 @@ bool dominates(
     return dominates(t1, t2, gen_indices<sizeof...(T)>{});
 }
 
+// sum_t //
 
 template <typename ... Ts, std::size_t ... Is>
 std::tuple<Ts...> sum_t(
@@ -128,6 +102,7 @@ std::tuple<Ts...> operator+(
     return sum_t(t1, t2, gen_indices<sizeof...(Ts)>{});
 }
 
+// diff_t //
 
 template <typename ... Ts, std::size_t ... Is>
 std::tuple<Ts...> diff_t(
@@ -146,6 +121,7 @@ std::tuple<Ts...> operator-(
     return diff_t(t1, t2, gen_indices<sizeof...(Ts)>{});
 }
 
+// worst and best //
 
 template <typename> struct Helper;
 
@@ -171,9 +147,8 @@ T best() { return Helper<T>::min(); }
 
 
 ////////////////////////////////////////////////////////////////////////////////
-////////////////////////////// Export global cost //////////////////////////////
+//////////////////////// print_local_scheme_global_cost ////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-
 
 template<typename, typename T>
 struct HasPrintGlobalCostMethod
@@ -235,10 +210,10 @@ std::string print_local_scheme_global_cost(
                 std::string(const typename LocalScheme::GlobalCost&)>::value>());
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////// Solution Pool /////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-
 
 template <typename Scheme>
 struct SolutionPoolComparator
@@ -375,6 +350,10 @@ private:
 };
 
 
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////// global_cost_cutoff //////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
 template<typename, typename T>
 struct HasGlobalCostCutoffMethod
 {
@@ -431,9 +410,16 @@ typename LocalScheme::GlobalCost global_cost_cutoff(
     return global_cost_cutoff(
             local_scheme,
             cutoff,
-            std::integral_constant<bool, HasGlobalCostCutoffMethod<LocalScheme, GlobalCost(double)>::value>());
+            std::integral_constant<
+                bool,
+                HasGlobalCostCutoffMethod<LocalScheme,
+                GlobalCost(double)>::value>());
 }
 
+
+////////////////////////////////////////////////////////////////////////////////
+//////////////////////// print_local_scheme_parameters /////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 template<typename, typename T>
 struct HasPrintParametersMethod
@@ -491,9 +477,16 @@ void print_local_scheme_parameters(
     print_local_scheme_parameters(
             local_scheme,
             info,
-            std::integral_constant<bool, HasPrintParametersMethod<LocalScheme, void(optimizationtools::Info&)>::value>());
+            std::integral_constant<
+                bool,
+                HasPrintParametersMethod<LocalScheme,
+                void(optimizationtools::Info&)>::value>());
 }
 
+
+////////////////////////////////////////////////////////////////////////////////
+//////////////////////// print_local_scheme_statistics /////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 template<typename, typename T>
 struct HasPrintStatisticsMethod
@@ -551,7 +544,10 @@ void print_local_scheme_statistics(
     print_local_scheme_statistics(
             local_scheme,
             info,
-            std::integral_constant<bool, HasPrintStatisticsMethod<LocalScheme, void(optimizationtools::Info&)>::value>());
+            std::integral_constant<
+                bool,
+                HasPrintStatisticsMethod<LocalScheme,
+                void(optimizationtools::Info&)>::value>());
 }
 
 }
