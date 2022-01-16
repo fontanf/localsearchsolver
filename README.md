@@ -53,6 +53,19 @@ A specific implementation is also available for sequencing problems. The neighbo
 
 [Sequential Ordering Problem](examples/sequentialordering.hpp)
 
+<details><summary>Benchmarks</summary>
+<p>
+
+```shell
+DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/sequentialordering_main --csv ../ordata/sequentialordering/data.csv -f "row['Dataset'] == 'tsplib'" -l "${DATE}_sequentialordering" -t 60
+python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/sequentialordering/data.csv -f "row['Dataset'] == 'tsplib'" -l "${DATE}_sequentialordering" -b heuristiclong -t 62
+```
+
+![sequentialordering](img/sequentialordering_tsplib.png?raw=true "sequentialordering_tsplib")
+
+</p>
+</details>
+
 [Single machine scheduling problem with sequence-dependent setup times, Total weighted tardiness](examples/schedulingwithsdsttwt.hpp)
 
 <details><summary>Benchmarks</summary>
@@ -175,11 +188,6 @@ python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/
 ```
 
 ![knapsackwithconflicts](img/knapsackwithconflicts_hifi2006.png?raw=true "knapsackwithconflicts_hifi2006")
-
-```shell
-DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/knapsackwithconflicts_main --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l "${DATE}_knapsackwithconflicts_bettinelli2017" -t 30
-python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'bettinelli2017'" -l "${DATE}_knapsackwithconflicts_bettinelli2017" -b heuristiclong -t 32
-```
 
 </p>
 </details>
