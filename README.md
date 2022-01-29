@@ -87,9 +87,11 @@ python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/
 <p>
 
 ```shell
-python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtct_main --csv ../ordata/permutationflowshopscheduling/data_totalcompletiontime.csv -l permutationflowshopschedulingtct --timelimitfield "Time limit"
-python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_totalcompletiontime.csv -l permutationflowshopschedulingtct -b heuristiclong -t 500
+DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtct_main --csv ../ordata/flowshopscheduling/data_permutationflowshopschedulingtct.csv -l "${DATE}_permutationflowshopschedulingtct" --timelimitfield "Time limit"
+python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/flowshopscheduling/data_permutationflowshopschedulingtct.csv -l "${DATE}_permutationflowshopschedulingtct" -b heuristiclong -t 500
 ```
+
+![permutationflowshopschedulingtct](img/permutationflowshopschedulingtct.png?raw=true "permutationflowshopschedulingtct")
 
 </p>
 </details>
@@ -100,9 +102,11 @@ python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/
 <p>
 
 ```shell
-DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtt_main --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l "${DATE}_permutationflowshopschedulingtt" --timelimitfield "Time limit"
-python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/permutationflowshopscheduling/data_totaltardiness.csv -l "${DATE}_permutationflowshopschedulingtt" -b heuristiclong -t 1400
+DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/optimizationtools/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtt_main --csv ../ordata/flowshopscheduling/data_permutationflowshopschedulingtt.csv -l "${DATE}_permutationflowshopschedulingtt" --timelimitfield "Time limit"
+python3 ../optimizationtools/optimizationtools/bench_process.py --csv ../ordata/flowshopscheduling/data_permutationflowshopschedulingtt.csv -l "${DATE}_permutationflowshopschedulingtt" -b heuristiclong -t 2200
 ```
+
+![permutationflowshopschedulingtt](img/permutationflowshopschedulingtt.png?raw=true "permutationflowshopschedulingtt")
 
 </p>
 </details>
