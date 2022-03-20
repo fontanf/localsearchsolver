@@ -27,8 +27,13 @@ struct RestartingLocalSearchOptionalParameters
     Counter maximum_size_of_the_solution_pool = 1;
     /** Seed. */
     Seed seed = 0;
-    /** Cutoff. */
-    GlobalCost cutoff = best<GlobalCost>();
+    /**
+     * Goal.
+     *
+     * The alglorithm stops as soon as a solution with a better global cost is
+     * found.
+     */
+    GlobalCost goal = best<GlobalCost>();
     /** Callback function called when a new best solution is found. */
     RestartingLocalSearchCallback<LocalScheme> new_solution_callback
         = [](const Solution& solution) { (void)solution; };
@@ -105,9 +110,9 @@ inline RestartingLocalSearchOutput<LocalScheme> restarting_local_search(
         if (parameters.info.needs_to_end())
             break;
 
-        // Check cutoff.
+        // Check goal.
         if (local_scheme.global_cost(output.solution_pool.best())
-                <= parameters.cutoff)
+                <= parameters.goal)
             break;
 
         // Generate initial solution.

@@ -557,9 +557,9 @@ public:
         return local_scheme_0_.bound(solution);
     }
 
-    GlobalCost global_cost_cutoff(double cutoff) const
+    GlobalCost global_cost_goal(double value) const
     {
-        return localsearchsolver::global_cost_cutoff(local_scheme_0_, cutoff);
+        return localsearchsolver::global_cost_goal(local_scheme_0_, value);
     }
 
     /**

@@ -218,11 +218,11 @@ public:
         };
     }
 
-    inline GlobalCost global_cost_cutoff(double cutoff) const
+    inline GlobalCost global_cost_goal(double value) const
     {
         return {
             0,
-            -cutoff,
+            -value,
         };
     }
 

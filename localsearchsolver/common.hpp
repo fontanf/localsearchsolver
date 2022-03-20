@@ -351,11 +351,11 @@ private:
 
 
 ////////////////////////////////////////////////////////////////////////////////
-////////////////////////////// global_cost_cutoff //////////////////////////////
+/////////////////////////////// global_cost_goal ///////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename, typename T>
-struct HasGlobalCostCutoffMethod
+struct HasGlobalCostGoalMethod
 {
     static_assert(
         std::integral_constant<T, false>::value,
@@ -363,13 +363,13 @@ struct HasGlobalCostCutoffMethod
 };
 
 template<typename C, typename Ret, typename... Args>
-struct HasGlobalCostCutoffMethod<C, Ret(Args...)>
+struct HasGlobalCostGoalMethod<C, Ret(Args...)>
 {
 
 private:
 
     template<typename T>
-    static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().global_cost_cutoff(std::declval<Args>()...)), Ret>::type;
+    static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().global_cost_goal(std::declval<Args>()...)), Ret>::type;
 
     template<typename>
     static constexpr std::false_type check(...);
@@ -383,7 +383,7 @@ public:
 };
 
 template<typename LocalScheme>
-typename LocalScheme::GlobalCost global_cost_cutoff(
+typename LocalScheme::GlobalCost global_cost_goal(
         const LocalScheme&,
         double,
         std::false_type)
@@ -392,27 +392,27 @@ typename LocalScheme::GlobalCost global_cost_cutoff(
 }
 
 template<typename LocalScheme>
-typename LocalScheme::GlobalCost global_cost_cutoff(
+typename LocalScheme::GlobalCost global_cost_goal(
         const LocalScheme& local_scheme,
-        double cutoff,
+        double value,
         std::true_type)
 {
-    return local_scheme.global_cost_cutoff(cutoff);
+    return local_scheme.global_cost_goal(value);
 }
 
 template<typename LocalScheme>
-typename LocalScheme::GlobalCost global_cost_cutoff(
+typename LocalScheme::GlobalCost global_cost_goal(
         const LocalScheme& local_scheme,
-        double cutoff)
+        double value)
 {
     typedef typename LocalScheme::GlobalCost GlobalCost;
 
-    return global_cost_cutoff(
+    return global_cost_goal(
             local_scheme,
-            cutoff,
+            value,
             std::integral_constant<
                 bool,
-                HasGlobalCostCutoffMethod<LocalScheme,
+                HasGlobalCostGoalMethod<LocalScheme,
                 GlobalCost(double)>::value>());
 }
 

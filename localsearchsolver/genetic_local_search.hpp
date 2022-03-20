@@ -38,8 +38,13 @@ struct GeneticLocalSearchOptionalParameters
     Counter maximum_size_of_the_solution_pool = 1;
     /** Seed. */
     Seed seed = 0;
-    /** Cutoff. */
-    GlobalCost cutoff = best<GlobalCost>();
+    /**
+     * Goal.
+     *
+     * The alglorithm stops as soon as a solution with a better global cost is
+     * found.
+     */
+    GlobalCost goal = best<GlobalCost>();
     /** Callback function called when a new best solution is found. */
     GeneticLocalSearchCallback<LocalScheme> new_solution_callback
         = [](const Solution&) { };
@@ -348,9 +353,9 @@ inline void genetic_local_search_worker(
         if (data.parameters.info.needs_to_end())
             break;
 
-        // Check cutoff.
+        // Check goal.
         if (local_scheme.global_cost(data.output.solution_pool.best())
-                <= data.parameters.cutoff)
+                <= data.parameters.goal)
             break;
 
         data.mutex.lock();
@@ -397,9 +402,9 @@ inline void genetic_local_search_worker(
         if (data.parameters.info.needs_to_end())
             break;
 
-        // Check cutoff.
+        // Check goal.
         if (local_scheme.global_cost(data.output.solution_pool.best())
-                <= data.parameters.cutoff)
+                <= data.parameters.goal)
             break;
 
         data.mutex.lock();

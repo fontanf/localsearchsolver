@@ -97,11 +97,11 @@ public:
         };
     }
 
-    inline GlobalCost global_cost_cutoff(double cutoff) const
+    inline GlobalCost global_cost_goal(double value) const
     {
         return {
             -instance_.number_of_jobs(),
-            cutoff,
+            value,
         };
     }
 

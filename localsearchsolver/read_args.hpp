@@ -110,9 +110,9 @@ struct MainArgs
     optimizationtools::Info info = optimizationtools::Info();
     bool print_instance = false;
     bool print_solution = false;
-    bool has_cutoff = false;
+    bool has_goal = false;
+    double goal = 0;
     std::vector<Counter> initial_solution_ids = {0};
-    double cutoff = 0;
 };
 
 MainArgs read_args(int argc, char *argv[], MainArgs& main_args)
@@ -132,7 +132,7 @@ MainArgs read_args(int argc, char *argv[], MainArgs& main_args)
         ("local-scheme,s", boost::program_options::value<std::string>(&main_args.local_scheme), "set localscheme parameters")
         ("initial-solutions,", boost::program_options::value<std::vector<Counter>>(&main_args.initial_solution_ids)->multitoken(), "")
         ("time-limit,t", boost::program_options::value<double>(&time_limit), "Time limit in seconds\n  ex: 3600")
-        ("cutoff,", boost::program_options::value<double>(&main_args.cutoff), "Time limit in seconds\n  ex: 3600")
+        ("goal,g", boost::program_options::value<double>(&main_args.goal), "set goal")
         ("only-write-at-the-end,e", "Only write output and certificate files at the end")
         ("verbose,v", "")
         ("print-instance", "")
@@ -153,7 +153,7 @@ MainArgs read_args(int argc, char *argv[], MainArgs& main_args)
 
     main_args.print_instance = (vm.count("print-instance"));
     main_args.print_solution = (vm.count("print-solution"));
-    main_args.has_cutoff = (vm.count("cutoff"));
+    main_args.has_goal = (vm.count("goal"));
 
     main_args.algorithm_args = boost::program_options::split_unix(main_args.algorithm);
     for (std::string& s: main_args.algorithm_args)
@@ -185,8 +185,8 @@ SolutionPool<LocalScheme> run_restarting_local_search(
     auto parameters = read_restarting_local_search_args<LocalScheme>(main_args.algorithm_argv);
     parameters.info = info;
     parameters.initial_solution_ids = main_args.initial_solution_ids;
-    if (main_args.has_cutoff)
-        parameters.cutoff = global_cost_cutoff(local_scheme, main_args.cutoff);
+    if (main_args.has_goal)
+        parameters.goal = global_cost_goal(local_scheme, main_args.goal);
     return restarting_local_search(local_scheme, parameters).solution_pool;
 }
 
@@ -199,8 +199,8 @@ SolutionPool<LocalScheme> run_iterated_local_search(
     auto parameters = read_iterated_local_search_args<LocalScheme>(main_args.algorithm_argv);
     parameters.info = info;
     parameters.initial_solution_ids = main_args.initial_solution_ids;
-    if (main_args.has_cutoff)
-        parameters.cutoff = global_cost_cutoff(local_scheme, main_args.cutoff);
+    if (main_args.has_goal)
+        parameters.goal = global_cost_goal(local_scheme, main_args.goal);
     return iterated_local_search(local_scheme, parameters).solution_pool;
 }
 
@@ -213,8 +213,8 @@ SolutionPool<LocalScheme> run_best_first_local_search(
     auto parameters = read_best_first_local_search_args<LocalScheme>(main_args.algorithm_argv);
     parameters.info = info;
     parameters.initial_solution_ids = main_args.initial_solution_ids;
-    if (main_args.has_cutoff)
-        parameters.cutoff = global_cost_cutoff(local_scheme, main_args.cutoff);
+    if (main_args.has_goal)
+        parameters.goal = global_cost_goal(local_scheme, main_args.goal);
     return best_first_local_search(local_scheme, parameters).solution_pool;
 }
 
@@ -227,8 +227,8 @@ SolutionPool<LocalScheme> run_genetic_local_search(
     auto parameters = read_genetic_local_search_args<LocalScheme>(main_args.algorithm_argv);
     parameters.info = info;
     parameters.initial_solution_ids = main_args.initial_solution_ids;
-    if (main_args.has_cutoff)
-        parameters.cutoff = global_cost_cutoff(local_scheme, main_args.cutoff);
+    if (main_args.has_goal)
+        parameters.goal = global_cost_goal(local_scheme, main_args.goal);
     return genetic_local_search(local_scheme, parameters).solution_pool;
 }
 
