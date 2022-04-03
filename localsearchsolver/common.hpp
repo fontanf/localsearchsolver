@@ -1,7 +1,7 @@
 #pragma once
 
-#include "optimizationtools/info.hpp"
-#include "optimizationtools/utils.hpp"
+#include "optimizationtools/utils/info.hpp"
+#include "optimizationtools/utils/utils.hpp"
 
 #include <cstdint>
 #include <set>
@@ -282,9 +282,9 @@ public:
             info.output->number_of_solutions++;
             double t = info.elapsed_time();
             std::string sol_str = "Solution" + std::to_string(info.output->number_of_solutions);
-            PUT(info, sol_str, "Value", print_local_scheme_global_cost(scheme_, scheme_.global_cost(solution)));
-            PUT(info, sol_str, "Time", t);
-            PUT(info, sol_str, "Comment", ss.str());
+            FFOT_PUT(info, sol_str, "Value", print_local_scheme_global_cost(scheme_, scheme_.global_cost(solution)));
+            FFOT_PUT(info, sol_str, "Time", t);
+            FFOT_PUT(info, sol_str, "Comment", ss.str());
             if (!info.output->only_write_at_the_end) {
                 info.write_json_output();
                 scheme_.write(*solutions_.begin(), info.output->certificate_path);
@@ -302,7 +302,7 @@ public:
 
     void display_init(optimizationtools::Info& info)
     {
-        VER(info,
+        FFOT_VER(info,
                 std::setw(10) << "Time"
                 << std::setw(40) << "Value"
                 << std::setw(40) << "Comment" << std::endl
@@ -315,7 +315,7 @@ public:
     {
         double t = info.elapsed_time();
         std::streamsize precision = std::cout.precision();
-        VER(info,
+        FFOT_VER(info,
                 std::setw(10) << std::fixed << std::setprecision(3) << t << std::defaultfloat << std::setprecision(precision)
                 << std::setw(40) << to_string(scheme_.global_cost(best()))
                 << std::setw(40) << ss.str()
@@ -325,15 +325,15 @@ public:
     void display_end(optimizationtools::Info& info)
     {
         double t = info.elapsed_time();
-        VER(info, std::endl
+        FFOT_VER(info, std::endl
                 << "Final statistics" << std::endl
                 << "----------------" << std::endl
                 << "Value:                      " << to_string(scheme_.global_cost(best())) << std::endl
                 << "Time:                       " << t << std::endl);
 
         std::string sol_str = "Solution";
-        PUT(info, sol_str, "Time", t);
-        PUT(info, sol_str, "Value", print_local_scheme_global_cost(scheme_, scheme_.global_cost(*solutions_.begin())));
+        FFOT_PUT(info, sol_str, "Time", t);
+        FFOT_PUT(info, sol_str, "Value", print_local_scheme_global_cost(scheme_, scheme_.global_cost(*solutions_.begin())));
         info.write_json_output();
         scheme_.write(best_, info.output->certificate_path);
     }
@@ -463,7 +463,7 @@ void print_local_scheme_parameters(
         optimizationtools::Info& info,
         std::true_type)
 {
-    VER(info, std::endl
+    FFOT_VER(info, std::endl
             << "Local scheme parameters" << std::endl
             << "-----------------------" << std::endl);
     local_scheme.print_parameters(info);
@@ -530,7 +530,7 @@ void print_local_scheme_statistics(
         optimizationtools::Info& info,
         std::true_type)
 {
-    VER(info, std::endl
+    FFOT_VER(info, std::endl
             << "Local scheme statistics" << std::endl
             << "-----------------------" << std::endl);
     local_scheme.print_statistics(info);

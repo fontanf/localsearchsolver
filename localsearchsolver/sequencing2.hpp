@@ -1306,7 +1306,7 @@ public:
     void print_parameters(
             optimizationtools::Info& info) const
     {
-        VER(info, ""
+        FFOT_VER(info, ""
                 << "Shift, block maximum length:                     " << parameters_.shift_block_maximum_length << std::endl
                 << "Swap, block maximum length:                      " << parameters_.swap_block_maximum_length << std::endl
                 << "Reverse:                                         " << parameters_.reverse << std::endl
@@ -1323,86 +1323,86 @@ public:
             optimizationtools::Info& info) const
     {
         for (JobPos block_size = 1; block_size <= parameters_.shift_block_maximum_length; ++block_size) {
-            VER(info,
+            FFOT_VER(info,
                     std::left << std::setw(28) << ("Shift " + std::to_string(block_size) + ":")
                     << shift_number_of_explorations_[block_size]
                     << " / " << shift_number_of_sucesses_[block_size]
                     << " / " << (double)shift_number_of_sucesses_[block_size] / shift_number_of_explorations_[block_size] * 100 << "%"
                     << std::endl);
-            PUT(info,
+            FFOT_PUT(info,
                     "Algorithm", ("Shift" + std::to_string(block_size) + "NumberOfExplorations"),
                     shift_number_of_explorations_[block_size]);
-            PUT(info,
+            FFOT_PUT(info,
                     "Algorithm", ("Shift" + std::to_string(block_size) + "NumberOfSuccesses"),
                     shift_number_of_explorations_[block_size]);
         }
         for (JobPos block_size_1 = 1; block_size_1 <= parameters_.swap_block_maximum_length; ++block_size_1) {
             for (JobPos block_size_2 = 1; block_size_2 <= block_size_1; ++block_size_2) {
-                VER(info,
+                FFOT_VER(info,
                         std::left << std::setw(28) << ("Swap " + std::to_string(block_size_1) + "," + std::to_string(block_size_2) + ":")
                         << swap_number_of_explorations_[block_size_1][block_size_2]
                         << " / " << swap_number_of_sucesses_[block_size_1][block_size_2]
                         << " / " << (double)swap_number_of_sucesses_[block_size_1][block_size_2] / swap_number_of_explorations_[block_size_1][block_size_2] * 100 << "%"
                         << std::endl);
-                PUT(info,
+                FFOT_PUT(info,
                         "Algorithm", ("Swap" + std::to_string(block_size_1) + "," + std::to_string(block_size_2) + "NumberOfExplorations"),
                         swap_number_of_explorations_[block_size_1][block_size_2]);
-                PUT(info,
+                FFOT_PUT(info,
                         "Algorithm", ("Shift" + std::to_string(block_size_1) + "," + std::to_string(block_size_2) + "NumberOfSuccesses"),
                         swap_number_of_explorations_[block_size_1][block_size_2]);
             }
         }
         if (parameters_.reverse) {
-            VER(info,
+            FFOT_VER(info,
                     std::left << std::setw(28) << ("Reverse:")
                     << reverse_number_of_explorations_
                     << " / " << reverse_number_of_sucesses_
                     << " / " << (double)reverse_number_of_sucesses_ / reverse_number_of_explorations_ * 100 << "%"
                     << std::endl);
-            PUT(info,
+            FFOT_PUT(info,
                     "Algorithm", ("ReverseNumberOfExplorations"),
                     reverse_number_of_explorations_);
-            PUT(info,
+            FFOT_PUT(info,
                     "Algorithm", ("ReverseNumberOfSuccesses"),
                     reverse_number_of_explorations_);
         }
         for (JobPos block_size = 2; block_size <= parameters_.shift_reverse_block_maximum_length; ++block_size) {
-            VER(info,
+            FFOT_VER(info,
                     std::left << std::setw(28) << ("Shift-reverse " + std::to_string(block_size) + ":")
                     << shift_reverse_number_of_explorations_[block_size]
                     << " / " << shift_reverse_number_of_sucesses_[block_size]
                     << " / " << (double)shift_reverse_number_of_sucesses_[block_size] / shift_reverse_number_of_explorations_[block_size] * 100 << "%"
                     << std::endl);
-            PUT(info,
+            FFOT_PUT(info,
                     "Algorithm", ("ShiftReverse" + std::to_string(block_size) + "NumberOfExplorations"),
                     shift_reverse_number_of_explorations_[block_size]);
-            PUT(info,
+            FFOT_PUT(info,
                     "Algorithm", ("ShiftReverse" + std::to_string(block_size) + "NumberOfSuccesses"),
                     shift_reverse_number_of_explorations_[block_size]);
         }
         if (parameters_.add_remove) {
-            VER(info,
+            FFOT_VER(info,
                     std::left << std::setw(28) << ("Add:")
                     << add_number_of_explorations_
                     << " / " << add_number_of_sucesses_
                     << " / " << (double)add_number_of_sucesses_ / add_number_of_explorations_ * 100 << "%"
                     << std::endl);
-            PUT(info,
+            FFOT_PUT(info,
                     "Algorithm", ("ReverseNumberOfExplorations"),
                     add_number_of_explorations_);
-            PUT(info,
+            FFOT_PUT(info,
                     "Algorithm", ("ReverseNumberOfSuccesses"),
                     add_number_of_explorations_);
-            VER(info,
+            FFOT_VER(info,
                     std::left << std::setw(28) << ("Add:")
                     << remove_number_of_explorations_
                     << " / " << remove_number_of_sucesses_
                     << " / " << (double)remove_number_of_sucesses_ / remove_number_of_explorations_ * 100 << "%"
                     << std::endl);
-            PUT(info,
+            FFOT_PUT(info,
                     "Algorithm", ("ReverseNumberOfExplorations"),
                     remove_number_of_explorations_);
-            PUT(info,
+            FFOT_PUT(info,
                     "Algorithm", ("ReverseNumberOfSuccesses"),
                     remove_number_of_explorations_);
         }

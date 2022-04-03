@@ -71,7 +71,7 @@ inline RestartingLocalSearchOutput<LocalScheme> restarting_local_search(
         RestartingLocalSearchOptionalParameters<LocalScheme> parameters)
 {
     // Initial display.
-    VER(parameters.info,
+    FFOT_VER(parameters.info,
                "=======================================" << std::endl
             << "          Local Search Solver          " << std::endl
             << "=======================================" << std::endl
@@ -136,8 +136,8 @@ inline RestartingLocalSearchOutput<LocalScheme> restarting_local_search(
     }
 
     output.solution_pool.display_end(parameters.info);
-    VER(parameters.info, "Number of restarts:         " << output.number_of_restarts << std::endl);
-    PUT(parameters.info, "Algorithm", "NumberOfRestarts", output.number_of_restarts);
+    FFOT_VER(parameters.info, "Number of restarts:         " << output.number_of_restarts << std::endl);
+    FFOT_PUT(parameters.info, "Algorithm", "NumberOfRestarts", output.number_of_restarts);
     return output;
 }
 

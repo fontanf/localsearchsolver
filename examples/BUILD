@@ -252,7 +252,7 @@ cc_library(
         deps = [
                 "//localsearchsolver:localsearchsolver",
                 "@orproblems//orproblems:roadef2020",
-                "@optimizationtools//optimizationtools:indexed_collections",
+                "@optimizationtools//optimizationtools/containers:containers",
         ] + CPLEX_DEP + GUROBI_DEP,
         copts = [
                 #"-fprofile-generate=/home/florian/Dev/localsearchsolver/profile_dir",

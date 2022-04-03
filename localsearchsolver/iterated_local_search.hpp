@@ -89,7 +89,7 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
     typedef typename LocalScheme::Move Move;
 
     // Initial display.
-    VER(parameters.info, ""
+    FFOT_VER(parameters.info, ""
             << "=======================================" << std::endl
             << "          Local Search Solver          " << std::endl
             << "=======================================" << std::endl
@@ -107,7 +107,7 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
             << "Maximum size of the pool:         " << parameters.maximum_size_of_the_solution_pool << std::endl
             << "Time limit:                       " << parameters.info.time_limit << std::endl);
     print_local_scheme_parameters(local_scheme, parameters.info);
-    VER(parameters.info, std::endl);
+    FFOT_VER(parameters.info, std::endl);
 
     auto move_compare = [](const Move& move_1, const Move& move_2) -> bool
     {
@@ -241,10 +241,10 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
     }
 
     output.solution_pool.display_end(parameters.info);
-    VER(parameters.info, "Number of restarts:         " << output.number_of_restarts << std::endl);
-    VER(parameters.info, "Number of iterations:       " << output.number_of_iterations << std::endl);
-    PUT(parameters.info, "Algorithm", "NumberOfRestarts", output.number_of_restarts);
-    PUT(parameters.info, "Algorithm", "NumberOfIterations", output.number_of_iterations);
+    FFOT_VER(parameters.info, "Number of restarts:         " << output.number_of_restarts << std::endl);
+    FFOT_VER(parameters.info, "Number of iterations:       " << output.number_of_iterations << std::endl);
+    FFOT_PUT(parameters.info, "Algorithm", "NumberOfRestarts", output.number_of_restarts);
+    FFOT_PUT(parameters.info, "Algorithm", "NumberOfIterations", output.number_of_iterations);
     print_local_scheme_statistics(local_scheme, parameters.info);
     return output;
 }

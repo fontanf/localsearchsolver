@@ -12,7 +12,7 @@
 
 #include "orproblems/multidimensionalmultiplechoiceknapsack.hpp"
 
-#include "optimizationtools/indexed_set.hpp"
+#include "optimizationtools/containers/indexed_set.hpp"
 
 namespace localsearchsolver
 {

@@ -469,7 +469,7 @@ inline GeneticLocalSearchOutput<LocalScheme> genetic_local_search(
         GeneticLocalSearchOptionalParameters<LocalScheme> parameters)
 {
     // Initial display.
-    VER(parameters.info,
+    FFOT_VER(parameters.info,
                "=======================================" << std::endl
             << "          Local Search Solver          " << std::endl
             << "=======================================" << std::endl
@@ -504,8 +504,8 @@ inline GeneticLocalSearchOutput<LocalScheme> genetic_local_search(
         threads[thread_id].join();
 
     output.solution_pool.display_end(parameters.info);
-    VER(parameters.info, "Number of iterations:       " << output.number_of_iterations << std::endl);
-    PUT(parameters.info, "Algorithm", "NumberOfIterations", output.number_of_iterations);
+    FFOT_VER(parameters.info, "Number of iterations:       " << output.number_of_iterations << std::endl);
+    FFOT_PUT(parameters.info, "Algorithm", "NumberOfIterations", output.number_of_iterations);
     return output;
 }
 

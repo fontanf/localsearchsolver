@@ -539,7 +539,7 @@ public:
     void print_parameters(
             optimizationtools::Info& info) const
     {
-        VER(info, ""
+        FFOT_VER(info, ""
                 << "Swap:                        " << parameters_.swap << std::endl
                 << "(2,1)-swap:                  " << parameters_.swap_2_1 << std::endl
                 );
@@ -548,43 +548,43 @@ public:
     void print_statistics(
             optimizationtools::Info& info) const
     {
-        VER(info,
+        FFOT_VER(info,
                 std::left << std::setw(28) << ("Toggle:")
                 << toggle_number_of_explorations_
                 << " / " << toggle_number_of_sucesses_
                 << " / " << (double)toggle_number_of_sucesses_ / toggle_number_of_explorations_ * 100 << "%"
                 << std::endl);
-        PUT(info,
+        FFOT_PUT(info,
                 "Algorithm", ("ToggleNumberOfExplorations"),
                 toggle_number_of_explorations_);
-        PUT(info,
+        FFOT_PUT(info,
                 "Algorithm", ("ToggleNumberOfSuccesses"),
                 toggle_number_of_explorations_);
         if (parameters_.swap) {
-            VER(info,
+            FFOT_VER(info,
                     std::left << std::setw(28) << ("Swap:")
                     << swap_number_of_explorations_
                     << " / " << swap_number_of_sucesses_
                     << " / " << (double)swap_number_of_sucesses_ / swap_number_of_explorations_ * 100 << "%"
                     << std::endl);
-            PUT(info,
+            FFOT_PUT(info,
                     "Algorithm", ("SwapNumberOfExplorations"),
                     swap_number_of_explorations_);
-            PUT(info,
+            FFOT_PUT(info,
                     "Algorithm", ("SwapNumberOfSuccesses"),
                     swap_number_of_explorations_);
         }
         if (parameters_.swap_2_1) {
-            VER(info,
+            FFOT_VER(info,
                     std::left << std::setw(28) << ("(2-1)-swap:")
                     << swap_2_1_number_of_explorations_
                     << " / " << swap_2_1_number_of_sucesses_
                     << " / " << (double)swap_2_1_number_of_sucesses_ / swap_2_1_number_of_explorations_ * 100 << "%"
                     << std::endl);
-            PUT(info,
+            FFOT_PUT(info,
                     "Algorithm", ("Swap2,1NumberOfExplorations"),
                     swap_2_1_number_of_explorations_);
-            PUT(info,
+            FFOT_PUT(info,
                     "Algorithm", ("Swap2,1NumberOfSuccesses"),
                     swap_2_1_number_of_explorations_);
         }
