@@ -213,7 +213,7 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
             // Apply perturbation and local search.
             Solution solution_tmp = solution_cur;
             auto move = perturbations[perturbation_id];
-            local_scheme.apply_move(solution_tmp, move);
+            local_scheme.apply_move(solution_tmp, move, generator);
             local_scheme.local_search(solution_tmp, generator, move);
 
             // Check for a new best solution.

@@ -40,7 +40,7 @@ public:
      * Solutions.
      */
 
-    struct Solution
+    struct Sequence
     {
         std::vector<JobId> sequence;
         Time time = 0;
@@ -88,23 +88,23 @@ public:
      * Initial solutions.
      */
 
-    inline Solution empty_solution() const
+    inline Sequence empty_sequence() const
     {
-        Solution solution;
-        solution.profit += instance_.job(0).profit;
-        solution.profit += instance_.job(instance_.number_of_jobs() - 1).profit;
-        return solution;
+        Sequence sequence;
+        sequence.profit += instance_.job(0).profit;
+        sequence.profit += instance_.job(instance_.number_of_jobs() - 1).profit;
+        return sequence;
     }
 
     /*
      * Solution properties.
      */
 
-    inline GlobalCost global_cost(const Solution& solution) const
+    inline GlobalCost global_cost(const Sequence& sequence) const
     {
         return {
-            solution.reversed_time_full,
-            solution.total_weighted_tardiness_full - solution.profit,
+            sequence.reversed_time_full,
+            sequence.total_weighted_tardiness_full - sequence.profit,
         };
     }
 
@@ -114,46 +114,46 @@ public:
 
     inline JobPos number_of_elements() const { return instance_.number_of_jobs() - 2; }
 
-    inline GlobalCost bound(const Solution& solution) const
+    inline GlobalCost bound(const Sequence& sequence) const
     {
         return {
-            solution.reversed_time_curr,
+            sequence.reversed_time_curr,
             std::numeric_limits<Profit>::lowest(),
         };
     }
 
     inline void append(
-            Solution& solution,
+            Sequence& sequence,
             JobId j) const
     {
         // Update time.
         Time rj = instance_.job(j + 1).release_date;
-        if (solution.time < rj)
-            solution.time = rj;
-        JobId j_prev = (solution.sequence.size() > 0)?
-            solution.sequence.back():
+        if (sequence.time < rj)
+            sequence.time = rj;
+        JobId j_prev = (sequence.sequence.size() > 0)?
+            sequence.sequence.back():
             -1;
-        solution.time += instance_.setup_time(j_prev + 1, j + 1);
-        solution.time += instance_.job(j + 1).processing_time;
+        sequence.time += instance_.setup_time(j_prev + 1, j + 1);
+        sequence.time += instance_.job(j + 1).processing_time;
         // Update reversed_time.
         Time dj = instance_.job(j + 1).deadline;
-        if (solution.time > dj) {
-            solution.reversed_time_curr += (solution.time - dj);
-            solution.time = dj;
+        if (sequence.time > dj) {
+            sequence.reversed_time_curr += (sequence.time - dj);
+            sequence.time = dj;
         }
         // Update jobs.
-        solution.sequence.push_back(j);
+        sequence.sequence.push_back(j);
         // Update total weighted tardiness.
-        if (solution.time > instance_.job(j + 1).due_date)
-            solution.total_weighted_tardiness_curr
+        if (sequence.time > instance_.job(j + 1).due_date)
+            sequence.total_weighted_tardiness_curr
                 += instance_.job(j + 1).weight
-                * (solution.time - instance_.job(j + 1).due_date);
+                * (sequence.time - instance_.job(j + 1).due_date);
         // Update profit.
-        solution.profit += instance_.job(j + 1).profit;
+        sequence.profit += instance_.job(j + 1).profit;
 
-        solution.reversed_time_full = solution.reversed_time_curr;
-        solution.total_weighted_tardiness_full = solution.total_weighted_tardiness_curr;
-        Time time_full = solution.time;
+        sequence.reversed_time_full = sequence.reversed_time_curr;
+        sequence.total_weighted_tardiness_full = sequence.total_weighted_tardiness_curr;
+        Time time_full = sequence.time;
         JobId jn = instance_.number_of_jobs() - 1;
         Time rjn = instance_.job(jn).release_date;
         if (time_full < rjn)
@@ -162,64 +162,13 @@ public:
         time_full += instance_.job(jn).processing_time;
         Time djn = instance_.job(jn).deadline;
         if (time_full > djn) {
-            solution.reversed_time_full += (time_full - djn);
+            sequence.reversed_time_full += (time_full - djn);
             time_full = djn;
         }
         if (time_full > instance_.job(jn).due_date)
-            solution.total_weighted_tardiness_full
+            sequence.total_weighted_tardiness_full
                 += instance_.job(jn).weight
                 * (time_full - instance_.job(jn).due_date);
-    }
-
-    std::ostream& print(
-            std::ostream &os,
-            const Solution& solution) const
-    {
-        Solution solution_tmp_;
-        JobId j_prev = -1;
-        for (JobId j: solution.sequence) {
-            append(solution_tmp_, j);
-            os << "j " << j
-                << " rj " << instance_.job(j + 1).release_date
-                << " st " << instance_.setup_time(j_prev + 1, j + 1)
-                << " pj " << instance_.job(j + 1).processing_time
-                << " time " << solution_tmp_.time
-                << " dj " << instance_.job(j + 1).due_date
-                << " dj " << instance_.job(j + 1).deadline
-                << " rev_cur " << solution.reversed_time_curr
-                << " rev_full " << solution.reversed_time_full
-                << " profit " << solution_tmp_.profit
-                << " twt_cur " << solution_tmp_.total_weighted_tardiness_curr
-                << " twt_full " << solution_tmp_.total_weighted_tardiness_full
-                << std::endl;
-            j_prev = j;
-        }
-        os << "sequence:";
-        for (JobId j: solution.sequence)
-            os << " " << j;
-        os << std::endl;
-        os << "cost: " << to_string(global_cost(solution)) << std::endl;
-        return os;
-    }
-
-    /*
-     * Outputs.
-     */
-
-    inline void write(
-            const Solution& solution,
-            std::string certificate_path) const
-    {
-        if (certificate_path.empty())
-            return;
-        std::ofstream cert(certificate_path);
-        if (!cert.good()) {
-            std::cerr << "\033[31m" << "ERROR, unable to open file \"" << certificate_path << "\"" << "\033[0m" << std::endl;
-            return;
-        }
-
-        for (JobId j: solution.sequence)
-            cert << j + 1 << " ";
     }
 
 private:

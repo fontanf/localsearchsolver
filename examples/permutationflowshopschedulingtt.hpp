@@ -26,21 +26,24 @@ class LocalScheme
 
 public:
 
-    /** Global cost: <Number of jobs, Total tardiness>; */
-    using GlobalCost = std::tuple<JobPos, Time>;
+    using ElementId = sequencing2::ElementId;
+    using ElementPos = sequencing2::ElementPos;
 
-    inline JobPos&       number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Time&        total_tardiness(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline JobPos  number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Time   total_tardiness(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    /** Global cost: <Number of jobs, Total tardiness>; */
+    using GlobalCost = std::tuple<ElementPos, Time>;
+
+    inline ElementPos&       number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline Time&            total_tardiness(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline ElementPos  number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline Time       total_tardiness(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
 
     /*
-     * Solutions.
+     * Sequences.
      */
 
-    struct Solution
+    struct Sequence
     {
-        std::vector<JobId> sequence;
+        std::vector<ElementId> sequence;
         std::vector<Time> times;
         Time total_tardiness = 0;
     };
@@ -77,25 +80,25 @@ public:
     virtual ~LocalScheme() { }
 
     /*
-     * Initial solutions.
+     * Initial sequences.
      */
 
-    inline Solution empty_solution() const
+    inline Sequence empty_sequence(sequencing2::SequenceId) const
     {
-        Solution solution;
-        solution.times = std::vector<Time>(instance_.number_of_machines(), 0);
-        return solution;
+        Sequence sequence;
+        sequence.times = std::vector<Time>(instance_.number_of_machines(), 0);
+        return sequence;
     }
 
     /*
-     * Solution properties.
+     * Sequence properties.
      */
 
-    inline GlobalCost global_cost(const Solution& solution) const
+    inline GlobalCost global_cost(const Sequence& sequence) const
     {
         return {
-            -solution.sequence.size(),
-            solution.total_tardiness,
+            -sequence.sequence.size(),
+            sequence.total_tardiness,
         };
     }
 
@@ -103,13 +106,13 @@ public:
      * Methods required by sequencing2::LocalScheme.
      */
 
-    inline JobPos number_of_elements() const { return instance_.number_of_jobs(); }
+    inline ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
-    inline GlobalCost bound(const Solution& solution) const
+    inline GlobalCost bound(const Sequence& sequence) const
     {
         return {
             -instance_.number_of_jobs(),
-            solution.total_tardiness,
+            sequence.total_tardiness,
         };
     }
 
@@ -122,24 +125,24 @@ public:
     }
 
     inline void append(
-            Solution& solution,
-            JobId j) const
+            Sequence& sequence,
+            ElementId j) const
     {
         MachineId m = instance_.number_of_machines();
         // Update sequence.
-        solution.sequence.push_back(j);
+        sequence.sequence.push_back(j);
         // Update times.
-        solution.times[0] = solution.times[0] + instance_.job(j).processing_times[0];
+        sequence.times[0] = sequence.times[0] + instance_.job(j).processing_times[0];
         for (MachineId i = 1; i < m; ++i) {
-            if (solution.times[i - 1] > solution.times[i]) {
-                solution.times[i] = solution.times[i - 1] + instance_.job(j).processing_times[i];
+            if (sequence.times[i - 1] > sequence.times[i]) {
+                sequence.times[i] = sequence.times[i - 1] + instance_.job(j).processing_times[i];
             } else {
-                solution.times[i] = solution.times[i] + instance_.job(j).processing_times[i];
+                sequence.times[i] = sequence.times[i] + instance_.job(j).processing_times[i];
             }
         }
         // Update total tardiness.
-        if (solution.times[m - 1] > instance_.job(j).due_date)
-            solution.total_tardiness += (solution.times[m - 1] - instance_.job(j).due_date);
+        if (sequence.times[m - 1] > instance_.job(j).due_date)
+            sequence.total_tardiness += (sequence.times[m - 1] - instance_.job(j).due_date);
     }
 
 private:

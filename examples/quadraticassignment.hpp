@@ -400,7 +400,10 @@ public:
         return moves;
     }
 
-    inline void apply_move(Solution& solution, const Move& move) const
+    inline void apply_move(
+            Solution& solution,
+            const Move& move,
+            std::mt19937_64) const
     {
         LocationId location_id_1 = solution.locations[move.facilities[0]];
         remove(solution, move.facilities[0]);
@@ -473,14 +476,14 @@ public:
 
     inline void write(
             const Solution& solution,
-            std::string filepath) const
+            std::string certificate_path) const
     {
-        if (filepath.empty())
+        if (certificate_path.empty())
             return;
-        std::ofstream cert(filepath);
+        std::ofstream cert(certificate_path);
         if (!cert.good()) {
-            std::cerr << "\033[31m" << "ERROR, unable to open file \"" << filepath << "\"" << "\033[0m" << std::endl;
-            return;
+            throw std::runtime_error(
+                    "Unable to open file \"" + certificate_path + "\".");
         }
 
         for (LocationId location_id: solution.locations)

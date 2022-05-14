@@ -54,9 +54,23 @@ int main(int argc, char *argv[])
         run_genetic_local_search(main_args, local_scheme, main_args.info);
 
     // Write solution.
-    local_scheme_0.write(solution_pool.best(), main_args.info.output->certificate_path);
-    if (main_args.print_solution)
-        local_scheme_0.print(std::cout, solution_pool.best());
+    std::string certificate_path = main_args.info.output->certificate_path;
+    if (!certificate_path.empty()) {
+        std::ofstream file(certificate_path);
+        if (!file.good()) {
+            throw std::runtime_error(
+                    "Unable to open file \"" + certificate_path + "\".");
+        }
+        for (LocationId j: solution_pool.best().sequences[0].sequence)
+            file << j + 1 << " ";
+    }
+
+    if (main_args.print_solution) {
+        std::cout << std::endl
+            << "Solution" << std::endl
+            << "--------" << std::endl;
+        local_scheme.print(std::cout, solution_pool.best());
+    }
 
     // Run checker.
     if (main_args.info.output->certificate_path != "") {

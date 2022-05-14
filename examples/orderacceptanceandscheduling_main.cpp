@@ -54,9 +54,13 @@ int main(int argc, char *argv[])
         run_genetic_local_search(main_args, local_scheme, main_args.info);
 
     // Write solution.
-    local_scheme_0.write(solution_pool.best(), main_args.info.output->certificate_path);
-    if (main_args.print_solution)
-        local_scheme_0.print(std::cout, solution_pool.best());
+    local_scheme.write(solution_pool.best(), main_args.info.output->certificate_path);
+    if (main_args.print_solution) {
+        std::cout << std::endl
+            << "Solution" << std::endl
+            << "--------" << std::endl;
+        local_scheme.print(std::cout, solution_pool.best());
+    }
 
     // Run checker.
     if (main_args.info.output->certificate_path != "") {

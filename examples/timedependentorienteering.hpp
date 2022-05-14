@@ -38,10 +38,10 @@ public:
     inline Time  total_time(const GlobalCost& global_cost) { return std::get<2>(global_cost); }
 
     /*
-     * Solutions.
+     * Sequences.
      */
 
-    struct Solution
+    struct Sequence
     {
         std::vector<LocationId> sequence;
         Time time_cur = 0;
@@ -83,24 +83,15 @@ public:
     virtual ~LocalScheme() { }
 
     /*
-     * Initial solutions.
+     * Sequence properties.
      */
 
-    inline Solution empty_solution() const
-    {
-        return Solution();
-    }
-
-    /*
-     * Solution properties.
-     */
-
-    inline GlobalCost global_cost(const Solution& solution) const
+    inline GlobalCost global_cost(const Sequence& sequence) const
     {
         return {
-            std::max((Time)0, solution.time_full - instance_.maximum_duration()),
-            -solution.profit,
-            solution.time_full,
+            std::max((Time)0, sequence.time_full - instance_.maximum_duration()),
+            -sequence.profit,
+            sequence.time_full,
         };
     }
 
@@ -110,73 +101,53 @@ public:
 
     inline LocationPos number_of_elements() const { return instance_.number_of_locations() - 2; }
 
-    inline GlobalCost bound(const Solution& solution) const
+    inline GlobalCost bound(const Sequence& sequence) const
     {
         return {
-            std::max((Time)0, solution.time_full - instance_.maximum_duration()),
+            std::max((Time)0, sequence.time_full - instance_.maximum_duration()),
             std::numeric_limits<Profit>::lowest(),
-            solution.time_full,
+            sequence.time_full,
         };
     }
 
     inline void append(
-            Solution& solution,
+            Sequence& sequence,
             LocationId j) const
     {
         // Update time_cur.
-        LocationId j_prev = (solution.sequence.size() > 0)?
-            solution.sequence.back():
+        LocationId j_prev = (sequence.sequence.size() > 0)?
+            sequence.sequence.back():
             -1;
-        solution.time_cur = instance_.arrival_time(j_prev + 1, j + 1, solution.time_cur);
+        sequence.time_cur = instance_.arrival_time(j_prev + 1, j + 1, sequence.time_cur);
         // Update sequence.
-        solution.sequence.push_back(j);
+        sequence.sequence.push_back(j);
         // Update profit.
-        solution.profit += instance_.location(j + 1).profit;
+        sequence.profit += instance_.location(j + 1).profit;
         // Update time_full.
         LocationId jn = instance_.number_of_locations() - 1;
-        solution.time_full = instance_.arrival_time(j + 1, jn, solution.time_cur);
+        sequence.time_full = instance_.arrival_time(j + 1, jn, sequence.time_cur);
     }
 
     std::ostream& print(
             std::ostream &os,
-            const Solution& solution) const
+            const Sequence& sequence) const
     {
-        Solution solution_tmp_;
-        for (LocationId j: solution.sequence) {
-            append(solution_tmp_, j);
+        Sequence sequence_tmp_;
+        for (LocationId j: sequence.sequence) {
+            append(sequence_tmp_, j);
             os << "j " << j
-                << " time_curr " << solution_tmp_.time_cur
-                << " time_full " << solution_tmp_.time_full
+                << " time_curr " << sequence_tmp_.time_cur
+                << " time_full " << sequence_tmp_.time_full
                 << " pj " << instance_.location(j + 1).profit
-                << " pS " << solution_tmp_.profit
+                << " pS " << sequence_tmp_.profit
                 << std::endl;
         }
         os << "sequence:";
-        for (LocationId j: solution.sequence)
+        for (LocationId j: sequence.sequence)
             os << " " << j;
         os << std::endl;
-        os << "cost: " << to_string(global_cost(solution)) << std::endl;
+        os << "cost: " << to_string(global_cost(sequence)) << std::endl;
         return os;
-    }
-
-    /*
-     * Outputs.
-     */
-
-    inline void write(
-            const Solution& solution,
-            std::string certificate_path) const
-    {
-        if (certificate_path.empty())
-            return;
-        std::ofstream cert(certificate_path);
-        if (!cert.good()) {
-            std::cerr << "\033[31m" << "ERROR, unable to open file \"" << certificate_path << "\"" << "\033[0m" << std::endl;
-            return;
-        }
-
-        for (LocationId j: solution.sequence)
-            cert << j + 1 << " ";
     }
 
 private:

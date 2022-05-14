@@ -408,7 +408,7 @@ inline void best_first_local_search_worker(
                         node_cur->next_child_pos);
         }
         // Apply perturbation and local search.
-        local_scheme.apply_move(solution, move);
+        local_scheme.apply_move(solution, move, generator);
         local_scheme.local_search(solution, generator, move);
 
         // Check for a new best solution.

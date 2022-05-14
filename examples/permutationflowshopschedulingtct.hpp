@@ -26,21 +26,24 @@ class LocalScheme
 
 public:
 
-    /** Global cost: <Number of jobs, Total completion time>; */
-    using GlobalCost = std::tuple<JobPos, Time>;
+    using ElementId = sequencing2::ElementId;
+    using ElementPos = sequencing2::ElementPos;
 
-    inline JobPos&             number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    /** Global cost: <Number of jobs, Total completion time>; */
+    using GlobalCost = std::tuple<ElementPos, Time>;
+
+    inline ElementPos&         number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
     inline Time&        total_completion_time(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline JobPos        number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline ElementPos    number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
     inline Time   total_completion_time(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
 
     /*
-     * Solutions.
+     * Sequences.
      */
 
-    struct Solution
+    struct Sequence
     {
-        std::vector<JobId> sequence;
+        std::vector<ElementId> sequence;
         std::vector<Time> times;
         Time total_completion_time = 0;
     };
@@ -77,25 +80,25 @@ public:
     virtual ~LocalScheme() { }
 
     /*
-     * Initial solutions.
+     * Initial sequences.
      */
 
-    inline Solution empty_solution() const
+    inline Sequence empty_sequence(sequencing2::SequenceId) const
     {
-        Solution solution;
-        solution.times = std::vector<Time>(instance_.number_of_machines(), 0);
-        return solution;
+        Sequence sequence;
+        sequence.times = std::vector<Time>(instance_.number_of_machines(), 0);
+        return sequence;
     }
 
     /*
-     * Solution properties.
+     * Sequence properties.
      */
 
-    inline GlobalCost global_cost(const Solution& solution) const
+    inline GlobalCost global_cost(const Sequence& sequence) const
     {
         return {
-            -solution.sequence.size(),
-            solution.total_completion_time,
+            -sequence.sequence.size(),
+            sequence.total_completion_time,
         };
     }
 
@@ -103,37 +106,37 @@ public:
      * Methods required by sequencing2::LocalScheme.
      */
 
-    inline JobPos number_of_elements() const { return instance_.number_of_jobs(); }
+    inline ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
-    inline GlobalCost bound(const Solution& solution) const
+    inline GlobalCost bound(const Sequence& sequence) const
     {
         return {
             -instance_.number_of_jobs(),
-            solution.total_completion_time,
+            sequence.total_completion_time,
         };
     }
 
     inline void append(
-            Solution& solution,
-            JobId j) const
+            Sequence& sequence,
+            ElementId j) const
     {
         MachineId m = instance_.number_of_machines();
-        JobId n = instance_.number_of_jobs();
-        JobId n_cur = solution.sequence.size();
-        Time t_prec = solution.times[m - 1];
+        ElementId n = instance_.number_of_jobs();
+        ElementId n_cur = sequence.sequence.size();
+        Time t_prec = sequence.times[m - 1];
         // Update sequence.
-        solution.sequence.push_back(j);
+        sequence.sequence.push_back(j);
         // Update times.
-        solution.times[0] = solution.times[0] + instance_.processing_time(j, 0);
+        sequence.times[0] = sequence.times[0] + instance_.processing_time(j, 0);
         for (MachineId i = 1; i < m; ++i) {
-            if (solution.times[i - 1] > solution.times[i]) {
-                solution.times[i] = solution.times[i - 1] + instance_.processing_time(j, i);
+            if (sequence.times[i - 1] > sequence.times[i]) {
+                sequence.times[i] = sequence.times[i - 1] + instance_.processing_time(j, i);
             } else {
-                solution.times[i] = solution.times[i] + instance_.processing_time(j, i);
+                sequence.times[i] = sequence.times[i] + instance_.processing_time(j, i);
             }
         }
         // Update total completion_time.
-        solution.total_completion_time += (n - n_cur) * (solution.times[m - 1] - t_prec);
+        sequence.total_completion_time += (n - n_cur) * (sequence.times[m - 1] - t_prec);
     }
 
 private:

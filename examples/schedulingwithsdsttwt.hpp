@@ -28,21 +28,24 @@ class LocalScheme
 
 public:
 
-    /** Global cost: <Number of jobs, Total weighted tardiness>; */
-    using GlobalCost = std::tuple<JobPos, Weight>;
+    using ElementId = sequencing2::ElementId;
+    using ElementPos = sequencing2::ElementPos;
 
-    inline JobPos&                 number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    /** Global cost: <Number of jobs, Total weighted tardiness>; */
+    using GlobalCost = std::tuple<ElementPos, Weight>;
+
+    inline ElementPos&             number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
     inline Weight&       total_weighted_tardiness(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline JobPos            number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline ElementPos        number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
     inline Weight  total_weighted_tardiness(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
 
     /*
-     * Solutions.
+     * Sequence.
      */
 
-    struct Solution
+    struct Sequence
     {
-        std::vector<JobId> sequence;
+        std::vector<ElementId> sequence;
         Time time = 0;
         Weight total_weighted_tardiness = 0;
     };
@@ -77,23 +80,14 @@ public:
     virtual ~LocalScheme() { }
 
     /*
-     * Initial solutions.
+     * Sequence properties.
      */
 
-    inline Solution empty_solution() const
-    {
-        return Solution();
-    }
-
-    /*
-     * Solution properties.
-     */
-
-    inline GlobalCost global_cost(const Solution& solution) const
+    inline GlobalCost global_cost(const Sequence& sequence) const
     {
         return {
-            -solution.sequence.size(),
-            solution.total_weighted_tardiness,
+            -sequence.sequence.size(),
+            sequence.total_weighted_tardiness,
         };
     }
 
@@ -109,38 +103,38 @@ public:
      * Methods required by sequencing::LocalScheme.
      */
 
-    inline JobPos number_of_elements() const { return instance_.number_of_jobs(); }
+    inline ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
-    inline GlobalCost bound(const Solution& solution) const
+    inline GlobalCost bound(const Sequence& sequence) const
     {
         return {
             -instance_.number_of_jobs(),
-            solution.total_weighted_tardiness,
+            sequence.total_weighted_tardiness,
         };
     }
 
     inline void append(
-            Solution& solution,
-            JobId j) const
+            Sequence& sequence,
+            ElementId j) const
     {
-        JobPos ns = solution.sequence.size();
+        ElementPos ns = sequence.sequence.size();
         // Update time.
-        JobId j_prev = (ns)?
-            solution.sequence.back():
+        ElementId j_prev = (ns)?
+            sequence.sequence.back():
             instance_.number_of_jobs();
-        solution.time += instance_.setup_time(j_prev, j);
-        solution.time += instance_.job(j).processing_time;
+        sequence.time += instance_.setup_time(j_prev, j);
+        sequence.time += instance_.job(j).processing_time;
         // Update jobs.
-        solution.sequence.push_back(j);
+        sequence.sequence.push_back(j);
         // Update total weighted tardiness.
-        if (solution.time > instance_.job(j).due_date)
-            solution.total_weighted_tardiness
+        if (sequence.time > instance_.job(j).due_date)
+            sequence.total_weighted_tardiness
                 += instance_.job(j).weight
-                * (solution.time - instance_.job(j).due_date);
+                * (sequence.time - instance_.job(j).due_date);
         if (ns > 2
-                && instance_.job(solution.sequence[ns - 1]).weight > 0
-                && instance_.job(solution.sequence[ns - 2]).weight == 0)
-            solution.total_weighted_tardiness += 1000000;
+                && instance_.job(sequence.sequence[ns - 1]).weight > 0
+                && instance_.job(sequence.sequence[ns - 2]).weight == 0)
+            sequence.total_weighted_tardiness += 1000000;
     }
 
 private:

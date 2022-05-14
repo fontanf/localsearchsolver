@@ -303,7 +303,10 @@ public:
         return moves;
     }
 
-    inline void apply_move(Solution& solution, const Move& move) const
+    inline void apply_move(
+            Solution& solution,
+            const Move& move,
+            std::mt19937_64) const
     {
         if (move.add) {
             add(solution, move.j);
@@ -509,26 +512,26 @@ public:
             std::ostream &os,
             const Solution& solution)
     {
-        os << "items:";
+        os << "Items:";
         for (ItemId j = 0; j < instance_.number_of_items(); ++j)
             if (contains(solution, j))
                 os << " " << j;
         os << std::endl;
-        os << "weight: " << solution.weight << " / " << instance_.capacity() << std::endl;
-        os << "profit: " << solution.profit << std::endl;
+        os << "Weight: " << solution.weight << " / " << instance_.capacity() << std::endl;
+        os << "Profit: " << solution.profit << std::endl;
         return os;
     }
 
     inline void write(
             const Solution& solution,
-            std::string filepath) const
+            std::string certificate_path) const
     {
-        if (filepath.empty())
+        if (certificate_path.empty())
             return;
-        std::ofstream cert(filepath);
+        std::ofstream cert(certificate_path);
         if (!cert.good()) {
-            std::cerr << "\033[31m" << "ERROR, unable to open file \"" << filepath << "\"" << "\033[0m" << std::endl;
-            return;
+            throw std::runtime_error(
+                    "Unable to open file \"" + certificate_path + "\".");
         }
 
         for (ItemId j = 0; j < instance_.number_of_items(); ++j)

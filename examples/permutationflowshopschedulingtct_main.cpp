@@ -60,8 +60,12 @@ int main(int argc, char *argv[])
 
     // Write solution.
     local_scheme.write(solution_pool.best(), main_args.info.output->certificate_path);
-    if (main_args.print_solution)
+    if (main_args.print_solution) {
+        std::cout << std::endl
+            << "Solution" << std::endl
+            << "--------" << std::endl;
         local_scheme.print(std::cout, solution_pool.best());
+    }
 
     // Run checker.
     if (main_args.info.output->certificate_path != "") {
