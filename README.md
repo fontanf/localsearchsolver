@@ -138,6 +138,19 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/orderaccep
 
 #### Multiple sequences
 
+[Distributed permutation flow shop scheduling problem, Total completion time](examples/distributedpfsstct.hpp)
+
+<details><summary>Benchmarks</summary>
+<p>
+
+```shell
+DATE=$(date '+%Y-%m-%d--%H-%M-%S') && python3 ../optimizationtools/scripts/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtct_main --csv ../ordata/flowshopscheduling/data_distributedpfsstct.csv -l "${DATE}_distributedpfsstct" --timelimitfield "Time limit"
+python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/flowshopscheduling/data_distributedpfsstct.csv -l "${DATE}_distributedpfsstct" -b heuristiclong -t 500
+```
+
+</p>
+</details>
+
 ## Other examples
 
 Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orproblems)

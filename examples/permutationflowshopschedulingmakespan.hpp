@@ -30,9 +30,9 @@ public:
     using GlobalCost = std::tuple<JobId, Time>;
 
     inline JobId&       number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Time&          makespan(GlobalCost& global_cost) { return std::get<1>(global_cost); }
+    inline Time&              makespan(GlobalCost& global_cost) { return std::get<1>(global_cost); }
     inline JobId  number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Time     makespan(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
+    inline Time         makespan(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
 
     /*
      * Solutions.

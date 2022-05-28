@@ -175,9 +175,9 @@ public:
         elements_(local_scheme_0_.number_of_elements()),
         positions_1_(local_scheme_0_.number_of_elements()),
         positions_2_(local_scheme_0_.number_of_elements()),
-        global_costs_shift_(local_scheme_0_.number_of_elements() + 1, worst<GlobalCost>()),
-        global_costs_swap_1_(local_scheme_0_.number_of_elements()),
-        global_costs_swap_2_(
+        global_costs_1d_(local_scheme_0_.number_of_elements() + 1, worst<GlobalCost>()),
+        global_costs_2d_1_(local_scheme_0_.number_of_elements()),
+        global_costs_2d_2_(
                 local_scheme_0_.number_of_elements(),
                 std::vector<GlobalCost>(
                     local_scheme_0_.number_of_elements(),
@@ -197,7 +197,7 @@ public:
                 if (pos_1 != pos_2)
                     pairs_2_.push_back({pos_1, pos_2});
         for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1)
-            global_costs_swap_1_[pos_1].resize(
+            global_costs_2d_1_[pos_1].resize(
                     local_scheme_0_.number_of_elements() - pos_1,
                     worst<GlobalCost>());
 
@@ -420,7 +420,7 @@ public:
                     for (ElementPos pos: positions_2_) {
                         if (pos > (ElementPos)sequence.sequence.size())
                             continue;
-                        GlobalCost c = global_costs_shift_[pos];
+                        GlobalCost c = global_costs_1d_[pos];
                         if (c >= c_best)
                             continue;
                         if (pos_best != -1 && !dominates(c, c_best))
@@ -506,7 +506,7 @@ public:
                         for (ElementPos pos: positions_2_) {
                             if (pos > (ElementPos)sequence.sequence.size())
                                 continue;
-                            GlobalCost c = global_costs_shift_[pos];
+                            GlobalCost c = global_costs_1d_[pos];
                             if (c >= c_best)
                                 continue;
                             pos_best = pos;
@@ -1050,7 +1050,7 @@ public:
                                     == solution.sequences[i].sequence[positions[j] - 1])
                                 continue;
                         }
-                        GlobalCost c = global_costs_shift_[pos_new];
+                        GlobalCost c = global_costs_1d_[pos_new];
                         if (c >= c_best)
                             continue;
                         if (pos_best != -1 && !dominates(c, c_best))
@@ -1093,7 +1093,7 @@ public:
                 for (ElementPos pos: positions_2_) {
                     if (pos > seq_size)
                         continue;
-                    GlobalCost c = global_costs_shift_[pos];
+                    GlobalCost c = global_costs_1d_[pos];
                     if (pos_best != -1 && !dominates(c, c_best))
                         continue;
                     i_best = i;
@@ -1230,7 +1230,7 @@ public:
                             for (ElementPos pos_new: positions_2_) {
                                 if (pos == pos_new || pos_new > seq_size - block_size)
                                     continue;
-                                GlobalCost c = global_costs_shift_[pos_new];
+                                GlobalCost c = global_costs_1d_[pos_new];
                                 if (c >= c_best)
                                     continue;
                                 if (i_best != -1 && !dominates(c, c_best))
@@ -1321,7 +1321,7 @@ public:
                             break;
                         compute_cost_swap(solution, i, block_size);
                         for (auto pair: pairs_1_) {
-                            GlobalCost c = global_costs_swap_1_[pair.first][pair.second - pair.first - 1];
+                            GlobalCost c = global_costs_2d_1_[pair.first][pair.second - pair.first - 1];
                             if (c >= c_best)
                                 continue;
                             if (i_best != -1 && !dominates(c, c_best))
@@ -1403,7 +1403,7 @@ public:
                             break;
                         compute_cost_swap(solution, i, block_size_1, block_size_2);
                         for (auto pair: pairs_2_) {
-                            GlobalCost c = global_costs_swap_2_[pair.first][pair.second];
+                            GlobalCost c = global_costs_2d_2_[pair.first][pair.second];
                             if (c >= c_best)
                                 continue;
                             if (i_best != -1 && !dominates(c, c_best))
@@ -1495,7 +1495,7 @@ public:
                     for (SequenceId i: sequences_1_) {
                         compute_cost_reverse(solution, i);
                         for (auto pair: pairs_1_) {
-                            GlobalCost c = global_costs_swap_1_[pair.first][pair.second - pair.first - 1];
+                            GlobalCost c = global_costs_2d_1_[pair.first][pair.second - pair.first - 1];
                             if (c >= c_best)
                                 continue;
                             if (pos_1_best != -1 && !dominates(c, c_best))
@@ -1581,7 +1581,7 @@ public:
                             for (ElementPos pos_new: positions_2_) {
                                 if (pos == pos_new || pos_new > seq_size - block_size)
                                     continue;
-                                GlobalCost c = global_costs_shift_[pos_new];
+                                GlobalCost c = global_costs_1d_[pos_new];
                                 if (c >= c_best)
                                     continue;
                                 if (pos_best != -1 && !dominates(c, c_best))
@@ -1678,7 +1678,7 @@ public:
                             for (ElementPos pos: positions_2_) {
                                 if (pos > seq_size)
                                     continue;
-                                GlobalCost c = global_costs_shift_[pos];
+                                GlobalCost c = global_costs_1d_[pos];
                                 if (c >= c_best)
                                     continue;
                                 if (pos_best != -1 && !dominates(c, c_best))
@@ -1753,7 +1753,7 @@ public:
                             if (perturbation.type == Perturbations::ForceAdd
                                     && perturbation.force_add_j == sequence.sequence[pos])
                                 continue;
-                            GlobalCost c = global_costs_shift_[pos];
+                            GlobalCost c = global_costs_1d_[pos];
                             if (c >= c_best)
                                 continue;
                             if (pos_best != -1 && !dominates(c, c_best))
@@ -1824,7 +1824,7 @@ public:
                                 continue;
                             compute_cost_inter_two_opt(solution, i1, i2);
                             for (auto pair: pairs_2_) {
-                                GlobalCost c = global_costs_swap_2_[pair.first][pair.second];
+                                GlobalCost c = global_costs_2d_2_[pair.first][pair.second];
                                 if (c >= c_best)
                                     continue;
                                 if (i1_best != -1 && !dominates(c, c_best))
@@ -1915,7 +1915,7 @@ public:
                                 continue;
                             compute_cost_inter_shift(solution, i1, i2, block_size);
                             for (auto pair: pairs_2_) {
-                                GlobalCost c = global_costs_swap_2_[pair.first][pair.second];
+                                GlobalCost c = global_costs_2d_2_[pair.first][pair.second];
                                 //std::cout
                                 //    << "i1 " << i1
                                 //    << " i2 " << i2
@@ -2044,7 +2044,7 @@ public:
                                 continue;
                             compute_cost_inter_swap(solution, i1, i2, block_size_1, block_size_2);
                             for (auto pair: pairs_2_) {
-                                GlobalCost c = global_costs_swap_2_[pair.first][pair.second];
+                                GlobalCost c = global_costs_2d_2_[pair.first][pair.second];
                                 if (c >= c_best)
                                     continue;
                                 if (i1_best != -1 && !dominates(c, c_best))
@@ -2167,7 +2167,7 @@ public:
                             compute_cost_inter_shift(
                                     solution, i1, i2, block_size, true);
                             for (auto pair: pairs_2_) {
-                                GlobalCost c = global_costs_swap_2_[pair.first][pair.second];
+                                GlobalCost c = global_costs_2d_2_[pair.first][pair.second];
                                 if (c >= c_best)
                                     continue;
                                 if (i1_best != -1 && !dominates(c, c_best))
@@ -2655,10 +2655,10 @@ private:
         GlobalCost gc0 = compute_global_cost(solution, i);
         // Initialize sequence_cur_.
         sequence_cur_1_ = empty_sequence(i);
-        // Reset global_costs_shift_.
+        // Reset global_costs_1d_.
         std::fill(
-                global_costs_shift_.begin(),
-                global_costs_shift_.end(),
+                global_costs_1d_.begin(),
+                global_costs_1d_.end(),
                 worst<GlobalCost>());
 
         // Loop through all new positions.
@@ -2727,9 +2727,9 @@ private:
 
             if (!stop) {
                 if (m == 1) {
-                    global_costs_shift_[pos_new] = global_cost(sequence_tmp_1_);
+                    global_costs_1d_[pos_new] = global_cost(sequence_tmp_1_);
                 } else {
-                    global_costs_shift_[pos_new] = global_cost_merge(
+                    global_costs_1d_[pos_new] = global_cost_merge(
                             gc0, local_scheme_0_.global_cost(sequence_tmp_1_));
                 }
             }
@@ -2768,8 +2768,8 @@ private:
         // Reset global_costs_swap_.
         for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
             std::fill(
-                    global_costs_swap_1_[pos_1].begin(),
-                    global_costs_swap_1_[pos_1].end(),
+                    global_costs_2d_1_[pos_1].begin(),
+                    global_costs_2d_1_[pos_1].end(),
                     worst<GlobalCost>());
         }
 
@@ -2811,10 +2811,10 @@ private:
 
                 if (!stop) {
                     if (m == 1) {
-                        global_costs_swap_1_[pos_1][pos_2 - pos_1 - 1]
+                        global_costs_2d_1_[pos_1][pos_2 - pos_1 - 1]
                             = local_scheme_0_.global_cost(sequence_tmp_1_);
                     } else {
-                        global_costs_swap_1_[pos_1][pos_2 - pos_1 - 1]
+                        global_costs_2d_1_[pos_1][pos_2 - pos_1 - 1]
                             = global_cost_merge(gc0, local_scheme_0_.global_cost(sequence_tmp_1_));
                     }
                 }
@@ -2851,8 +2851,8 @@ private:
         // Reset global_costs_swap_.
         for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
             std::fill(
-                    global_costs_swap_2_[pos_1].begin(),
-                    global_costs_swap_2_[pos_1].end(),
+                    global_costs_2d_2_[pos_1].begin(),
+                    global_costs_2d_2_[pos_1].end(),
                     worst<GlobalCost>());
         }
 
@@ -2929,10 +2929,10 @@ private:
 
                 if (!stop) {
                     if (m == 1) {
-                        global_costs_swap_2_[pos_1][pos_2]
+                        global_costs_2d_2_[pos_1][pos_2]
                             = local_scheme_0_.global_cost(sequence_tmp_1_);
                     } else {
-                        global_costs_swap_2_[pos_1][pos_2]
+                        global_costs_2d_2_[pos_1][pos_2]
                             = global_cost_merge(gc0, local_scheme_0_.global_cost(sequence_tmp_1_));
                     }
                 }
@@ -3018,10 +3018,10 @@ private:
 
                 if (!stop) {
                     if (m == 1) {
-                        global_costs_swap_2_[pos_1][pos_2]
+                        global_costs_2d_2_[pos_1][pos_2]
                             = local_scheme_0_.global_cost(sequence_tmp_1_);
                     } else {
-                        global_costs_swap_2_[pos_1][pos_2]
+                        global_costs_2d_2_[pos_1][pos_2]
                             = global_cost_merge(gc0, local_scheme_0_.global_cost(sequence_tmp_1_));
                     }
                 }
@@ -3055,8 +3055,8 @@ private:
         // Reset global_costs_swap_.
         for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
             std::fill(
-                    global_costs_swap_1_[pos_1].begin(),
-                    global_costs_swap_1_[pos_1].end(),
+                    global_costs_2d_1_[pos_1].begin(),
+                    global_costs_2d_1_[pos_1].end(),
                     worst<GlobalCost>());
         }
 
@@ -3102,10 +3102,10 @@ private:
 
                 if (!stop) {
                     if (m == 1) {
-                        global_costs_swap_1_[pos_1][pos_2 - pos_1 - 1]
+                        global_costs_2d_1_[pos_1][pos_2 - pos_1 - 1]
                             = local_scheme_0_.global_cost(sequence_tmp_1_);
                     } else {
-                        global_costs_swap_1_[pos_1][pos_2 - pos_1 - 1]
+                        global_costs_2d_1_[pos_1][pos_2 - pos_1 - 1]
                             = global_cost_merge(gc0, local_scheme_0_.global_cost(sequence_tmp_1_));
                     }
                 }
@@ -3137,10 +3137,10 @@ private:
         GlobalCost gc0 = compute_global_cost(solution, i);
         // Initialize sequence_cur_.
         sequence_cur_1_ = empty_sequence(i);
-        // Reset global_costs_shift_.
+        // Reset global_costs_1d_.
         std::fill(
-                global_costs_shift_.begin(),
-                global_costs_shift_.end(),
+                global_costs_1d_.begin(),
+                global_costs_1d_.end(),
                 worst<GlobalCost>());
 
         // Loop through all new positions.
@@ -3171,9 +3171,9 @@ private:
 
             if (!stop) {
                 if (m == 1) {
-                    global_costs_shift_[pos] = global_cost(sequence_tmp_1_);
+                    global_costs_1d_[pos] = global_cost(sequence_tmp_1_);
                 } else {
-                    global_costs_shift_[pos]
+                    global_costs_1d_[pos]
                         = global_cost_merge(gc0, global_cost(sequence_tmp_1_));
                 }
             }
@@ -3199,10 +3199,10 @@ private:
         GlobalCost gc0 = compute_global_cost(solution, i);
         // Initialize sequence_cur_.
         sequence_cur_1_ = empty_sequence(i);
-        // Reset global_costs_shift_.
+        // Reset global_costs_1d_.
         std::fill(
-                global_costs_shift_.begin(),
-                global_costs_shift_.end(),
+                global_costs_1d_.begin(),
+                global_costs_1d_.end(),
                 worst<GlobalCost>());
 
         // Loop through all new positions.
@@ -3230,9 +3230,9 @@ private:
 
             if (!stop) {
                 if (m == 1) {
-                    global_costs_shift_[pos] = global_cost(sequence_tmp_1_);
+                    global_costs_1d_[pos] = global_cost(sequence_tmp_1_);
                 } else {
-                    global_costs_shift_[pos]
+                    global_costs_1d_[pos]
                         = global_cost_merge(gc0, local_scheme_0_.global_cost(sequence_tmp_1_));
                 }
             }
@@ -3261,11 +3261,11 @@ private:
         //std::cout << "i1 " << i1 << " i2 " << i2 << " gc0 " << to_string(gc0) << std::endl;
         // Initialize sequence_cur_.
         sequence_cur_2_ = empty_sequence(i2);
-        // Reset global_costs_swap_2_.
+        // Reset global_costs_2d_2_.
         for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
             std::fill(
-                    global_costs_swap_2_[pos_1].begin(),
-                    global_costs_swap_2_[pos_1].end(),
+                    global_costs_2d_2_[pos_1].begin(),
+                    global_costs_2d_2_[pos_1].end(),
                     worst<GlobalCost>());
         }
 
@@ -3361,7 +3361,7 @@ private:
                         //std::cout << "gc1 " << to_string(global_cost(sequence_tmp_1_)) << std::endl;
                         //std::cout << "gc2 " << to_string(global_cost(sequence_tmp_2_)) << std::endl;
                         //std::cout << "gc_tmp " << to_string(gc_tmp) << std::endl;
-                        global_costs_swap_2_[pos_1][pos_2] = gc_tmp;
+                        global_costs_2d_2_[pos_1][pos_2] = gc_tmp;
                     }
                 }
 
@@ -3406,11 +3406,11 @@ private:
         ElementPos n2 = sequence_2.sequence.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i1, i2);
-        // Reset global_costs_swap_2__.
+        // Reset global_costs_2d_2_.
         for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
             std::fill(
-                    global_costs_swap_2_[pos_1].begin(),
-                    global_costs_swap_2_[pos_1].end(),
+                    global_costs_2d_2_[pos_1].begin(),
+                    global_costs_2d_2_[pos_1].end(),
                     worst<GlobalCost>());
         }
 
@@ -3461,7 +3461,7 @@ private:
                     if (m > 2)
                         gc_tmp = global_cost_merge(gc0, gc_tmp);
                     if (gc_tmp < gc)
-                        global_costs_swap_2_[pos_1][pos_2] = gc_tmp;
+                        global_costs_2d_2_[pos_1][pos_2] = gc_tmp;
                 }
 
                 if (pos_2 == n2)
@@ -3510,11 +3510,11 @@ private:
         ElementPos n2 = sequence_2.sequence.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i1, i2);
-        // Reset global_costs_swap_2__.
+        // Reset global_costs_2d_2_.
         for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
             std::fill(
-                    global_costs_swap_2_[pos_1].begin(),
-                    global_costs_swap_2_[pos_1].end(),
+                    global_costs_2d_2_[pos_1].begin(),
+                    global_costs_2d_2_[pos_1].end(),
                     worst<GlobalCost>());
         }
 
@@ -3592,7 +3592,7 @@ private:
                     if (m > 2)
                         gc_tmp = global_cost_merge(gc0, gc_tmp);
                     if (gc_tmp < gc)
-                        global_costs_swap_2_[pos_1][pos_2] = gc_tmp;
+                        global_costs_2d_2_[pos_1][pos_2] = gc_tmp;
                 }
 
                 if (pos_2 == n2)
@@ -3630,28 +3630,57 @@ private:
      * Private attributes.
      */
 
+    /** Input local scheme. */
     LocalScheme0& local_scheme_0_;
+    /** Parameters. */
     Parameters parameters_;
 
     /*
-     * Structure to iterate in random order.
+     * Structures to iterate in random order.
      */
 
+    /** Vector containing numbers from '0' to 'number_of_sequences - 1'. */
     std::vector<SequenceId> sequences_1_;
+    /** Vector containing numbers from '0' to 'number_of_sequences - 1'. */
     std::vector<SequenceId> sequences_2_;
+    /** IndexedSet of size 'number_of_elements'. */
     optimizationtools::IndexedSet elements_;
+    /** Vector containing numbers from '0' to 'number_of_elements - 1'. */
     std::vector<ElementPos> positions_1_;
+    /** Vector containing numbers from '0' to 'number_of_elements - 1'. */
     std::vector<ElementPos> positions_2_;
+    /**
+     * Vector of all non-ordered pairs from '0' to 'number_of_elements'.
+     *
+     * Contains 'number_of_element x (number_of_elements - 1) / 2' elements.
+     */
     std::vector<std::pair<ElementPos, ElementPos>> pairs_1_;
+    /**
+     * Vector of all ordered pairs from '0' to 'number_of_elements'.
+     *
+     * Contains 'number_of_element x number_of_elements' elements.
+     */
     std::vector<std::pair<ElementPos, ElementPos>> pairs_2_;
 
     /*
-     * Structure storing neighborhood costs.
+     * Structures storing neighborhood costs.
      */
 
-    std::vector<GlobalCost> global_costs_shift_;
-    std::vector<std::vector<GlobalCost>> global_costs_swap_1_;
-    std::vector<std::vector<GlobalCost>> global_costs_swap_2_;
+    /**
+     * Structure to store neighborhood global costs in a 1D vector of size
+     * 'number_of_elements'.
+     */
+    std::vector<GlobalCost> global_costs_1d_;
+    /**
+     * Structure to store neighborhood global costs in a 2D triangular matrix
+     * of size 'number_of_elements x (number_of_elements - 1) / 2'.
+     */
+    std::vector<std::vector<GlobalCost>> global_costs_2d_1_;
+    /**
+     * Structure to store neighborhood global costs in a 2D matrix of size
+     * 'number_of_elements x number_of_elements'.
+     */
+    std::vector<std::vector<GlobalCost>> global_costs_2d_2_;
 
     /*
      * Temporary structures.
