@@ -245,7 +245,7 @@ public:
     inline void apply_move(
             Solution& solution,
             const Move& move,
-            std::mt19937_64) const
+            std::mt19937_64&) const
     {
         remove(solution, move.group_id, solution.items[move.group_id]);
         add(solution, move.group_id, move.j);

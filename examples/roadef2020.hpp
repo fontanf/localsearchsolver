@@ -244,7 +244,7 @@ public:
     inline void apply_move(
             Solution& solution,
             const Move& move,
-            std::mt19937_64) const
+            std::mt19937_64&) const
     {
         remove(solution, move.j);
         add(solution, move.j, move.t_start);

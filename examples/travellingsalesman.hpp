@@ -215,7 +215,7 @@ public:
     inline void apply_move(
             Solution& solution,
             const Move& move,
-            std::mt19937_64) const
+            std::mt19937_64&) const
     {
         //print(std::cout, solution);
         //std::cout << "pos_1 " << move.pos_1

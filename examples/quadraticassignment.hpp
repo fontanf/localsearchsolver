@@ -403,7 +403,7 @@ public:
     inline void apply_move(
             Solution& solution,
             const Move& move,
-            std::mt19937_64) const
+            std::mt19937_64&) const
     {
         LocationId location_id_1 = solution.locations[move.facilities[0]];
         remove(solution, move.facilities[0]);

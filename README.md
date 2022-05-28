@@ -33,23 +33,31 @@ Implemented algorithms:
 
 ## Sequencing module
 
-A specific implementation is also available for sequencing problems. The neighborhoods, crossovers and perturbations are already implemented, it is only required to provide an `append(solution, j)` method to use them:
+A specific implementation is also available for sequencing problems. The neighborhoods, crossovers and perturbations are already implemented. It is only required to provide an `append(solution, j)` method to use them:
 * Local search neighborhoods:
-  * Shift a block of `k` consecutive jobs
-  * Swap a block of `k1` consecutive jobs with another block of `k2` consecutive jobs
-  * Reverse a block of consecutive jobs
-  * Shift and reverse a block of `k` consecutive jobs
-  * Remove a job from the solution / Add a job into the solution
+  * Intra:
+    * Shift a block of `k` consecutive elements
+    * Swap a block of `k1` consecutive elements with another block of `k2` consecutive elements
+    * Reverse a block of consecutive elements (2-opt)
+    * Shift and reverse a block of `k` consecutive elements
+  * Inter:
+    * 2-opt\*
+    * Shift a block of `k` consecutive elements from one sequence to another
+    * Swap a block of `k1` consecutive elements from a sequence with another block of `k2` consecutive elements from another sequence
+    * Shift and reverse a block of `k` consecutive elements from one sequence to another
+  * Remove an element from the solution / Add an element into the solution
 * Perturbations:
-  * Swap two blocks of consecutive jobs (double-bridge)
-  * Remove `k` jobs and re-insert them (ruin-and-recreate)
-  * Force a job into the solution
+  * Swap two blocks of consecutive elements (double-bridge) (single sequence only)
+  * Remove `k` elements and re-insert them (ruin-and-recreate)
+  * Force an element into the solution
 * Crossover algorithms:
-  * OX crossover
-  * SJOX crossover
-  * SBOX crossover
+  * OX crossover (single sequence only)
+  * SJOX crossover (single sequence only)
+  * SBOX crossover (single sequence only)
 
 ### Examples
+
+#### Single sequence
 
 [Sequential Ordering Problem](examples/sequentialordering.hpp)
 
@@ -57,7 +65,7 @@ A specific implementation is also available for sequencing problems. The neighbo
 <p>
 
 ```shell
-DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/scripts/bench_run.py --main ./bazel-bin/examples/sequentialordering_main --csv ../ordata/sequentialordering/data.csv -f "row['Dataset'] == 'tsplib'" -l "${DATE}_sequentialordering" -t 60
+DATE=$(date '+%Y-%m-%d--%H-%M-%S') && python3 ../optimizationtools/scripts/bench_run.py --main ./bazel-bin/examples/sequentialordering_main --csv ../ordata/sequentialordering/data.csv -f "row['Dataset'] == 'tsplib'" -l "${DATE}_sequentialordering" -t 60
 python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/sequentialordering/data.csv -f "row['Dataset'] == 'tsplib'" -l "${DATE}_sequentialordering" -b heuristiclong -t 62
 ```
 
@@ -72,7 +80,7 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/sequential
 <p>
 
 ```shell
-DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/scripts/bench_run.py --main ./bazel-bin/examples/schedulingwithsdsttwt_main --csv ../ordata/schedulingwithsdsttwt/data.csv -l "${DATE}_schedulingwithsdsttwt" -t 60
+DATE=$(date '+%Y-%m-%d--%H-%M-%S') && python3 ../optimizationtools/scripts/bench_run.py --main ./bazel-bin/examples/schedulingwithsdsttwt_main --csv ../ordata/schedulingwithsdsttwt/data.csv -l "${DATE}_schedulingwithsdsttwt" -t 60
 python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/schedulingwithsdsttwt/data.csv -l "${DATE}_schedulingwithsdsttwt" -b heuristiclong -t 62
 ```
 
@@ -87,7 +95,7 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/scheduling
 <p>
 
 ```shell
-DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/scripts/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtct_main --csv ../ordata/flowshopscheduling/data_permutationflowshopschedulingtct.csv -l "${DATE}_permutationflowshopschedulingtct" --timelimitfield "Time limit"
+DATE=$(date '+%Y-%m-%d--%H-%M-%S') && python3 ../optimizationtools/scripts/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtct_main --csv ../ordata/flowshopscheduling/data_permutationflowshopschedulingtct.csv -l "${DATE}_permutationflowshopschedulingtct" --timelimitfield "Time limit"
 python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/flowshopscheduling/data_permutationflowshopschedulingtct.csv -l "${DATE}_permutationflowshopschedulingtct" -b heuristiclong -t 500
 ```
 
@@ -102,7 +110,7 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/flowshopsc
 <p>
 
 ```shell
-DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/scripts/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtt_main --csv ../ordata/flowshopscheduling/data_permutationflowshopschedulingtt.csv -l "${DATE}_permutationflowshopschedulingtt" --timelimitfield "Time limit"
+DATE=$(date '+%Y-%m-%d--%H-%M-%S') && python3 ../optimizationtools/scripts/bench_run.py --main ./bazel-bin/examples/permutationflowshopschedulingtt_main --csv ../ordata/flowshopscheduling/data_permutationflowshopschedulingtt.csv -l "${DATE}_permutationflowshopschedulingtt" --timelimitfield "Time limit"
 python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/flowshopscheduling/data_permutationflowshopschedulingtt.csv -l "${DATE}_permutationflowshopschedulingtt" -b heuristiclong -t 2200
 ```
 
@@ -110,6 +118,10 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/flowshopsc
 
 </p>
 </details>
+
+[Time-dependent orienteering problem](examples/timedependentorienteering.hpp)
+
+#### Single sub-sequence
 
 [Single machine order acceptance and scheduling problem with time windows and sequence-dependent setup times, Total weighted tardiness](examples/orderacceptanceandscheduling.hpp)
 
@@ -124,7 +136,7 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/orderaccep
 </p>
 </details>
 
-[Time-dependent orienteering problem](examples/timedependentorienteering.hpp)
+#### Multiple sequences
 
 ## Other examples
 
@@ -144,7 +156,7 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
 <p>
 
 ```shell
-DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/scripts/bench_run.py --main ./bazel-bin/examples/multidimensionalmultiplechoiceknapsack_main --csv ../ordata/multidimensionalmultiplechoiceknapsack/data.csv -l "${DATE}_multidimensionalmultiplechoiceknapsack" -t 60
+DATE=$(date '+%Y-%m-%d--%H-%M-%S') && python3 ../optimizationtools/scripts/bench_run.py --main ./bazel-bin/examples/multidimensionalmultiplechoiceknapsack_main --csv ../ordata/multidimensionalmultiplechoiceknapsack/data.csv -l "${DATE}_multidimensionalmultiplechoiceknapsack" -t 60
 python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/multidimensionalmultiplechoiceknapsack/data.csv -l "${DATE}_multidimensionalmultiplechoiceknapsack" -b heuristiclong -t 62
 ```
 
@@ -164,7 +176,7 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/multidimen
 <p>
 
 ```shell
-DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/scripts/bench_run.py --main ./bazel-bin/examples/quadraticassignment_main --csv ../ordata/quadraticassignment/data.csv -l "${DATE}_quadraticassignment" -t 60
+DATE=$(date '+%Y-%m-%d--%H-%M-%S') && python3 ../optimizationtools/scripts/bench_run.py --main ./bazel-bin/examples/quadraticassignment_main --csv ../ordata/quadraticassignment/data.csv -l "${DATE}_quadraticassignment" -t 60
 python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/quadraticassignment/data.csv -l "${DATE}_quadraticassignment" -b heuristiclong -t 62
 ```
 
@@ -187,7 +199,7 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/quadratica
 <p>
 
 ```shell
-DATE=$(date '+%Y-%m-%d--%H-%M') && python3 ../optimizationtools/scripts/bench_run.py --main ./bazel-bin/examples/knapsackwithconflicts_main --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'hifi2006'" -l "${DATE}_knapsackwithconflicts_hifi2006" -t 60
+DATE=$(date '+%Y-%m-%d--%H-%M-%S') && python3 ../optimizationtools/scripts/bench_run.py --main ./bazel-bin/examples/knapsackwithconflicts_main --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'hifi2006'" -l "${DATE}_knapsackwithconflicts_hifi2006" -t 60
 python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/knapsackwithconflicts/data.csv -f "row['Dataset'] == 'hifi2006'" -l "${DATE}_knapsackwithconflicts_hifi2006" -b heuristiclong -t 62
 ```
 

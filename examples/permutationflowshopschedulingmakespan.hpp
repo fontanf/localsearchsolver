@@ -205,7 +205,7 @@ public:
     inline void apply_move(
             Solution& solution,
             const Move& move,
-            std::mt19937_64)
+            std::mt19937_64&)
     {
         std::vector<JobId> jobs;
         for (JobPos pos = 0; pos < move.pos_1; ++pos)

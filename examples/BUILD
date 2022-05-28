@@ -246,6 +246,30 @@ cc_binary(
 
 
 cc_library(
+        name = "distributedpfsstct",
+        hdrs = ["distributedpfsstct.hpp"],
+        deps = [
+                "//localsearchsolver:localsearchsolver",
+                "@orproblems//orproblems:distributedpfsstct",
+        ],
+        visibility = ["//visibility:public"],
+)
+
+cc_binary(
+        name = "distributedpfsstct_main",
+        srcs = ["distributedpfsstct_main.cpp"],
+        deps = [
+                ":distributedpfsstct",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
+
+cc_library(
         name = "roadef2020",
         hdrs = ["roadef2020.hpp"],
         srcs = ["roadef2020.cpp"],
