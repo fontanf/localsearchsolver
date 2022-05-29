@@ -54,12 +54,31 @@ int main(int argc, char *argv[])
         run_genetic_local_search(main_args, local_scheme, main_args.info);
 
     // Write solution.
-    local_scheme.write(solution_pool.best(), main_args.info.output->certificate_path);
+    std::string certificate_path = main_args.info.output->certificate_path;
+    if (!certificate_path.empty()) {
+        std::ofstream file(certificate_path);
+        if (!file.good()) {
+            throw std::runtime_error(
+                    "Unable to open file \"" + certificate_path + "\".");
+        }
+        for (auto se: solution_pool.best().sequences[0].elements)
+            file << se.j + 1 << " ";
+    }
+
     if (main_args.print_solution) {
         std::cout << std::endl
             << "Solution" << std::endl
             << "--------" << std::endl;
         local_scheme.print(std::cout, solution_pool.best());
+        //auto sequence = local_scheme.empty_sequence(0);
+        //for (auto se: solution_pool.best().sequences[0].elements) {
+        //    local_scheme.append(sequence, se);
+        //    std::cout << "Job " << se.j
+        //        << ": time " << sequence.data.time
+        //        << ": profit " << sequence.data.profit
+        //        << ": total weighted tardiness " << sequence.data.total_weighted_tardiness_curr
+        //        << std::endl;
+        //}
     }
 
     // Run checker.

@@ -164,6 +164,8 @@ public:
             sequence_data.total_weighted_tardiness_full
                 += instance_.job(jn).weight
                 * (time_full - instance_.job(jn).due_date);
+        // Update j_last.
+        sequence_data.j_last = j;
     }
 
 private:

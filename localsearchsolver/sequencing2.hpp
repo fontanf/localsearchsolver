@@ -43,6 +43,10 @@ enum class Neighborhoods
     InterShift,
     InterSwap,
     InterShiftReverse,
+
+    //ShiftChangeMode,
+    //ModeSwap,
+    //SwapWithModes,
 };
 
 struct Parameters
@@ -224,22 +228,27 @@ public:
             for (ElementPos pos_2 = 0; pos_2 < local_scheme_0_.number_of_elements(); ++pos_2)
                 if (pos_1 != pos_2)
                     pairs_2_.push_back({pos_1, pos_2});
-
-        global_costs_1d_ = std::vector<GlobalCost>(n + 1, worst<GlobalCost>()),
-        global_costs_2d_1_ = std::vector<std::vector<GlobalCost>>(n);
-        for (ElementPos pos_1 = 0; pos_1 < n; ++pos_1)
-            global_costs_2d_1_[pos_1].resize(
-                    n - pos_1,
-                    worst<GlobalCost>());
-        global_costs_2d_2_ = std::vector<std::vector<GlobalCost>>(
-                n,
-                std::vector<GlobalCost>(n, worst<GlobalCost>()));
         for (ElementId j = 0; j < n; ++j)
             if (maximum_number_of_modes_ < number_of_modes(j))
                 maximum_number_of_modes_ = number_of_modes(j);
         modes_ = std::vector<Mode>(maximum_number_of_modes_);
         std::iota(modes_.begin(), modes_.end(), 0);
 
+        // Initialize global_costs_n_.
+        global_costs_n_ = std::vector<GlobalCost>(n + 1, worst<GlobalCost>()),
+        // Initialize global_costs_n_n2_.
+        global_costs_n_n2_ = std::vector<std::vector<GlobalCost>>(n);
+        for (ElementPos pos_1 = 0; pos_1 < n; ++pos_1)
+            global_costs_n_n2_[pos_1] = std::vector<GlobalCost>(n - pos_1);
+        // Initialize global_costs_n_n_.
+        global_costs_n_n_ = std::vector<std::vector<GlobalCost>>(
+                n, std::vector<GlobalCost>(n));
+        // Initialize global_costs_n_modes_.
+        global_costs_n_modes_ = std::vector<std::vector<GlobalCost>>(n);
+        for (ElementPos pos = 0; pos < n; ++pos)
+            global_costs_n_modes_[pos] = std::vector<GlobalCost>(maximum_number_of_modes_);
+
+        // Initialize temporary structures.
         sequence_datas_cur_ = std::vector<std::vector<SequenceData>>(
                 m, std::vector<SequenceData>(n + 1));
         modes_cur_ = std::vector<Mode>(n);
@@ -357,14 +366,14 @@ public:
                 std::shuffle(modes_.begin(), modes_.end(), generator);
                 for (SequenceId i: sequences_1_) {
                     SequencePos seq_size = solution.sequences[i].elements.size();
-                    for (Mode mode: modes_) {
-                        if (mode >= number_of_modes(j))
+                    compute_cost_add(solution, i, j);
+                    for (ElementPos pos: positions_2_) {
+                        if (pos > seq_size)
                             continue;
-                        compute_cost_add(solution, i, j, mode);
-                        for (ElementPos pos: positions_2_) {
-                            if (pos > seq_size)
+                        for (Mode mode: modes_) {
+                            if (mode >= number_of_modes(j))
                                 continue;
-                            GlobalCost c = global_costs_1d_[pos];
+                            GlobalCost c = global_costs_n_modes_[pos][mode];
                             if (c >= c_best)
                                 continue;
                             if (pos_best != -1 && !dominates(c, c_best))
@@ -459,14 +468,14 @@ public:
                     for (ElementId j: positions_1_) {
                         if (contains[j])
                             continue;
-                        for (Mode mode: modes_) {
-                            if (mode >= number_of_modes(j))
+                        compute_cost_add(solution, i, j);
+                        for (ElementPos pos: positions_2_) {
+                            if (pos > seq_size)
                                 continue;
-                            compute_cost_add(solution, i, j, mode);
-                            for (ElementPos pos: positions_2_) {
-                                if (pos > seq_size)
+                            for (Mode mode: modes_) {
+                                if (mode >= number_of_modes(j))
                                     continue;
-                                GlobalCost c = global_costs_1d_[pos];
+                                GlobalCost c = global_costs_n_modes_[pos][mode];
                                 if (c >= c_best)
                                     continue;
                                 pos_best = pos;
@@ -979,15 +988,17 @@ public:
         } case Perturbations::RuinAndRecreate: {
             ElementId n = local_scheme_0_.number_of_elements();
             std::vector<SequenceId> sequences(n, -1);
+            std::vector<Mode> modes(n, -1);
             std::vector<ElementPos> positions(n, -1);
             elements_.clear();
             for (SequenceId i = 0; i < number_of_sequences(); ++i) {
-                const Sequence& sequence = solution.sequences[i];
-                ElementPos seq_size = (ElementPos)sequence.elements.size();
+                const auto& elements = solution.sequences[i].elements;
+                ElementPos seq_size = (ElementPos)elements.size();
                 for (ElementPos pos = 0; pos < seq_size; ++pos) {
-                    ElementId j = sequence.elements[pos].j;
+                    ElementId j = elements[pos].j;
                     elements_.add(j);
                     sequences[j] = i;
+                    modes[j] = elements[pos].mode;
                     positions[j] = pos;
                 }
             }
@@ -1024,16 +1035,16 @@ public:
                 ElementPos pos_best = -1;
                 for (SequenceId i: sequences_1_) {
                     ElementPos seq_size = (ElementPos)solution_cur_.sequences[i].elements.size();
-                    for (Mode mode: modes_) {
-                        if (mode >= number_of_modes(j))
+                    compute_cost_add(solution_cur_, i, j);
+                    for (ElementPos pos_new: positions_2_) {
+                        if (pos_new > seq_size)
                             continue;
-                        compute_cost_add(solution_cur_, i, j, mode);
-                        for (ElementPos pos_new: positions_2_) {
-                            if (pos_new > seq_size)
+                        for (Mode mode: modes_) {
+                            if (mode >= number_of_modes(j))
                                 continue;
                             // Avoid inserting j at the same place as in the
                             // original solution.
-                            if (i == sequences[j]) {
+                            if (i == sequences[j] && mode == modes[j]) {
                                 if (pos_new == 0 && positions[j] == 0)
                                     continue;
                                 if (pos_new != 0
@@ -1042,7 +1053,7 @@ public:
                                         == solution.sequences[i].elements[positions[j] - 1].j)
                                     continue;
                             }
-                            GlobalCost c = global_costs_1d_[pos_new];
+                            GlobalCost c = global_costs_n_modes_[pos_new][mode];
                             if (c >= c_best)
                                 continue;
                             if (pos_best != -1 && !dominates(c, c_best))
@@ -1087,14 +1098,14 @@ public:
             ElementPos pos_best = -1;
             for (SequenceId i: sequences_1_) {
                 ElementPos seq_size = (ElementPos)solution.sequences[i].elements.size();
-                for (Mode mode: modes_) {
-                    if (mode >= number_of_modes(j))
+                compute_cost_add(solution, i, j);
+                for (ElementPos pos: positions_2_) {
+                    if (pos > seq_size)
                         continue;
-                    compute_cost_add(solution, i, j, mode);
-                    for (ElementPos pos: positions_2_) {
-                        if (pos > seq_size)
+                    for (Mode mode: modes_) {
+                        if (mode >= number_of_modes(j))
                             continue;
-                        GlobalCost c = global_costs_1d_[pos];
+                        GlobalCost c = global_costs_n_modes_[pos][mode];
                         if (pos_best != -1 && !dominates(c, c_best))
                             continue;
                         i_best = i;
@@ -1237,7 +1248,7 @@ public:
                             for (ElementPos pos_new: positions_2_) {
                                 if (pos == pos_new || pos_new > seq_size - block_size)
                                     continue;
-                                GlobalCost c = global_costs_1d_[pos_new];
+                                GlobalCost c = global_costs_n_[pos_new];
                                 if (c >= c_best)
                                     continue;
                                 if (i_best != -1 && !dominates(c, c_best))
@@ -1329,7 +1340,7 @@ public:
                             break;
                         compute_cost_swap(solution, i, block_size);
                         for (auto pair: pairs_1_) {
-                            GlobalCost c = global_costs_2d_1_[pair.first][pair.second - pair.first - 1];
+                            GlobalCost c = global_costs_n_n2_[pair.first][pair.second - pair.first - 1];
                             if (c >= c_best)
                                 continue;
                             if (i_best != -1 && !dominates(c, c_best))
@@ -1412,7 +1423,7 @@ public:
                             break;
                         compute_cost_swap(solution, i, block_size_1, block_size_2);
                         for (auto pair: pairs_2_) {
-                            GlobalCost c = global_costs_2d_2_[pair.first][pair.second];
+                            GlobalCost c = global_costs_n_n_[pair.first][pair.second];
                             if (c >= c_best)
                                 continue;
                             if (i_best != -1 && !dominates(c, c_best))
@@ -1505,7 +1516,7 @@ public:
                     for (SequenceId i: sequences_1_) {
                         compute_cost_reverse(solution, i);
                         for (auto pair: pairs_1_) {
-                            GlobalCost c = global_costs_2d_1_[pair.first][pair.second - pair.first - 1];
+                            GlobalCost c = global_costs_n_n2_[pair.first][pair.second - pair.first - 1];
                             if (c >= c_best)
                                 continue;
                             if (pos_1_best != -1 && !dominates(c, c_best))
@@ -1586,7 +1597,7 @@ public:
                             for (ElementPos pos_new: positions_2_) {
                                 if (pos == pos_new || pos_new > seq_size - block_size)
                                     continue;
-                                GlobalCost c = global_costs_1d_[pos_new];
+                                GlobalCost c = global_costs_n_[pos_new];
                                 if (c >= c_best)
                                     continue;
                                 if (pos_best != -1 && !dominates(c, c_best))
@@ -1682,14 +1693,14 @@ public:
                         for (auto it = elements_.out_begin();
                                 it != elements_.out_end(); ++it) {
                             ElementId j = *it;
-                            for (Mode mode: modes_) {
-                                if (mode >= number_of_modes(j))
+                            compute_cost_add(solution, i, j);
+                            for (ElementPos pos: positions_2_) {
+                                if (pos > seq_size)
                                     continue;
-                                compute_cost_add(solution, i, j, mode);
-                                for (ElementPos pos: positions_2_) {
-                                    if (pos > seq_size)
+                                for (Mode mode: modes_) {
+                                    if (mode >= number_of_modes(j))
                                         continue;
-                                    GlobalCost c = global_costs_1d_[pos];
+                                    GlobalCost c = global_costs_n_modes_[pos][mode];
                                     if (c >= c_best)
                                         continue;
                                     if (pos_best != -1 && !dominates(c, c_best))
@@ -1767,7 +1778,7 @@ public:
                             if (perturbation.type == Perturbations::ForceAdd
                                     && perturbation.force_add_j == elements[pos].j)
                                 continue;
-                            GlobalCost c = global_costs_1d_[pos];
+                            GlobalCost c = global_costs_n_[pos];
                             if (c >= c_best)
                                 continue;
                             if (pos_best != -1 && !dominates(c, c_best))
@@ -1839,7 +1850,7 @@ public:
                                 continue;
                             compute_cost_inter_two_opt(solution, i1, i2);
                             for (auto pair: pairs_2_) {
-                                GlobalCost c = global_costs_2d_2_[pair.first][pair.second];
+                                GlobalCost c = global_costs_n_n_[pair.first][pair.second];
                                 if (c >= c_best)
                                     continue;
                                 if (i1_best != -1 && !dominates(c, c_best))
@@ -1932,7 +1943,7 @@ public:
                                 continue;
                             compute_cost_inter_shift(solution, i1, i2, block_size);
                             for (auto pair: pairs_2_) {
-                                GlobalCost c = global_costs_2d_2_[pair.first][pair.second];
+                                GlobalCost c = global_costs_n_n_[pair.first][pair.second];
                                 //std::cout
                                 //    << "i1 " << i1
                                 //    << " i2 " << i2
@@ -2062,7 +2073,7 @@ public:
                                 continue;
                             compute_cost_inter_swap(solution, i1, i2, block_size_1, block_size_2);
                             for (auto pair: pairs_2_) {
-                                GlobalCost c = global_costs_2d_2_[pair.first][pair.second];
+                                GlobalCost c = global_costs_n_n_[pair.first][pair.second];
                                 if (c >= c_best)
                                     continue;
                                 if (i1_best != -1 && !dominates(c, c_best))
@@ -2186,7 +2197,7 @@ public:
                             compute_cost_inter_shift(
                                     solution, i1, i2, block_size, true);
                             for (auto pair: pairs_2_) {
-                                GlobalCost c = global_costs_2d_2_[pair.first][pair.second];
+                                GlobalCost c = global_costs_n_n_[pair.first][pair.second];
                                 if (c >= c_best)
                                     continue;
                                 if (i1_best != -1 && !dominates(c, c_best))
@@ -2452,16 +2463,16 @@ public:
                     "Algorithm", ("ReverseNumberOfSuccesses"),
                     add_number_of_explorations_);
             FFOT_VER(info,
-                    std::left << std::setw(28) << ("Add:")
+                    std::left << std::setw(28) << ("Remove:")
                     << remove_number_of_explorations_
                     << " / " << remove_number_of_sucesses_
                     << " / " << (double)remove_number_of_sucesses_ / remove_number_of_explorations_ * 100 << "%"
                     << std::endl);
             FFOT_PUT(info,
-                    "Algorithm", ("ReverseNumberOfExplorations"),
+                    "Algorithm", ("RemoveNumberOfExplorations"),
                     remove_number_of_explorations_);
             FFOT_PUT(info,
-                    "Algorithm", ("ReverseNumberOfSuccesses"),
+                    "Algorithm", ("RemoveNumberOfSuccesses"),
                     remove_number_of_explorations_);
         }
 
@@ -2931,10 +2942,10 @@ private:
         GlobalCost gc0 = compute_global_cost(solution, i);
         // Initialize sequence_data_cur.
         SequenceData sequence_data_cur = empty_sequence_data(i);
-        // Reset global_costs_1d_.
+        // Reset global_costs_n_.
         std::fill(
-                global_costs_1d_.begin(),
-                global_costs_1d_.end(),
+                global_costs_n_.begin(),
+                global_costs_n_.end(),
                 worst<GlobalCost>());
 
         // Loop through all new positions.
@@ -3000,9 +3011,9 @@ private:
 
             if (!stop) {
                 if (m == 1) {
-                    global_costs_1d_[pos_new] = global_cost(sequence_data);
+                    global_costs_n_[pos_new] = global_cost(sequence_data);
                 } else {
-                    global_costs_1d_[pos_new] = global_cost_merge(
+                    global_costs_n_[pos_new] = global_cost_merge(
                             gc0, global_cost(sequence_data));
                 }
             }
@@ -3038,8 +3049,8 @@ private:
         // Reset global_costs_swap_.
         for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
             std::fill(
-                    global_costs_2d_1_[pos_1].begin(),
-                    global_costs_2d_1_[pos_1].end(),
+                    global_costs_n_n2_[pos_1].begin(),
+                    global_costs_n_n2_[pos_1].end(),
                     worst<GlobalCost>());
         }
 
@@ -3090,10 +3101,10 @@ private:
 
                 if (!stop) {
                     if (m == 1) {
-                        global_costs_2d_1_[pos_1][pos_2 - pos_1 - 1]
+                        global_costs_n_n2_[pos_1][pos_2 - pos_1 - 1]
                             = global_cost(sequence_data);
                     } else {
-                        global_costs_2d_1_[pos_1][pos_2 - pos_1 - 1]
+                        global_costs_n_n2_[pos_1][pos_2 - pos_1 - 1]
                             = global_cost_merge(gc0, global_cost(sequence_data));
                     }
                 }
@@ -3116,8 +3127,8 @@ private:
         // Reset global_costs_swap_.
         for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
             std::fill(
-                    global_costs_2d_2_[pos_1].begin(),
-                    global_costs_2d_2_[pos_1].end(),
+                    global_costs_n_n_[pos_1].begin(),
+                    global_costs_n_n_[pos_1].end(),
                     worst<GlobalCost>());
         }
 
@@ -3199,10 +3210,10 @@ private:
 
                 if (!stop) {
                     if (m == 1) {
-                        global_costs_2d_2_[pos_1][pos_2]
+                        global_costs_n_n_[pos_1][pos_2]
                             = global_cost(sequence_data);
                     } else {
-                        global_costs_2d_2_[pos_1][pos_2]
+                        global_costs_n_n_[pos_1][pos_2]
                             = global_cost_merge(gc0, global_cost(sequence_data));
                     }
                 }
@@ -3293,10 +3304,10 @@ private:
 
                 if (!stop) {
                     if (m == 1) {
-                        global_costs_2d_2_[pos_1][pos_2]
+                        global_costs_n_n_[pos_1][pos_2]
                             = global_cost(sequence_data);
                     } else {
-                        global_costs_2d_2_[pos_1][pos_2]
+                        global_costs_n_n_[pos_1][pos_2]
                             = global_cost_merge(gc0, global_cost(sequence_data));
                     }
                 }
@@ -3317,8 +3328,8 @@ private:
         // Reset global_costs_swap_.
         for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
             std::fill(
-                    global_costs_2d_1_[pos_1].begin(),
-                    global_costs_2d_1_[pos_1].end(),
+                    global_costs_n_n2_[pos_1].begin(),
+                    global_costs_n_n2_[pos_1].end(),
                     worst<GlobalCost>());
         }
 
@@ -3371,10 +3382,10 @@ private:
 
                 if (!stop) {
                     if (m == 1) {
-                        global_costs_2d_1_[pos_1][pos_2 - pos_1 - 1]
+                        global_costs_n_n2_[pos_1][pos_2 - pos_1 - 1]
                             = global_cost(sequence_data);
                     } else {
-                        global_costs_2d_1_[pos_1][pos_2 - pos_1 - 1]
+                        global_costs_n_n2_[pos_1][pos_2 - pos_1 - 1]
                             = global_cost_merge(gc0, global_cost(sequence_data));
                     }
                 }
@@ -3385,8 +3396,7 @@ private:
     inline void compute_cost_add(
             const Solution& solution,
             SequenceId i,
-            ElementId j0,
-            Mode mode)
+            ElementId j0)
     {
         SequenceId m = number_of_sequences();
         GlobalCost gc = global_cost(solution);
@@ -3394,43 +3404,48 @@ private:
         SequencePos seq_size = elements.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i);
-        // Reset global_costs_1d_.
-        std::fill(
-                global_costs_1d_.begin(),
-                global_costs_1d_.end(),
-                worst<GlobalCost>());
+        // Reset global_costs_n_modes_.
+        for (ElementPos pos = 0; pos < local_scheme_0_.number_of_elements(); ++pos) {
+            std::fill(
+                    global_costs_n_modes_[pos].begin(),
+                    global_costs_n_modes_[pos].end(),
+                    worst<GlobalCost>());
+        }
 
         // Loop through all new positions.
         for (ElementPos pos = 0; pos <= seq_size; ++pos) {
 
-            bool stop = false;
+            for (Mode mode = 0; mode < number_of_modes(j0); ++mode) {
 
-            // Initialize sequence_data.
-            SequenceData sequence_data = sequence_datas_cur_[i][pos];
+                bool stop = false;
 
-            // Add element j0 to sequence_data.
-            append(sequence_data, {j0, mode});
+                // Initialize sequence_data.
+                SequenceData sequence_data = sequence_datas_cur_[i][pos];
 
-            // Add the remaining elements to sequence_tmp.
-            for (ElementPos p = pos; p < seq_size && !stop; ++p) {
-                // Add next element to sequence_data.
-                append(sequence_data, elements[p]);
-                // Check early termination.
-                if (m == 1) {
-                    if (bound(sequence_data) >= gc)
-                        stop = true;
-                } else {
-                    if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
-                        stop = true;
+                // Add element j0 to sequence_data.
+                append(sequence_data, {j0, mode});
+
+                // Add the remaining elements to sequence_tmp.
+                for (ElementPos p = pos; p < seq_size && !stop; ++p) {
+                    // Add next element to sequence_data.
+                    append(sequence_data, elements[p]);
+                    // Check early termination.
+                    if (m == 1) {
+                        if (bound(sequence_data) >= gc)
+                            stop = true;
+                    } else {
+                        if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
+                            stop = true;
+                    }
                 }
-            }
 
-            if (!stop) {
-                if (m == 1) {
-                    global_costs_1d_[pos] = global_cost(sequence_data);
-                } else {
-                    global_costs_1d_[pos]
-                        = global_cost_merge(gc0, global_cost(sequence_data));
+                if (!stop) {
+                    if (m == 1) {
+                        global_costs_n_modes_[pos][mode] = global_cost(sequence_data);
+                    } else {
+                        global_costs_n_modes_[pos][mode]
+                            = global_cost_merge(gc0, global_cost(sequence_data));
+                    }
                 }
             }
         }
@@ -3446,10 +3461,10 @@ private:
         SequencePos seq_size = elements.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i);
-        // Reset global_costs_1d_.
+        // Reset global_costs_n_.
         std::fill(
-                global_costs_1d_.begin(),
-                global_costs_1d_.end(),
+                global_costs_n_.begin(),
+                global_costs_n_.end(),
                 worst<GlobalCost>());
 
         // Loop through all new positions.
@@ -3476,9 +3491,9 @@ private:
 
             if (!stop) {
                 if (m == 1) {
-                    global_costs_1d_[pos] = global_cost(sequence_data);
+                    global_costs_n_[pos] = global_cost(sequence_data);
                 } else {
-                    global_costs_1d_[pos]
+                    global_costs_n_[pos]
                         = global_cost_merge(gc0, global_cost(sequence_data));
                 }
             }
@@ -3502,11 +3517,11 @@ private:
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i1, i2);
         //std::cout << "i1 " << i1 << " i2 " << i2 << " gc0 " << to_string(gc0) << std::endl;
-        // Reset global_costs_2d_2_.
+        // Reset global_costs_n_n_.
         for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
             std::fill(
-                    global_costs_2d_2_[pos_1].begin(),
-                    global_costs_2d_2_[pos_1].end(),
+                    global_costs_n_n_[pos_1].begin(),
+                    global_costs_n_n_[pos_1].end(),
                     worst<GlobalCost>());
         }
 
@@ -3607,7 +3622,7 @@ private:
                         //std::cout << "gc1 " << to_string(global_cost(sequence_data_1)) << std::endl;
                         //std::cout << "gc2 " << to_string(global_cost(sequence_data_2)) << std::endl;
                         //std::cout << "gc_tmp " << to_string(gc_tmp) << std::endl;
-                        global_costs_2d_2_[pos_1][pos_2] = gc_tmp;
+                        global_costs_n_n_[pos_1][pos_2] = gc_tmp;
                     }
                 }
             }
@@ -3627,11 +3642,11 @@ private:
         SequencePos seq_2_size = elements_2.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i1, i2);
-        // Reset global_costs_2d_2_.
+        // Reset global_costs_n_n_.
         for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
             std::fill(
-                    global_costs_2d_2_[pos_1].begin(),
-                    global_costs_2d_2_[pos_1].end(),
+                    global_costs_n_n_[pos_1].begin(),
+                    global_costs_n_n_[pos_1].end(),
                     worst<GlobalCost>());
         }
 
@@ -3684,7 +3699,7 @@ private:
                     if (m > 2)
                         gc_tmp = global_cost_merge(gc0, gc_tmp);
                     if (gc_tmp < gc)
-                        global_costs_2d_2_[pos_1][pos_2] = gc_tmp;
+                        global_costs_n_n_[pos_1][pos_2] = gc_tmp;
                 }
             }
         }
@@ -3705,11 +3720,11 @@ private:
         SequencePos seq_2_size = elements_2.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i1, i2);
-        // Reset global_costs_2d_2_.
+        // Reset global_costs_n_n_.
         for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
             std::fill(
-                    global_costs_2d_2_[pos_1].begin(),
-                    global_costs_2d_2_[pos_1].end(),
+                    global_costs_n_n_[pos_1].begin(),
+                    global_costs_n_n_[pos_1].end(),
                     worst<GlobalCost>());
         }
 
@@ -3787,7 +3802,7 @@ private:
                     if (m > 2)
                         gc_tmp = global_cost_merge(gc0, gc_tmp);
                     if (gc_tmp < gc)
-                        global_costs_2d_2_[pos_1][pos_2] = gc_tmp;
+                        global_costs_n_n_[pos_1][pos_2] = gc_tmp;
                 }
             }
         }
@@ -3845,17 +3860,22 @@ private:
      * Structure to store neighborhood global costs in a 1D vector of size
      * 'number_of_elements'.
      */
-    std::vector<GlobalCost> global_costs_1d_;
+    std::vector<GlobalCost> global_costs_n_;
     /**
      * Structure to store neighborhood global costs in a 2D triangular matrix
      * of size 'number_of_elements x (number_of_elements - 1) / 2'.
      */
-    std::vector<std::vector<GlobalCost>> global_costs_2d_1_;
+    std::vector<std::vector<GlobalCost>> global_costs_n_n2_;
     /**
      * Structure to store neighborhood global costs in a 2D matrix of size
      * 'number_of_elements x number_of_elements'.
      */
-    std::vector<std::vector<GlobalCost>> global_costs_2d_2_;
+    std::vector<std::vector<GlobalCost>> global_costs_n_n_;
+    /**
+     * Structure to store neighborhood global costs in a 2D matrix of size
+     * 'number_of_elements x number_of_modes'.
+     */
+    std::vector<std::vector<GlobalCost>> global_costs_n_modes_;
 
     /*
      * Temporary structures.

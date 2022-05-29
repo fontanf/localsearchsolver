@@ -43,7 +43,6 @@ public:
 
     struct SequenceData
     {
-        LocationPos number_of_locations = 0;
         LocationId j_last = -1;
         Time time_cur = 0;
         Time time_full = 0;
@@ -123,8 +122,8 @@ public:
         // Update time_full.
         LocationId jn = instance_.number_of_locations() - 1;
         sequence_data.time_full = instance_.arrival_time(j + 1, jn, sequence_data.time_cur);
-        // Update number_of_locations.
-        sequence_data.number_of_locations++;
+        // Update j_last.
+        sequence_data.j_last = j;
     }
 
 private:
