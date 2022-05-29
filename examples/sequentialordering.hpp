@@ -1,7 +1,7 @@
 #pragma once
 
 /**
- * Sequential Ordering Problem..
+ * Sequential Ordering Problem.
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/sequentialordering.hpp
@@ -33,20 +33,21 @@ public:
     /** Global cost: <Number of vertices, Number of precedence violations, Total distance>; */
     using GlobalCost = std::tuple<ElementPos, ElementPos, Distance>;
 
-    inline ElementPos&                    number_of_vertices(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline ElementPos&       number_of_precedence_violations(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline Distance&                                  length(GlobalCost& global_cost) { return std::get<2>(global_cost); }
-    inline ElementPos               number_of_vertices(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline ElementPos  number_of_precedence_violations(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline Distance                             length(const GlobalCost& global_cost) { return std::get<2>(global_cost); }
+    inline VertexPos&                    number_of_vertices(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline VertexPos&       number_of_precedence_violations(GlobalCost& global_cost) { return std::get<1>(global_cost); }
+    inline Distance&                                 length(GlobalCost& global_cost) { return std::get<2>(global_cost); }
+    inline VertexPos               number_of_vertices(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline VertexPos  number_of_precedence_violations(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
+    inline Distance                            length(const GlobalCost& global_cost) { return std::get<2>(global_cost); }
 
     /*
-     * Sequences.
+     * SequenceDatas.
      */
 
-    struct Sequence
+    struct SequenceData
     {
-        std::vector<ElementId> sequence;
+        VertexPos number_of_vertices = 0;
+        VertexId j_last = -1;
         Distance length = 0;
         ElementPos number_of_precedence_violations = 0;
         std::vector<uint8_t> contains;
@@ -84,27 +85,27 @@ public:
     virtual ~LocalScheme() { }
 
     /*
-     * Initial sequences.
+     * Initial sequence_datas.
      */
 
-    inline Sequence empty_sequence(sequencing2::SequenceId) const
+    inline SequenceData empty_sequence_data(sequencing2::SequenceId) const
     {
-        Sequence sequence;
-        sequence.contains = std::vector<uint8_t>(
+        SequenceData sequence_data;
+        sequence_data.contains = std::vector<uint8_t>(
                 instance_.number_of_vertices(), 0);
-        return sequence;
+        return sequence_data;
     }
 
     /*
-     * Sequence properties.
+     * SequenceData properties.
      */
 
-    inline GlobalCost global_cost(const Sequence& sequence) const
+    inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
         return {
-            -sequence.sequence.size(),
-            sequence.number_of_precedence_violations,
-            sequence.length,
+            -sequence_data.number_of_vertices,
+            sequence_data.number_of_precedence_violations,
+            sequence_data.length,
         };
     }
 
@@ -123,35 +124,36 @@ public:
 
     inline ElementPos number_of_elements() const { return instance_.number_of_vertices(); }
 
-    inline GlobalCost bound(const Sequence& sequence) const
+    inline GlobalCost bound(const SequenceData& sequence_data) const
     {
         return {
             -instance_.number_of_vertices(),
-            sequence.number_of_precedence_violations,
-            sequence.length,
+            sequence_data.number_of_precedence_violations,
+            sequence_data.length,
         };
     }
 
     inline void append(
-            Sequence& sequence,
+            SequenceData& sequence_data,
             ElementPos j) const
     {
         // Update number_of_precedence_violations.
         for (ElementId j: instance_.predecessors(j))
-            if (!sequence.contains[j])
-                sequence.number_of_precedence_violations++;
+            if (!sequence_data.contains[j])
+                sequence_data.number_of_precedence_violations++;
         // Update time.
-        if (sequence.sequence.size() > 0) {
-            ElementId j_prev = sequence.sequence.back();
-            Distance d = instance_.distance(j_prev, j);
+        if (sequence_data.number_of_vertices > 0) {
+            Distance d = instance_.distance(sequence_data.j_last, j);
             if (d == std::numeric_limits<Distance>::max())
-                d = instance_.distance(j, j_prev);
-            sequence.length += d;
+                d = instance_.distance(j, sequence_data.j_last);
+            sequence_data.length += d;
         }
         // Update contains.
-        sequence.contains[j] = 1;
-        // Update sequence.
-        sequence.sequence.push_back(j);
+        sequence_data.contains[j] = 1;
+        // Update j_last.
+        sequence_data.j_last = j;
+        // Update number_of_vertices.
+        sequence_data.number_of_vertices++;
     }
 
 private:

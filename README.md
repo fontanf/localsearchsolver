@@ -119,8 +119,6 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/flowshopsc
 </p>
 </details>
 
-[Time-dependent orienteering problem](examples/timedependentorienteering.hpp)
-
 #### Single sub-sequence
 
 [Single machine order acceptance and scheduling problem with time windows and sequence-dependent setup times, Total weighted tardiness](examples/orderacceptanceandscheduling.hpp)
@@ -135,6 +133,8 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/orderaccep
 
 </p>
 </details>
+
+[Time-dependent orienteering problem](examples/timedependentorienteering.hpp)
 
 #### Multiple sequences
 

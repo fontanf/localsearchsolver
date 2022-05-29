@@ -61,8 +61,8 @@ int main(int argc, char *argv[])
             throw std::runtime_error(
                     "Unable to open file \"" + certificate_path + "\".");
         }
-        for (LocationId j: solution_pool.best().sequences[0].sequence)
-            file << j + 1 << " ";
+        for (auto se: solution_pool.best().sequences[0].elements)
+            file << se.j + 1 << " ";
     }
 
     if (main_args.print_solution) {

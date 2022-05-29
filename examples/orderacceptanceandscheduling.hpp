@@ -2,7 +2,7 @@
 
 /**
  * Single machine order acceptance and scheduling problem with time windows and
- * sequence-dependent setup times, Total weighted tardiness.
+ * sequence_data-dependent setup times, Total weighted tardiness.
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/orderacceptanceandscheduling.hpp
@@ -40,9 +40,9 @@ public:
      * Solutions.
      */
 
-    struct Sequence
+    struct SequenceData
     {
-        std::vector<JobId> sequence;
+        JobId j_last = -1;
         Time time = 0;
         Time reversed_time_curr = 0;
         Time reversed_time_full = 0;
@@ -88,23 +88,23 @@ public:
      * Initial solutions.
      */
 
-    inline Sequence empty_sequence() const
+    inline SequenceData empty_sequence_data() const
     {
-        Sequence sequence;
-        sequence.profit += instance_.job(0).profit;
-        sequence.profit += instance_.job(instance_.number_of_jobs() - 1).profit;
-        return sequence;
+        SequenceData sequence_data;
+        sequence_data.profit += instance_.job(0).profit;
+        sequence_data.profit += instance_.job(instance_.number_of_jobs() - 1).profit;
+        return sequence_data;
     }
 
     /*
      * Solution properties.
      */
 
-    inline GlobalCost global_cost(const Sequence& sequence) const
+    inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
         return {
-            sequence.reversed_time_full,
-            sequence.total_weighted_tardiness_full - sequence.profit,
+            sequence_data.reversed_time_full,
+            sequence_data.total_weighted_tardiness_full - sequence_data.profit,
         };
     }
 
@@ -114,46 +114,41 @@ public:
 
     inline JobPos number_of_elements() const { return instance_.number_of_jobs() - 2; }
 
-    inline GlobalCost bound(const Sequence& sequence) const
+    inline GlobalCost bound(const SequenceData& sequence_data) const
     {
         return {
-            sequence.reversed_time_curr,
+            sequence_data.reversed_time_curr,
             std::numeric_limits<Profit>::lowest(),
         };
     }
 
     inline void append(
-            Sequence& sequence,
+            SequenceData& sequence_data,
             JobId j) const
     {
         // Update time.
         Time rj = instance_.job(j + 1).release_date;
-        if (sequence.time < rj)
-            sequence.time = rj;
-        JobId j_prev = (sequence.sequence.size() > 0)?
-            sequence.sequence.back():
-            -1;
-        sequence.time += instance_.setup_time(j_prev + 1, j + 1);
-        sequence.time += instance_.job(j + 1).processing_time;
+        if (sequence_data.time < rj)
+            sequence_data.time = rj;
+        sequence_data.time += instance_.setup_time(sequence_data.j_last + 1, j + 1);
+        sequence_data.time += instance_.job(j + 1).processing_time;
         // Update reversed_time.
         Time dj = instance_.job(j + 1).deadline;
-        if (sequence.time > dj) {
-            sequence.reversed_time_curr += (sequence.time - dj);
-            sequence.time = dj;
+        if (sequence_data.time > dj) {
+            sequence_data.reversed_time_curr += (sequence_data.time - dj);
+            sequence_data.time = dj;
         }
-        // Update jobs.
-        sequence.sequence.push_back(j);
         // Update total weighted tardiness.
-        if (sequence.time > instance_.job(j + 1).due_date)
-            sequence.total_weighted_tardiness_curr
+        if (sequence_data.time > instance_.job(j + 1).due_date)
+            sequence_data.total_weighted_tardiness_curr
                 += instance_.job(j + 1).weight
-                * (sequence.time - instance_.job(j + 1).due_date);
+                * (sequence_data.time - instance_.job(j + 1).due_date);
         // Update profit.
-        sequence.profit += instance_.job(j + 1).profit;
-
-        sequence.reversed_time_full = sequence.reversed_time_curr;
-        sequence.total_weighted_tardiness_full = sequence.total_weighted_tardiness_curr;
-        Time time_full = sequence.time;
+        sequence_data.profit += instance_.job(j + 1).profit;
+        // Update reversed_time_full and total_weighted_tardiness_full.
+        sequence_data.reversed_time_full = sequence_data.reversed_time_curr;
+        sequence_data.total_weighted_tardiness_full = sequence_data.total_weighted_tardiness_curr;
+        Time time_full = sequence_data.time;
         JobId jn = instance_.number_of_jobs() - 1;
         Time rjn = instance_.job(jn).release_date;
         if (time_full < rjn)
@@ -162,11 +157,11 @@ public:
         time_full += instance_.job(jn).processing_time;
         Time djn = instance_.job(jn).deadline;
         if (time_full > djn) {
-            sequence.reversed_time_full += (time_full - djn);
+            sequence_data.reversed_time_full += (time_full - djn);
             time_full = djn;
         }
         if (time_full > instance_.job(jn).due_date)
-            sequence.total_weighted_tardiness_full
+            sequence_data.total_weighted_tardiness_full
                 += instance_.job(jn).weight
                 * (time_full - instance_.job(jn).due_date);
     }

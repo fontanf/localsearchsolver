@@ -32,20 +32,21 @@ public:
     using ElementPos = sequencing2::ElementPos;
 
     /** Global cost: <Number of jobs, Total weighted tardiness>; */
-    using GlobalCost = std::tuple<ElementPos, Weight>;
+    using GlobalCost = std::tuple<JobPos, Weight>;
 
-    inline ElementPos&             number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline JobPos&                 number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
     inline Weight&       total_weighted_tardiness(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline ElementPos        number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline JobPos            number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
     inline Weight  total_weighted_tardiness(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
 
     /*
      * Sequence.
      */
 
-    struct Sequence
+    struct SequenceData
     {
-        std::vector<ElementId> sequence;
+        JobPos number_of_jobs = 0;
+        JobId j_last = -1;
         Time time = 0;
         Weight total_weighted_tardiness = 0;
     };
@@ -61,6 +62,7 @@ public:
             sequencing_parameters.shift_block_maximum_length = 13;
             sequencing_parameters.swap_block_maximum_length = 3;
             sequencing_parameters.shuffle_neighborhood_order = true;
+
             sequencing_parameters.double_bridge_number_of_perturbations = 0;
             sequencing_parameters.ruin_and_recreate_number_of_perturbations = 10;
         }
@@ -83,11 +85,11 @@ public:
      * Sequence properties.
      */
 
-    inline GlobalCost global_cost(const Sequence& sequence) const
+    inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
         return {
-            -sequence.sequence.size(),
-            sequence.total_weighted_tardiness,
+            -sequence_data.number_of_jobs,
+            sequence_data.total_weighted_tardiness,
         };
     }
 
@@ -105,36 +107,33 @@ public:
 
     inline ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
-    inline GlobalCost bound(const Sequence& sequence) const
+    inline GlobalCost bound(const SequenceData& sequence_data) const
     {
         return {
             -instance_.number_of_jobs(),
-            sequence.total_weighted_tardiness,
+            sequence_data.total_weighted_tardiness,
         };
     }
 
     inline void append(
-            Sequence& sequence,
+            SequenceData& sequence_data,
             ElementId j) const
     {
-        ElementPos ns = sequence.sequence.size();
+        // Update number_of_jobs.
+        sequence_data.number_of_jobs++;
         // Update time.
-        ElementId j_prev = (ns)?
-            sequence.sequence.back():
+        JobId j_prev = (sequence_data.j_last != -1)?
+            sequence_data.j_last:
             instance_.number_of_jobs();
-        sequence.time += instance_.setup_time(j_prev, j);
-        sequence.time += instance_.job(j).processing_time;
-        // Update jobs.
-        sequence.sequence.push_back(j);
+        sequence_data.time += instance_.setup_time(j_prev, j);
+        sequence_data.time += instance_.job(j).processing_time;
         // Update total weighted tardiness.
-        if (sequence.time > instance_.job(j).due_date)
-            sequence.total_weighted_tardiness
+        if (sequence_data.time > instance_.job(j).due_date)
+            sequence_data.total_weighted_tardiness
                 += instance_.job(j).weight
-                * (sequence.time - instance_.job(j).due_date);
-        if (ns > 2
-                && instance_.job(sequence.sequence[ns - 1]).weight > 0
-                && instance_.job(sequence.sequence[ns - 2]).weight == 0)
-            sequence.total_weighted_tardiness += 1000000;
+                * (sequence_data.time - instance_.job(j).due_date);
+        // Update j_prev.
+        sequence_data.j_last = j;
     }
 
 private:

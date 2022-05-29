@@ -18,6 +18,7 @@ using SequenceId = int64_t;
 using SequencePos = int64_t;
 using ElementId = int64_t;
 using ElementPos = int64_t;
+using Mode = int64_t;
 
 enum class Perturbations
 {
@@ -64,8 +65,6 @@ struct Parameters
 
     ElementPos shift_reverse_block_maximum_length = 0;
 
-    bool add_remove = false;
-
     /*
      * Neighborhoods - Inter.
      */
@@ -77,6 +76,12 @@ struct Parameters
     ElementPos inter_swap_block_maximum_length = 0;
 
     ElementPos inter_shift_reverse_block_maximum_length = 0;
+
+    /*
+     * Neighborhoods - Sub-sequence.
+     */
+
+    bool add_remove = false;
 
     /*
      * Perturbations.
@@ -106,7 +111,33 @@ public:
 
     using GlobalCost = typename LocalScheme0::GlobalCost;
 
-    using Sequence = typename LocalScheme0::Sequence;
+    using SequenceData = typename LocalScheme0::SequenceData;
+
+    struct SequenceElement
+    {
+        ElementId j;
+        Mode mode;
+
+        bool operator==(const SequenceElement& rhs) const
+        {
+            return j == rhs.j && mode == rhs.mode;
+        }
+    };
+
+    struct Sequence
+    {
+        std::vector<SequenceElement> elements;
+        SequenceData data;
+    };
+
+    void append(
+            Sequence& sequence,
+            SequenceElement se) const
+    {
+        append(sequence.data, se);
+        sequence.elements.push_back(se);
+    }
+
 
     struct Solution
     {
@@ -114,11 +145,12 @@ public:
         GlobalCost global_cost;
     };
 
-    using CompactSolution = std::vector<std::vector<ElementId>>;
+    using CompactSolution = std::vector<std::vector<SequenceElement>>;
 
     struct CompactSolutionHasher
     {
-        std::hash<ElementId> hasher;
+        std::hash<ElementId> hasher_j;
+        std::hash<Mode> hasher_mode;
 
         inline bool operator()(
                 const std::shared_ptr<CompactSolution>& compact_solution_1,
@@ -133,8 +165,10 @@ public:
             size_t hash = 0;
             for (const auto& sequence: *compact_solution) {
                 size_t hash_tmp = 0;
-                for (ElementId j: sequence)
-                    optimizationtools::hash_combine(hash_tmp, hasher(j));
+                for (const SequenceElement& se: sequence) {
+                    optimizationtools::hash_combine(hash_tmp, hasher_j(se.j));
+                    optimizationtools::hash_combine(hash_tmp, hasher_mode(se.mode));
+                }
                 optimizationtools::hash_combine(hash, hash_tmp);
             }
             return hash;
@@ -147,8 +181,8 @@ public:
     {
         auto solution = empty_solution();
         for (SequenceId i = 0; i < number_of_sequences(); ++i)
-            for (ElementId j: compact_solution[i])
-                local_scheme_0_.append(solution.sequences[i], j);
+            for (const SequenceElement& se: compact_solution[i])
+                append(solution.sequences[i], se);
         compute_global_cost(solution);
         return solution;
     }
@@ -157,7 +191,7 @@ public:
     {
         CompactSolution compact_solution(number_of_sequences());
         for (SequenceId i = 0; i < number_of_sequences(); ++i)
-            compact_solution[i] = solution.sequences[i].sequence;
+            compact_solution[i] = solution.sequences[i].elements;
         return compact_solution;
     }
 
@@ -170,21 +204,15 @@ public:
             Parameters parameters):
         local_scheme_0_(local_scheme_0),
         parameters_(parameters),
-        sequences_1_(number_of_sequences()),
-        sequences_2_(number_of_sequences()),
-        elements_(local_scheme_0_.number_of_elements()),
-        positions_1_(local_scheme_0_.number_of_elements()),
-        positions_2_(local_scheme_0_.number_of_elements()),
-        global_costs_1d_(local_scheme_0_.number_of_elements() + 1, worst<GlobalCost>()),
-        global_costs_2d_1_(local_scheme_0_.number_of_elements()),
-        global_costs_2d_2_(
-                local_scheme_0_.number_of_elements(),
-                std::vector<GlobalCost>(
-                    local_scheme_0_.number_of_elements(),
-                    worst<GlobalCost>())),
-        solution_cur_(empty_solution()),
-        solution_tmp_(empty_solution())
+        elements_(local_scheme_0_.number_of_elements())
     {
+        SequencePos m = number_of_sequences();
+        ElementPos n = local_scheme_0_.number_of_elements();
+
+        sequences_1_ = std::vector<SequenceId>(m);
+        sequences_2_ = std::vector<SequenceId>(m);
+        positions_1_ = std::vector<ElementPos>(n);
+        positions_2_ = std::vector<ElementPos>(n);
         std::iota(sequences_1_.begin(), sequences_1_.end(), 0);
         std::iota(sequences_2_.begin(), sequences_2_.end(), 0);
         std::iota(positions_1_.begin(), positions_1_.end(), 0);
@@ -196,10 +224,24 @@ public:
             for (ElementPos pos_2 = 0; pos_2 < local_scheme_0_.number_of_elements(); ++pos_2)
                 if (pos_1 != pos_2)
                     pairs_2_.push_back({pos_1, pos_2});
-        for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1)
+
+        global_costs_1d_ = std::vector<GlobalCost>(n + 1, worst<GlobalCost>()),
+        global_costs_2d_1_ = std::vector<std::vector<GlobalCost>>(n);
+        for (ElementPos pos_1 = 0; pos_1 < n; ++pos_1)
             global_costs_2d_1_[pos_1].resize(
-                    local_scheme_0_.number_of_elements() - pos_1,
+                    n - pos_1,
                     worst<GlobalCost>());
+        global_costs_2d_2_ = std::vector<std::vector<GlobalCost>>(
+                n,
+                std::vector<GlobalCost>(n, worst<GlobalCost>()));
+        for (ElementId j = 0; j < n; ++j)
+            if (maximum_number_of_modes_ < number_of_modes(j))
+                maximum_number_of_modes_ = number_of_modes(j);
+        modes_ = std::vector<Mode>(maximum_number_of_modes_);
+        std::iota(modes_.begin(), modes_.end(), 0);
+
+        solution_cur_ = empty_solution();
+        solution_tmp_ = empty_solution();
 
         // Initialize statistics structures.
         shift_number_of_explorations_ = std::vector<Counter>(
@@ -241,118 +283,11 @@ public:
 
     virtual ~LocalScheme() { }
 
-    /*
-     * Number of sequences.
-     */
-
-    template<typename, typename T>
-    struct HasNumberOfSequencesMethod
+    inline Sequence empty_sequence(SequenceId i) const
     {
-        static_assert(
-                std::integral_constant<T, false>::value,
-                "Second template parameter needs to be of function type.");
-    };
-
-    template<typename C, typename Ret, typename... Args>
-    struct HasNumberOfSequencesMethod<C, Ret(Args...)>
-    {
-
-    private:
-
-        template<typename T>
-        static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().number_of_sequences(std::declval<Args>()...)), Ret>::type;
-
-        template<typename>
-        static constexpr std::false_type check(...);
-
-        typedef decltype(check<C>(0)) type;
-
-    public:
-
-        static constexpr bool value = type::value;
-
-    };
-
-    SequencePos number_of_sequences(
-            std::false_type) const
-    {
-        return 1;
-    }
-
-    SequencePos number_of_sequences(
-            std::true_type) const
-    {
-        return local_scheme_0_.number_of_sequences();;
-    }
-
-    /**
-     * Return the number of sequences in the problem.
-     *
-     * If LocalScheme0 does not implement a method:
-     * 'SequencePos number_of_sequences()',
-     * then it returns 1.
-     */
-    SequencePos number_of_sequences() const
-    {
-        return number_of_sequences(
-                std::integral_constant<
-                    bool,
-                    HasNumberOfSequencesMethod<LocalScheme0, SequencePos()>::value>());
-    }
-
-    /*
-     * Empty sequence.
-     */
-
-    template<typename, typename T>
-    struct HasEmptySequenceMethod
-    {
-        static_assert(
-                std::integral_constant<T, false>::value,
-                "Second template parameter needs to be of function type.");
-    };
-
-    template<typename C, typename Ret, typename... Args>
-    struct HasEmptySequenceMethod<C, Ret(Args...)>
-    {
-
-    private:
-
-        template<typename T>
-        static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().empty_sequence(std::declval<Args>()...)), Ret>::type;
-
-        template<typename>
-        static constexpr std::false_type check(...);
-
-        typedef decltype(check<C>(0)) type;
-
-    public:
-
-        static constexpr bool value = type::value;
-
-    };
-
-    Sequence empty_sequence(
-            SequenceId,
-            std::false_type) const
-    {
-        return Sequence();
-    }
-
-    Sequence empty_sequence(
-            SequenceId i,
-            std::true_type) const
-    {
-        return local_scheme_0_.empty_sequence(i);;
-    }
-
-    Sequence empty_sequence(SequenceId i) const
-    {
-        return empty_sequence(
-                i,
-                std::integral_constant<
-                    bool,
-                    HasEmptySequenceMethod<LocalScheme0, Sequence(SequenceId)>::value>());
+        Sequence sequence;
+        sequence.data = empty_sequence_data(i);
+        return sequence;
     }
 
     inline Solution empty_solution() const
@@ -411,37 +346,45 @@ public:
             for (ElementId j: elements) {
                 GlobalCost c_best = global_cost(solution);
                 SequenceId i_best = -1;
+                Mode mode_best = -1;
                 ElementPos pos_best = -1;
                 std::shuffle(sequences_1_.begin(), sequences_1_.end(), generator);
                 std::shuffle(positions_2_.begin(), positions_2_.end(), generator);
+                std::shuffle(modes_.begin(), modes_.end(), generator);
                 for (SequenceId i: sequences_1_) {
-                    Sequence& sequence = solution.sequences[i];
-                    compute_cost_add(solution, i, j);
-                    for (ElementPos pos: positions_2_) {
-                        if (pos > (ElementPos)sequence.sequence.size())
+                    SequencePos seq_size = solution.sequences[i].elements.size();
+                    for (Mode mode: modes_) {
+                        if (mode >= number_of_modes(j))
                             continue;
-                        GlobalCost c = global_costs_1d_[pos];
-                        if (c >= c_best)
-                            continue;
-                        if (pos_best != -1 && !dominates(c, c_best))
-                            continue;
-                        i_best = i;
-                        pos_best = pos;
-                        c_best = c;
+                        compute_cost_add(solution, i, j, mode);
+                        for (ElementPos pos: positions_2_) {
+                            if (pos > seq_size)
+                                continue;
+                            GlobalCost c = global_costs_1d_[pos];
+                            if (c >= c_best)
+                                continue;
+                            if (pos_best != -1 && !dominates(c, c_best))
+                                continue;
+                            i_best = i;
+                            mode_best = mode;
+                            pos_best = pos;
+                            c_best = c;
+                        }
                     }
                 }
                 if (i_best != -1) {
                     for (SequenceId i = 0; i < number_of_sequences(); ++i)
                         if (i != i_best)
                             solution_tmp_.sequences[i] = solution.sequences[i];
-                    const Sequence& sequence = solution.sequences[i_best];
+                    const auto& elements = solution.sequences[i_best].elements;
+                    SequencePos seq_size = elements.size();
                     Sequence& sequence_tmp = solution_tmp_.sequences[i_best];
                     sequence_tmp = empty_sequence(i_best);
                     for (ElementPos p = 0; p < pos_best; ++p)
-                        local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
-                    local_scheme_0_.append(sequence_tmp, j);
-                    for (ElementPos p = pos_best; p < (ElementPos)sequence.sequence.size(); ++p)
-                        local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                        append(sequence_tmp, elements[p]);
+                    append(sequence_tmp, {j, mode_best});
+                    for (ElementPos p = pos_best; p < seq_size; ++p)
+                        append(sequence_tmp, elements[p]);
                     compute_global_cost(solution_tmp_);
                     solution = solution_tmp_;
                 }
@@ -456,26 +399,33 @@ public:
                 GlobalCost c_best = global_cost(solution);
                 //std::cout << to_string(c_best) << std::endl;
                 ElementId j_best = -1;
+                Mode mode_best = -1;
                 SequenceId i_best = -1;
                 std::shuffle(sequences_1_.begin(), sequences_1_.end(), generator);
                 std::shuffle(positions_1_.begin(), positions_1_.end(), generator);
+                std::shuffle(modes_.begin(), modes_.end(), generator);
                 for (SequenceId i: sequences_1_) {
                     Sequence& sequence = solution.sequences[i];
                     for (ElementId j: positions_1_) {
                         if (contains[j])
                             continue;
-                        sequence_tmp_1_ = sequence;
-                        local_scheme_0_.append(sequence_tmp_1_, j);
-                        GlobalCost c = global_cost(sequence_tmp_1_);
-                        if (c >= c_best)
-                            continue;
-                        c_best = c;
-                        j_best = j;
-                        i_best = i;
+                        for (Mode mode: modes_) {
+                            if (mode >= number_of_modes(j))
+                                continue;
+                            sequence_tmp_1_ = sequence;
+                            append(sequence_tmp_1_, {j, mode});
+                            GlobalCost c = global_cost(sequence_tmp_1_);
+                            if (c >= c_best)
+                                continue;
+                            c_best = c;
+                            j_best = j;
+                            mode_best = mode;
+                            i_best = i;
+                        }
                     }
                 }
                 if (j_best != -1) {
-                    local_scheme_0_.append(solution.sequences[i_best], j_best);
+                    append(solution.sequences[i_best], {j_best, mode_best});
                     contains[j_best] = 1;
                     continue;
                 }
@@ -493,26 +443,33 @@ public:
                 //std::cout << to_string(c_best) << std::endl;
                 SequenceId i_best = -1;
                 ElementId j_best = -1;
+                Mode mode_best = -1;
                 ElementPos pos_best = -1;
                 std::shuffle(sequences_1_.begin(), sequences_1_.end(), generator);
                 std::shuffle(positions_1_.begin(), positions_1_.end(), generator);
                 std::shuffle(positions_2_.begin(), positions_2_.end(), generator);
+                std::shuffle(modes_.begin(), modes_.end(), generator);
                 for (SequenceId i: sequences_1_) {
-                    Sequence& sequence = solution.sequences[i];
+                    SequencePos seq_size = (ElementPos)solution.sequences[i].elements.size();
                     for (ElementId j: positions_1_) {
                         if (contains[j])
                             continue;
-                        compute_cost_add(solution, i, j);
-                        for (ElementPos pos: positions_2_) {
-                            if (pos > (ElementPos)sequence.sequence.size())
+                        for (Mode mode: modes_) {
+                            if (mode >= number_of_modes(j))
                                 continue;
-                            GlobalCost c = global_costs_1d_[pos];
-                            if (c >= c_best)
-                                continue;
-                            pos_best = pos;
-                            c_best = c;
-                            j_best = j;
-                            i_best = i;
+                            compute_cost_add(solution, i, j, mode);
+                            for (ElementPos pos: positions_2_) {
+                                if (pos > seq_size)
+                                    continue;
+                                GlobalCost c = global_costs_1d_[pos];
+                                if (c >= c_best)
+                                    continue;
+                                pos_best = pos;
+                                c_best = c;
+                                j_best = j;
+                                mode_best = mode;
+                                i_best = i;
+                            }
                         }
                     }
                 }
@@ -520,14 +477,15 @@ public:
                     for (SequenceId i = 0; i < number_of_sequences(); ++i)
                         if (i != i_best)
                             solution_tmp_.sequences[i] = solution.sequences[i];
-                    const Sequence& sequence = solution.sequences[i_best];
+                    const auto& elements = solution.sequences[i_best].elements;
+                    SequencePos seq_size = elements.size();
                     Sequence& sequence_tmp = solution_tmp_.sequences[i_best];
                     sequence_tmp = empty_sequence(i_best);
                     for (ElementPos p = 0; p < pos_best; ++p)
-                        local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
-                    local_scheme_0_.append(sequence_tmp, j_best);
-                    for (ElementPos p = pos_best; p < (ElementPos)sequence.sequence.size(); ++p)
-                        local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                        append(sequence_tmp, elements[p]);
+                    append(sequence_tmp, {j_best, mode_best});
+                    for (ElementPos p = pos_best; p < seq_size; ++p)
+                        append(sequence_tmp, elements[p]);
                     compute_global_cost(solution_tmp_);
                     solution = solution_tmp_;
                     contains[j_best] = 1;
@@ -544,8 +502,10 @@ public:
             std::uniform_int_distribution<SequenceId> di(0, m - 1);
             Solution solution = empty_solution();
             for (ElementId j: elements_) {
+                std::uniform_int_distribution<SequenceId> d_mode(0, number_of_modes(j) - 1);
+                Mode mode = d_mode(generator);
                 SequenceId i = di(generator);
-                local_scheme_0_.append(solution.sequences[i], j);
+                append(solution.sequences[i], {j, mode});
             }
             compute_global_cost(solution);
             return solution;
@@ -626,45 +586,42 @@ public:
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
     {
+        // TODO
+        // Adapt this function to make it work with multiple sequences.
+
         Solution solution = empty_solution();
 
-        const Sequence& sequence_parent_1 = solution_parent_1.sequences[0];
-        const Sequence& sequence_parent_2 = solution_parent_2.sequences[0];
+        const auto& elements_parent_1 = solution_parent_1.sequences[0].elements;
+        const auto& elements_parent_2 = solution_parent_2.sequences[0].elements;
         Sequence& sequence = solution.sequences[0];
 
-        ElementPos n = sequence_parent_1.sequence.size();
+        ElementPos seq_1_size = elements_parent_1.size();
 
         std::vector<ElementPos> edges = optimizationtools::bob_floyd<ElementPos>(
-                2, n + 1, generator);
+                2, seq_1_size + 1, generator);
         std::sort(edges.begin(), edges.end());
 
         ElementPos pos_1 = edges[0];
         ElementPos pos_2 = edges[1];
 
-        std::vector<uint8_t> in_substring(n, false);
+        std::vector<uint8_t> in_substring(seq_1_size, false);
         for (ElementPos pos = pos_1; pos < pos_2; ++pos) {
-            ElementId j = sequence_parent_1.sequence[pos];
+            ElementId j = elements_parent_1[pos].j;
             in_substring[j] = true;
         }
 
-        for (ElementPos pos = 0; pos < n; ++pos) {
-            if ((ElementPos)sequence.sequence.size() == pos_1) {
-                for (ElementPos p = pos_1; p < pos_2; ++p) {
-                    ElementId j = sequence_parent_1.sequence[p];
-                    local_scheme_0_.append(sequence, j);
-                }
-            }
-            ElementId j = sequence_parent_2.sequence[pos];
+        for (ElementPos pos = 0; pos < seq_1_size; ++pos) {
+            if ((ElementPos)sequence.elements.size() == pos_1)
+                for (ElementPos p = pos_1; p < pos_2; ++p)
+                    append(sequence, elements_parent_1[p]);
+            ElementId j = elements_parent_2[pos].j;
             if (in_substring[j])
                 continue;
-            local_scheme_0_.append(sequence, j);
+            append(sequence, elements_parent_2[pos]);
         }
-        if ((ElementPos)sequence.sequence.size() == pos_1) {
-            for (ElementPos p = pos_1; p < pos_2; ++p) {
-                ElementId j = sequence_parent_1.sequence[p];
-                local_scheme_0_.append(sequence, j);
-            }
-        }
+        if ((ElementPos)sequence.elements.size() == pos_1)
+            for (ElementPos p = pos_1; p < pos_2; ++p)
+                append(sequence, elements_parent_1[p]);
 
         return solution;
     }
@@ -683,45 +640,48 @@ public:
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
     {
+        // TODO
+        // Can this function be adapted to work with multiple sequences?
+
         Solution solution = empty_solution();
 
-        const Sequence& sequence_parent_1 = solution_parent_1.sequences[0];
-        const Sequence& sequence_parent_2 = solution_parent_2.sequences[0];
+        const auto& elements_parent_1 = solution_parent_1.sequences[0].elements;
+        const auto& elements_parent_2 = solution_parent_2.sequences[0].elements;
         Sequence& sequence = solution.sequences[0];
 
-        ElementPos n = sequence_parent_1.sequence.size();
-        std::vector<ElementPos> positions(n, -1);
+        ElementPos seq_1_size = elements_parent_1.size();
+        std::vector<ElementPos> positions(seq_1_size, -1);
 
         // Add elements from parent_1 up to a given cut point.
-        std::uniform_int_distribution<ElementPos> d_point(1, n);
+        std::uniform_int_distribution<ElementPos> d_point(1, seq_1_size);
         ElementPos pos_0 = d_point(generator);
         for (ElementPos pos = 0; pos < pos_0; ++pos) {
-            ElementId j = sequence_parent_1.sequence[pos];
+            ElementId j = elements_parent_1[pos].j;
             positions[j] = pos;
-            local_scheme_0_.append(sequence, j);
+            append(sequence, elements_parent_1[pos]);
         }
 
         // Add elements from parent_2 keeping the relative order.
-        for (ElementPos pos = 0; pos < n; ++pos) {
+        for (ElementPos pos = 0; pos < seq_1_size; ++pos) {
             // Add elements which have the same positions in both parents.
             for (;;) {
-                ElementPos p = sequence.sequence.size();
-                if (p == n)
+                ElementPos p = sequence.elements.size();
+                if (p == seq_1_size)
                     break;
-                ElementId j1 = sequence_parent_1.sequence[p];
-                ElementId j2 = sequence_parent_2.sequence[p];
+                ElementId j1 = elements_parent_1[p].j;
+                ElementId j2 = elements_parent_2[p].j;
                 if (j1 == j2) {
                     positions[j1] = p;
-                    local_scheme_0_.append(sequence, j1);
+                    append(sequence, elements_parent_1[p]);
                     continue;
                 }
                 break;
             }
-            ElementId j = sequence_parent_2.sequence[pos];
+            ElementId j = elements_parent_2[pos].j;
             if (positions[j] != -1)
                 continue;
-            positions[j] = sequence.sequence.size();
-            local_scheme_0_.append(sequence, j);
+            positions[j] = sequence.elements.size();
+            append(sequence, elements_parent_2[pos]);
         }
 
         return solution;
@@ -741,58 +701,61 @@ public:
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
     {
+        // TODO
+        // Can this function be adapted to work with multiple sequences?
+
         Solution solution = empty_solution();
 
-        const Sequence& sequence_parent_1 = solution_parent_1.sequences[0];
-        const Sequence& sequence_parent_2 = solution_parent_2.sequences[0];
+        const auto& elements_parent_1 = solution_parent_1.sequences[0].elements;
+        const auto& elements_parent_2 = solution_parent_2.sequences[0].elements;
         Sequence& sequence = solution.sequences[0];
 
-        ElementPos n = sequence_parent_1.sequence.size();
-        std::vector<ElementPos> positions(n, -1);
+        ElementPos seq_1_size = elements_parent_1.size();
+        std::vector<ElementPos> positions(seq_1_size, -1);
 
         // Add elements from parent_1 up to a given cut point.
-        std::uniform_int_distribution<ElementPos> d_point(1, n);
+        std::uniform_int_distribution<ElementPos> d_point(1, seq_1_size);
         ElementPos pos_0 = d_point(generator);
         for (ElementPos pos = 0; pos < pos_0; ++pos) {
-            ElementId j = sequence_parent_1.sequence[pos];
+            ElementId j = elements_parent_1[pos].j;
             positions[j] = pos;
-            local_scheme_0_.append(sequence, j);
+            append(sequence, elements_parent_1[pos]);
         }
 
         // Add elements from parent_2 keeping the relative order.
-        for (ElementPos pos = 0; pos < n; ++pos) {
+        for (ElementPos pos = 0; pos < seq_1_size; ++pos) {
             // Add elements which have the same positions in both parents.
             for (;;) {
-                ElementPos p = sequence.sequence.size();
-                if (p == n)
+                ElementPos p = sequence.elements.size();
+                if (p == seq_1_size)
                     break;
-                ElementId j1 = sequence_parent_1.sequence[p];
-                ElementId j2 = sequence_parent_2.sequence[p];
-                if (p <= n - 1) {
-                    ElementId j1_next = sequence_parent_1.sequence[p + 1];
-                    ElementId j2_next = sequence_parent_2.sequence[p + 1];
+                ElementId j1 = elements_parent_1[p].j;
+                ElementId j2 = elements_parent_2[p].j;
+                if (p <= seq_1_size - 1) {
+                    ElementId j1_next = elements_parent_1[p + 1].j;
+                    ElementId j2_next = elements_parent_2[p + 1].j;
                     if (j1 == j2 && j1_next == j2_next) {
                         positions[j1] = p;
-                        local_scheme_0_.append(sequence, j1);
+                        append(sequence, elements_parent_1[p + 1]);
                         continue;
                     }
                 }
                 if (p >= 1) {
-                    ElementId j1_prev = sequence_parent_1.sequence[p - 1];
-                    ElementId j2_prev = sequence_parent_2.sequence[p - 1];
+                    ElementId j1_prev = elements_parent_1[p - 1].j;
+                    ElementId j2_prev = elements_parent_2[p - 1].j;
                     if (j1 == j2 && j1_prev == j2_prev) {
                         positions[j1] = p;
-                        local_scheme_0_.append(sequence, j1);
+                        append(sequence, elements_parent_1[p - 1]);
                         continue;
                     }
                 }
                 break;
             }
-            ElementId j = sequence_parent_2.sequence[pos];
+            ElementId j = elements_parent_2[pos].j;
             if (positions[j] != -1)
                 continue;
-            positions[j] = sequence.sequence.size();
-            local_scheme_0_.append(sequence, j);
+            positions[j] = sequence.elements.size();
+            append(sequence, elements_parent_2[pos]);
         }
 
         return solution;
@@ -809,12 +772,12 @@ public:
 
     inline GlobalCost global_cost(const Sequence& sequence) const
     {
-        return local_scheme_0_.global_cost(sequence);
+        return local_scheme_0_.global_cost(sequence.data);
     }
 
     inline GlobalCost bound(const Sequence& sequence) const
     {
-        return local_scheme_0_.bound(sequence);
+        return local_scheme_0_.bound(sequence.data);
     }
 
     GlobalCost global_cost_goal(double value) const
@@ -838,21 +801,25 @@ public:
             const Solution& solution_1,
             const Solution& solution_2) const
     {
-        const Sequence& sequence_1 = solution_1.sequences[0];
-        const Sequence& sequence_2 = solution_2.sequences[0];
+        // TODO
+        // Adapt this function to make it work with multiple sequences and
+        // modes.
 
-        ElementPos n = sequence_1.sequence.size();
-        std::vector<ElementId> next_1(n, -1);
-        for (ElementPos pos = 0; pos < n - 1; ++pos) {
-            ElementId j = sequence_1.sequence[pos];
-            ElementId j_next = sequence_1.sequence[pos + 1];
+        const auto& elements_1 = solution_1.sequences[0].elements;
+        const auto& elements_2 = solution_2.sequences[0].elements;
+
+        ElementPos seq_1_size = elements_1.size();
+        std::vector<ElementId> next_1(seq_1_size, -1);
+        for (ElementPos pos = 0; pos < seq_1_size - 1; ++pos) {
+            ElementId j = elements_1[pos].j;
+            ElementId j_next = elements_1[pos + 1].j;
             next_1[j] = j_next;
         }
 
         ElementPos d = 0;
-        for (ElementPos pos = 0; pos < n - 1; ++pos) {
-            ElementId j = sequence_2.sequence[pos];
-            ElementId j_next = sequence_2.sequence[pos + 1];
+        for (ElementPos pos = 0; pos < seq_1_size - 1; ++pos) {
+            ElementId j = elements_2[pos].j;
+            ElementId j_next = elements_2[pos + 1].j;
             if (j_next != next_1[j])
                 d++;
         }
@@ -869,7 +836,9 @@ public:
 
         /** Type of perturbation. */
         Perturbations type;
+        /** ForceAdd: element to add. */
         ElementId force_add_j = -1;
+        /** Global cost of the move. */
         GlobalCost global_cost;
     };
 
@@ -938,8 +907,8 @@ public:
         if (parameters_.force_add) {
             std::vector<uint8_t> contains(local_scheme_0_.number_of_elements(), 0);
             for (SequenceId i = 0; i < number_of_sequences(); ++i)
-                for (ElementId j: solution.sequences[i].sequence)
-                    contains[j] = 1;
+                for (SequenceElement se: solution.sequences[i].elements)
+                    contains[se.j] = 1;
             for (ElementId j = 0; j < local_scheme_0_.number_of_elements(); ++j) {
                 if (contains[j])
                     continue;
@@ -970,23 +939,24 @@ public:
             SequenceId i = distribution(generator);
             auto positions = optimizationtools::bob_floyd<ElementPos>(
                     4,
-                    solution.sequences[i].sequence.size() + 1,
+                    solution.sequences[i].elements.size() + 1,
                     generator);
             std::sort(positions.begin(), positions.end());
 
-            const Sequence& sequence = solution.sequences[i];
+            const auto& elements = solution.sequences[i].elements;
+            SequencePos seq_size = elements.size();
             Sequence& sequence_tmp = solution_tmp_.sequences[i];
             sequence_tmp = empty_sequence(i);
             for (ElementPos pos = 0; pos < positions[0]; ++pos)
-                local_scheme_0_.append(sequence_tmp, sequence.sequence[pos]);
+                append(sequence_tmp, elements[pos]);
             for (ElementPos pos = positions[2]; pos < positions[3]; ++pos)
-                local_scheme_0_.append(sequence_tmp, sequence.sequence[pos]);
+                append(sequence_tmp, elements[pos]);
             for (ElementPos pos = positions[1]; pos < positions[2]; ++pos)
-                local_scheme_0_.append(sequence_tmp, sequence.sequence[pos]);
+                append(sequence_tmp, elements[pos]);
             for (ElementPos pos = positions[0]; pos < positions[1]; ++pos)
-                local_scheme_0_.append(sequence_tmp, sequence.sequence[pos]);
-            for (ElementPos pos = positions[3]; pos < (ElementPos)sequence.sequence.size(); ++pos)
-                local_scheme_0_.append(sequence_tmp, sequence.sequence[pos]);
+                append(sequence_tmp, elements[pos]);
+            for (ElementPos pos = positions[3]; pos < seq_size; ++pos)
+                append(sequence_tmp, elements[pos]);
             compute_global_cost(solution_tmp_);
             solution = solution_tmp_;
             break;
@@ -998,9 +968,9 @@ public:
             elements_.clear();
             for (SequenceId i = 0; i < number_of_sequences(); ++i) {
                 const Sequence& sequence = solution.sequences[i];
-                ElementPos seq_size = (ElementPos)sequence.sequence.size();
+                ElementPos seq_size = (ElementPos)sequence.elements.size();
                 for (ElementPos pos = 0; pos < seq_size; ++pos) {
-                    ElementId j = sequence.sequence[pos];
+                    ElementId j = sequence.elements[pos].j;
                     elements_.add(j);
                     sequences[j] = i;
                     positions[j] = pos;
@@ -1018,60 +988,69 @@ public:
 
             Solution solution_cur_ = empty_solution();
             for (SequenceId i = 0; i < number_of_sequences(); ++i) {
-                const Sequence& sequence = solution.sequences[i];
+                const auto& elements = solution.sequences[i].elements;
+                SequencePos seq_size = elements.size();
                 Sequence& sequence_cur = solution_cur_.sequences[i];
-                for (ElementPos pos = 0; pos < (ElementPos)sequence.sequence.size(); ++pos) {
-                    ElementId j = sequence.sequence[pos];
+                for (ElementPos pos = 0; pos < seq_size; ++pos) {
+                    ElementId j = elements[pos].j;
                     if (!elements_.contains(j))
-                        local_scheme_0_.append(sequence_cur, j);
+                        append(sequence_cur, elements[pos]);
                 }
             }
             // Add back removed elements.
             for (ElementId j: elements_) {
                 std::shuffle(sequences_1_.begin(), sequences_1_.end(), generator);
                 std::shuffle(positions_2_.begin(), positions_2_.end(), generator);
+                std::shuffle(modes_.begin(), modes_.end(), generator);
                 GlobalCost c_best = global_cost(solution_cur_);
                 SequenceId i_best = -1;
+                Mode mode_best = -1;
                 ElementPos pos_best = -1;
                 for (SequenceId i: sequences_1_) {
-                    ElementPos seq_size = (ElementPos)solution_cur_.sequences[i].sequence.size();
-                    compute_cost_add(solution_cur_, i, j);
-                    for (ElementPos pos_new: positions_2_) {
-                        if (pos_new > seq_size)
+                    ElementPos seq_size = (ElementPos)solution_cur_.sequences[i].elements.size();
+                    for (Mode mode: modes_) {
+                        if (mode >= number_of_modes(j))
                             continue;
-                        // Avoid inserting j at the same place as in the
-                        // original solution.
-                        if (i == sequences[j]) {
-                            if (pos_new == 0 && positions[j] == 0)
+                        compute_cost_add(solution_cur_, i, j, mode);
+                        for (ElementPos pos_new: positions_2_) {
+                            if (pos_new > seq_size)
                                 continue;
-                            if (pos_new != 0
-                                    && positions[j] != 0
-                                    && solution_cur_.sequences[i].sequence[pos_new - 1]
-                                    == solution.sequences[i].sequence[positions[j] - 1])
+                            // Avoid inserting j at the same place as in the
+                            // original solution.
+                            if (i == sequences[j]) {
+                                if (pos_new == 0 && positions[j] == 0)
+                                    continue;
+                                if (pos_new != 0
+                                        && positions[j] != 0
+                                        && solution_cur_.sequences[i].elements[pos_new - 1].j
+                                        == solution.sequences[i].elements[positions[j] - 1].j)
+                                    continue;
+                            }
+                            GlobalCost c = global_costs_1d_[pos_new];
+                            if (c >= c_best)
                                 continue;
+                            if (pos_best != -1 && !dominates(c, c_best))
+                                continue;
+                            i_best = i;
+                            mode_best = mode;
+                            pos_best = pos_new;
+                            c_best = c;
                         }
-                        GlobalCost c = global_costs_1d_[pos_new];
-                        if (c >= c_best)
-                            continue;
-                        if (pos_best != -1 && !dominates(c, c_best))
-                            continue;
-                        i_best = i;
-                        pos_best = pos_new;
-                        c_best = c;
                     }
                 }
                 if (i_best != -1) {
                     for (SequenceId i = 0; i < number_of_sequences(); ++i)
                         if (i != i_best)
                             solution_tmp_.sequences[i] = solution_cur_.sequences[i];
-                    const Sequence& sequence_cur = solution_cur_.sequences[i_best];
+                    const auto& elements = solution_cur_.sequences[i_best].elements;
+                    SequencePos seq_size = elements.size();
                     Sequence& sequence_tmp = solution_tmp_.sequences[i_best];
                     sequence_tmp = empty_sequence(i_best);
                     for (ElementPos p = 0; p < pos_best; ++p)
-                        local_scheme_0_.append(sequence_tmp, sequence_cur.sequence[p]);
-                    local_scheme_0_.append(sequence_tmp, j);
-                    for (ElementPos p = pos_best; p < (ElementPos)sequence_cur.sequence.size(); ++p)
-                        local_scheme_0_.append(sequence_tmp, sequence_cur.sequence[p]);
+                        append(sequence_tmp, elements[p]);
+                    append(sequence_tmp, {j, mode_best});
+                    for (ElementPos p = pos_best; p < seq_size; ++p)
+                        append(sequence_tmp, elements[p]);
                     compute_global_cost(solution_tmp_);
                     solution_cur_ = solution_tmp_;
                 }
@@ -1085,34 +1064,42 @@ public:
             std::mt19937_64 generator(0);
             std::shuffle(sequences_1_.begin(), sequences_1_.end(), generator);
             std::shuffle(positions_2_.begin(), positions_2_.end(), generator);
+            std::shuffle(modes_.begin(), modes_.end(), generator);
             SequenceId i_best = -1;
+            Mode mode_best = -1;
             ElementPos pos_best = -1;
             for (SequenceId i: sequences_1_) {
-                ElementPos seq_size = (ElementPos)solution.sequences[i].sequence.size();
-                compute_cost_add(solution, i, j);
-                for (ElementPos pos: positions_2_) {
-                    if (pos > seq_size)
+                ElementPos seq_size = (ElementPos)solution.sequences[i].elements.size();
+                for (Mode mode: modes_) {
+                    if (mode >= number_of_modes(j))
                         continue;
-                    GlobalCost c = global_costs_1d_[pos];
-                    if (pos_best != -1 && !dominates(c, c_best))
-                        continue;
-                    i_best = i;
-                    pos_best = pos;
-                    c_best = c;
+                    compute_cost_add(solution, i, j, mode);
+                    for (ElementPos pos: positions_2_) {
+                        if (pos > seq_size)
+                            continue;
+                        GlobalCost c = global_costs_1d_[pos];
+                        if (pos_best != -1 && !dominates(c, c_best))
+                            continue;
+                        i_best = i;
+                        mode_best = mode;
+                        pos_best = pos;
+                        c_best = c;
+                    }
                 }
             }
             if (i_best != -1) {
                 for (SequenceId i = 0; i < number_of_sequences(); ++i)
                     if (i != i_best)
                         solution_tmp_.sequences[i] = solution.sequences[i];
-                const Sequence& sequence = solution.sequences[i_best];
+                const auto& elements = solution.sequences[i_best].elements;
+                SequencePos seq_size = elements.size();
                 Sequence& sequence_tmp = solution_tmp_.sequences[i_best];
                 sequence_tmp = empty_sequence(i_best);
                 for (ElementPos p = 0; p < pos_best; ++p)
-                    local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
-                local_scheme_0_.append(sequence_tmp, j);
-                for (ElementPos p = pos_best; p < (ElementPos)sequence.sequence.size(); ++p)
-                    local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                    append(sequence_tmp, elements[p]);
+                append(sequence_tmp, {j, mode_best});
+                for (ElementPos p = pos_best; p < seq_size; ++p)
+                    append(sequence_tmp, elements[p]);
                 compute_global_cost(solution_tmp_);
                 solution = solution_tmp_;
             }
@@ -1136,7 +1123,8 @@ public:
         //print(std::cout, solution);
         //std::cout << to_string(global_cost(solution)) << std::endl;
 
-        SequenceId m = number_of_sequences();
+        SequencePos m = number_of_sequences();
+        //ElementPos n = local_scheme_0_.number_of_elements();
 
         // Get neighborhoods.
         std::vector<std::tuple<Neighborhoods, ElementPos, ElementPos>> neighborhoods;
@@ -1220,7 +1208,7 @@ public:
                     ElementPos pos_new_best = -1;
                     GlobalCost c_best = global_cost(solution);
                     for (SequenceId i: sequences_1_) {
-                        ElementPos seq_size = (ElementPos)solution.sequences[i].sequence.size();
+                        ElementPos seq_size = (ElementPos)solution.sequences[i].elements.size();
                         if (seq_size <= block_size)
                             break;
                         for (ElementPos pos: positions_1_) {
@@ -1266,27 +1254,28 @@ public:
                         for (SequenceId i = 0; i < m; ++i)
                             if (i != i_best)
                                 solution_tmp_.sequences[i] = solution.sequences[i];
-                        const Sequence& sequence = solution.sequences[i_best];
+                        const auto& elements = solution.sequences[i_best].elements;
+                        SequencePos seq_size = elements.size();
                         Sequence& sequence_tmp = solution_tmp_.sequences[i_best];
                         sequence_tmp = empty_sequence(i_best);
                         if (pos_best > pos_new_best) {
                             for (ElementPos p = 0; p < pos_new_best; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
                             for (ElementPos p = pos_best; p < pos_best + block_size; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
                             for (ElementPos p = pos_new_best; p < pos_best; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
-                            for (ElementPos p = pos_best + block_size; p < (ElementPos)sequence.sequence.size(); ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
+                            for (ElementPos p = pos_best + block_size; p < seq_size; ++p)
+                                append(sequence_tmp, elements[p]);
                         } else {
                             for (ElementPos p = 0; p < pos_best; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
                             for (ElementPos p = pos_best + block_size; p < pos_new_best + block_size; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
                             for (ElementPos p = pos_best; p < pos_best + block_size; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
-                            for (ElementPos p = pos_new_best + block_size; p < (ElementPos)sequence.sequence.size(); ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
+                            for (ElementPos p = pos_new_best + block_size; p < seq_size; ++p)
+                                append(sequence_tmp, elements[p]);
                         }
                         compute_global_cost(solution_tmp_);
                         solution = solution_tmp_;
@@ -1316,7 +1305,7 @@ public:
                     ElementPos pos_2_best = -1;
                     GlobalCost c_best = global_cost(solution);
                     for (SequenceId i: sequences_1_) {
-                        ElementPos seq_size = (ElementPos)solution.sequences[i].sequence.size();
+                        ElementPos seq_size = (ElementPos)solution.sequences[i].elements.size();
                         if (seq_size <= block_size + block_size)
                             break;
                         compute_cost_swap(solution, i, block_size);
@@ -1354,20 +1343,21 @@ public:
                         for (SequenceId i = 0; i < m; ++i)
                             if (i != i_best)
                                 solution_tmp_.sequences[i] = solution.sequences[i];
-                        const Sequence& sequence = solution.sequences[i_best];
+                        const auto& elements = solution.sequences[i_best].elements;
+                        SequencePos seq_size = elements.size();
                         Sequence& sequence_tmp = solution_tmp_.sequences[i_best];
                         sequence_tmp = empty_sequence(i_best);
-                        for (ElementPos pos = 0; pos < (ElementPos)sequence.sequence.size(); ++pos) {
-                            ElementId j = sequence.sequence[pos];
-                            if (pos_1_best <= pos && pos < pos_1_best + block_size) {
-                                ElementPos diff = pos - pos_1_best;
-                                j = sequence.sequence[pos_2_best + diff];
+                        for (ElementPos p = 0; p < seq_size; ++p) {
+                            SequenceElement se = elements[p];
+                            if (pos_1_best <= p && p < pos_1_best + block_size) {
+                                ElementPos diff = p - pos_1_best;
+                                se = elements[pos_2_best + diff];
                             }
-                            if (pos_2_best <= pos && pos < pos_2_best + block_size) {
-                                ElementPos diff = pos - pos_2_best;
-                                j = sequence.sequence[pos_1_best + diff];
+                            if (pos_2_best <= p && p < pos_2_best + block_size) {
+                                ElementPos diff = p - pos_2_best;
+                                se = elements[pos_1_best + diff];
                             }
-                            local_scheme_0_.append(sequence_tmp, j);
+                            append(sequence_tmp, se);
                         }
                         compute_global_cost(solution_tmp_);
                         solution = solution_tmp_;
@@ -1398,7 +1388,7 @@ public:
                     ElementPos pos_2_best = -1;
                     GlobalCost c_best = global_cost(solution);
                     for (SequenceId i: sequences_1_) {
-                        ElementPos seq_size = (ElementPos)solution.sequences[i].sequence.size();
+                        ElementPos seq_size = (ElementPos)solution.sequences[i].elements.size();
                         if (seq_size <= block_size_1 + block_size_2)
                             break;
                         compute_cost_swap(solution, i, block_size_1, block_size_2);
@@ -1439,31 +1429,32 @@ public:
                         for (SequenceId i = 0; i < m; ++i)
                             if (i != i_best)
                                 solution_tmp_.sequences[i] = solution.sequences[i];
-                        const Sequence& sequence = solution.sequences[i_best];
+                        const auto& elements = solution.sequences[i_best].elements;
+                        SequencePos seq_size = elements.size();
                         Sequence& sequence_tmp = solution_tmp_.sequences[i_best];
                         sequence_tmp = empty_sequence(i_best);
                         if (pos_1_best < pos_2_best) {
                             for (ElementPos p = 0; p < pos_1_best; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
                             for (ElementPos p = pos_2_best; p < pos_2_best + block_size_2; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
                             for (ElementPos p = pos_1_best + block_size_1; p < pos_2_best; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
                             for (ElementPos p = pos_1_best; p < pos_1_best + block_size_1; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
-                            for (ElementPos p = pos_2_best + block_size_2; p < (ElementPos)sequence.sequence.size(); ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
+                            for (ElementPos p = pos_2_best + block_size_2; p < seq_size; ++p)
+                                append(sequence_tmp, elements[p]);
                         } else {
                             for (ElementPos p = 0; p < pos_2_best; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
                             for (ElementPos p = pos_1_best; p < pos_1_best + block_size_1; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
                             for (ElementPos p = pos_2_best + block_size_2; p < pos_1_best; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
                             for (ElementPos p = pos_2_best; p < pos_2_best + block_size_2; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
-                            for (ElementPos p = pos_1_best + block_size_1; p < (ElementPos)sequence.sequence.size(); ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
+                            for (ElementPos p = pos_1_best + block_size_1; p < seq_size; ++p)
+                                append(sequence_tmp, elements[p]);
                         }
                         compute_global_cost(solution_tmp_);
                         solution = solution_tmp_;
@@ -1528,21 +1519,16 @@ public:
                         for (SequenceId i = 0; i < m; ++i)
                             if (i != i_best)
                                 solution_tmp_.sequences[i] = solution.sequences[i];
-                        const Sequence& sequence = solution.sequences[i_best];
+                        const auto& elements = solution.sequences[i_best].elements;
+                        SequencePos seq_size = elements.size();
                         Sequence& sequence_tmp = solution_tmp_.sequences[i_best];
                         sequence_tmp = empty_sequence(i_best);
-                        for (ElementPos pos = 0; pos < pos_1_best; ++pos) {
-                            ElementId j = sequence.sequence[pos];
-                            local_scheme_0_.append(sequence_tmp, j);
-                        }
-                        for (ElementPos pos = pos_2_best; pos >= pos_1_best; --pos) {
-                            ElementId j = sequence.sequence[pos];
-                            local_scheme_0_.append(sequence_tmp, j);
-                        }
-                        for (ElementPos pos = pos_2_best + 1; pos < (ElementPos)sequence.sequence.size(); ++pos) {
-                            ElementId j = sequence.sequence[pos];
-                            local_scheme_0_.append(sequence_tmp, j);
-                        }
+                        for (ElementPos p = 0; p < pos_1_best; ++p)
+                            append(sequence_tmp, elements[p]);
+                        for (ElementPos p = pos_2_best; p >= pos_1_best; --p)
+                            append(sequence_tmp, elements[p]);
+                        for (ElementPos p = pos_2_best + 1; p < seq_size; ++p)
+                            append(sequence_tmp, elements[p]);
                         compute_global_cost(solution_tmp_);
                         solution = solution_tmp_;
                         // Check new current solution cost.
@@ -1571,7 +1557,7 @@ public:
                     ElementPos pos_new_best = -1;
                     GlobalCost c_best = global_cost(solution);
                     for (SequenceId i: sequences_1_) {
-                        ElementPos seq_size = (ElementPos)solution.sequences[i].sequence.size();
+                        ElementPos seq_size = (ElementPos)solution.sequences[i].elements.size();
                         if (seq_size <= block_size)
                             break;
                         for (ElementPos pos: positions_1_) {
@@ -1616,27 +1602,28 @@ public:
                         for (SequenceId i = 0; i < m; ++i)
                             if (i != i_best)
                                 solution_tmp_.sequences[i] = solution.sequences[i];
-                        const Sequence& sequence = solution.sequences[i_best];
+                        const auto& elements = solution.sequences[i_best].elements;
+                        SequencePos seq_size = elements.size();
                         Sequence& sequence_tmp = solution_tmp_.sequences[i_best];
                         sequence_tmp = empty_sequence(i_best);
                         if (pos_best > pos_new_best) {
                             for (ElementPos p = 0; p < pos_new_best; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
                             for (ElementPos p = pos_best + block_size - 1; p >= pos_best; --p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
                             for (ElementPos p = pos_new_best; p < pos_best; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
-                            for (ElementPos p = pos_best + block_size; p < (ElementPos)sequence.sequence.size(); ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
+                            for (ElementPos p = pos_best + block_size; p < seq_size; ++p)
+                                append(sequence_tmp, elements[p]);
                         } else {
                             for (ElementPos p = 0; p < pos_best; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
                             for (ElementPos p = pos_best + block_size; p < pos_new_best + block_size; ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
                             for (ElementPos p = pos_best + block_size - 1; p >= pos_best; --p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
-                            for (ElementPos p = pos_new_best + block_size; p < (ElementPos)sequence.sequence.size(); ++p)
-                                local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                                append(sequence_tmp, elements[p]);
+                            for (ElementPos p = pos_new_best + block_size; p < seq_size; ++p)
+                                append(sequence_tmp, elements[p]);
                         }
                         compute_global_cost(solution_tmp_);
                         solution = solution_tmp_;
@@ -1660,33 +1647,40 @@ public:
                 } case Neighborhoods::Add: {
                     std::shuffle(sequences_1_.begin(), sequences_1_.end(), generator);
                     std::shuffle(positions_2_.begin(), positions_2_.end(), generator);
+                    std::shuffle(modes_.begin(), modes_.end(), generator);
                     SequenceId i_best = -1;
                     ElementId j_best = -1;
+                    Mode mode_best = -1;
                     ElementPos pos_best = -1;
                     GlobalCost c_best = global_cost(solution);
                     elements_.clear();
                     for (SequenceId i = 0; i < m; ++i)
-                        for (ElementId j: solution.sequences[i].sequence)
-                            elements_.add(j);
+                        for (SequenceElement se: solution.sequences[i].elements)
+                            elements_.add(se.j);
                     elements_.shuffle_out(generator);
                     for (SequenceId i: sequences_1_) {
-                        ElementPos seq_size = (ElementPos)solution.sequences[i].sequence.size();
+                        ElementPos seq_size = (ElementPos)solution.sequences[i].elements.size();
                         for (auto it = elements_.out_begin();
                                 it != elements_.out_end(); ++it) {
                             ElementId j = *it;
-                            compute_cost_add(solution, i, j);
-                            for (ElementPos pos: positions_2_) {
-                                if (pos > seq_size)
+                            for (Mode mode: modes_) {
+                                if (mode >= number_of_modes(j))
                                     continue;
-                                GlobalCost c = global_costs_1d_[pos];
-                                if (c >= c_best)
-                                    continue;
-                                if (pos_best != -1 && !dominates(c, c_best))
-                                    continue;
-                                i_best = i;
-                                j_best = j;
-                                pos_best = pos;
-                                c_best = c;
+                                compute_cost_add(solution, i, j, mode);
+                                for (ElementPos pos: positions_2_) {
+                                    if (pos > seq_size)
+                                        continue;
+                                    GlobalCost c = global_costs_1d_[pos];
+                                    if (c >= c_best)
+                                        continue;
+                                    if (pos_best != -1 && !dominates(c, c_best))
+                                        continue;
+                                    i_best = i;
+                                    j_best = j;
+                                    mode_best = mode;
+                                    pos_best = pos;
+                                    c_best = c;
+                                }
                             }
                         }
                     }
@@ -1711,14 +1705,15 @@ public:
                         for (SequenceId i = 0; i < m; ++i)
                             if (i != i_best)
                                 solution_tmp_.sequences[i] = solution.sequences[i];
-                        const Sequence& sequence = solution.sequences[i_best];
+                        const auto& elements = solution.sequences[i_best].elements;
+                        SequencePos seq_size = elements.size();
                         Sequence& sequence_tmp = solution_tmp_.sequences[i_best];
                         sequence_tmp = empty_sequence(i_best);
                         for (ElementPos p = 0; p < pos_best; ++p)
-                            local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
-                        local_scheme_0_.append(sequence_tmp, j_best);
-                        for (ElementPos p = pos_best; p < (ElementPos)sequence.sequence.size(); ++p)
-                            local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                            append(sequence_tmp, elements[p]);
+                        append(sequence_tmp, {j_best, mode_best});
+                        for (ElementPos p = pos_best; p < seq_size; ++p)
+                            append(sequence_tmp, elements[p]);
                         compute_global_cost(solution_tmp_);
                         solution = solution_tmp_;
                         // Check new current solution cost.
@@ -1745,13 +1740,13 @@ public:
                     GlobalCost c_best = global_cost(solution);
                     for (SequenceId i: sequences_1_) {
                         compute_cost_remove(solution, i);
-                        const Sequence& sequence = solution.sequences[i];
-                        ElementPos seq_size = (ElementPos)sequence.sequence.size();
+                        const auto& elements = solution.sequences[i].elements;
+                        ElementPos seq_size = elements.size();
                         for (ElementPos pos: positions_1_) {
                             if (pos >= seq_size)
                                 continue;
                             if (perturbation.type == Perturbations::ForceAdd
-                                    && perturbation.force_add_j == sequence.sequence[pos])
+                                    && perturbation.force_add_j == elements[pos].j)
                                 continue;
                             GlobalCost c = global_costs_1d_[pos];
                             if (c >= c_best)
@@ -1783,13 +1778,14 @@ public:
                         for (SequenceId i = 0; i < m; ++i)
                             if (i != i_best)
                                 solution_tmp_.sequences[i] = solution.sequences[i];
-                        const Sequence& sequence = solution.sequences[i_best];
+                        const auto& elements = solution.sequences[i_best].elements;
+                        SequencePos seq_size = elements.size();
                         Sequence& sequence_tmp = solution_tmp_.sequences[i_best];
                         sequence_tmp = empty_sequence(i_best);
-                        for (ElementPos p = 0; p < (ElementPos)sequence.sequence.size(); ++p) {
+                        for (ElementPos p = 0; p < seq_size; ++p) {
                             if (p == pos_best)
                                 continue;
-                            local_scheme_0_.append(sequence_tmp, sequence.sequence[p]);
+                            append(sequence_tmp, elements[p]);
                         }
                         compute_global_cost(solution_tmp_);
                         solution = solution_tmp_;
@@ -1861,22 +1857,24 @@ public:
                         for (SequenceId i = 0; i < m; ++i)
                             if (i != i1_best && i != i2_best)
                                 solution_tmp_.sequences[i] = solution.sequences[i];
-                        const Sequence& sequence_1 = solution.sequences[i1_best];
-                        const Sequence& sequence_2 = solution.sequences[i2_best];
+                        const auto& elements_1 = solution.sequences[i1_best].elements;
+                        const auto& elements_2 = solution.sequences[i2_best].elements;
+                        SequencePos seq_1_size = elements_1.size();
+                        SequencePos seq_2_size = elements_2.size();
                         // Sequence 1.
                         Sequence& sequence_tmp_1 = solution_tmp_.sequences[i1_best];
                         sequence_tmp_1 = empty_sequence(i1_best);
                         for (ElementPos p = 0; p < pos_1_best; ++p)
-                            local_scheme_0_.append(sequence_tmp_1, sequence_1.sequence[p]);
-                        for (ElementPos p = pos_2_best; p < (ElementPos)sequence_2.sequence.size(); ++p)
-                            local_scheme_0_.append(sequence_tmp_1, sequence_2.sequence[p]);
+                            append(sequence_tmp_1, elements_1[p]);
+                        for (ElementPos p = pos_2_best; p < seq_2_size; ++p)
+                            append(sequence_tmp_1, elements_2[p]);
                         // Sequence 2.
                         Sequence& sequence_tmp_2 = solution_tmp_.sequences[i2_best];
                         sequence_tmp_2 = empty_sequence(i2_best);
                         for (ElementPos p = 0; p < pos_2_best; ++p)
-                            local_scheme_0_.append(sequence_tmp_2, sequence_2.sequence[p]);
-                        for (ElementPos p = pos_1_best; p < (ElementPos)sequence_1.sequence.size(); ++p)
-                            local_scheme_0_.append(sequence_tmp_2, sequence_1.sequence[p]);
+                            append(sequence_tmp_2, elements_2[p]);
+                        for (ElementPos p = pos_1_best; p < seq_1_size; ++p)
+                            append(sequence_tmp_2, elements_1[p]);
                         compute_global_cost(solution_tmp_);
                         solution = solution_tmp_;
                         // Check new current solution cost.
@@ -1907,7 +1905,7 @@ public:
                     ElementPos pos_2_best = -1;
                     GlobalCost c_best = global_cost(solution);
                     for (SequenceId i1: sequences_1_) {
-                        ElementPos seq_1_size = (ElementPos)solution.sequences[i1].sequence.size();
+                        ElementPos seq_1_size = (ElementPos)solution.sequences[i1].elements.size();
                         if (seq_1_size < block_size)
                             break;
                         for (SequenceId i2: sequences_2_) {
@@ -1961,43 +1959,44 @@ public:
                         for (SequenceId i = 0; i < m; ++i)
                             if (i != i1_best && i != i2_best)
                                 solution_tmp_.sequences[i] = solution.sequences[i];
-                        const Sequence& sequence_1 = solution.sequences[i1_best];
-                        const Sequence& sequence_2 = solution.sequences[i2_best];
+                        const auto& elements_1 = solution.sequences[i1_best].elements;
+                        const auto& elements_2 = solution.sequences[i2_best].elements;
+                        SequencePos seq_1_size = elements_1.size();
+                        SequencePos seq_2_size = elements_2.size();
                         // Sequence 1.
                         Sequence& sequence_tmp_1 = solution_tmp_.sequences[i1_best];
                         sequence_tmp_1 = empty_sequence(i1_best);
                         for (ElementPos p = 0; p < pos_1_best; ++p)
-                            local_scheme_0_.append(sequence_tmp_1, sequence_1.sequence[p]);
-                        for (ElementPos p = pos_1_best + block_size; p < (ElementPos)sequence_1.sequence.size(); ++p)
-                            local_scheme_0_.append(sequence_tmp_1, sequence_1.sequence[p]);
+                            append(sequence_tmp_1, elements_1[p]);
+                        for (ElementPos p = pos_1_best + block_size; p < seq_1_size; ++p)
+                            append(sequence_tmp_1, elements_1[p]);
                         // Sequence 2.
                         Sequence& sequence_tmp_2 = solution_tmp_.sequences[i2_best];
                         sequence_tmp_2 = empty_sequence(i2_best);
                         for (ElementPos p = 0; p < pos_2_best; ++p)
-                            local_scheme_0_.append(sequence_tmp_2, sequence_2.sequence[p]);
+                            append(sequence_tmp_2, elements_2[p]);
                         for (ElementPos p = pos_1_best; p < pos_1_best + block_size; ++p)
-                            local_scheme_0_.append(sequence_tmp_2, sequence_1.sequence[p]);
-                        for (ElementPos p = pos_2_best; p < (ElementPos)sequence_2.sequence.size(); ++p)
-                            local_scheme_0_.append(sequence_tmp_2, sequence_2.sequence[p]);
+                            append(sequence_tmp_2, elements_1[p]);
+                        for (ElementPos p = pos_2_best; p < seq_2_size; ++p)
+                            append(sequence_tmp_2, elements_2[p]);
                         compute_global_cost(solution_tmp_);
                         // Check new current solution size.
-                        if (sequence_tmp_1.sequence.size()
-                               + sequence_tmp_2.sequence.size()
-                               != sequence_1.sequence.size()
-                               + sequence_2.sequence.size()) {
+                        if (seq_1_size + seq_2_size
+                               != (ElementPos)elements_1.size()
+                               + (ElementPos)elements_2.size()) {
                             throw std::logic_error(
                                     "Inter-" + std::to_string(block_size)
                                     + "-shift."
                                     + " Sizes do not match:\n"
                                     + "* Old sequences: "
-                                    + std::to_string(sequence_1.sequence.size())
+                                    + std::to_string(seq_1_size)
                                     + " "
-                                    + std::to_string(sequence_2.sequence.size())
+                                    + std::to_string(seq_2_size)
                                     + "\n"
                                     + "* New sequences: "
-                                    + std::to_string(sequence_tmp_1.sequence.size())
+                                    + std::to_string(elements_1.size())
                                     + " "
-                                    + std::to_string(sequence_tmp_2.sequence.size())
+                                    + std::to_string(elements_2.size())
                                     + "\n");
                         }
                         solution = solution_tmp_;
@@ -2031,11 +2030,11 @@ public:
                     ElementPos pos_2_best = -1;
                     GlobalCost c_best = global_cost(solution);
                     for (SequenceId i1: sequences_1_) {
-                        ElementPos seq_1_size = (ElementPos)solution.sequences[i1].sequence.size();
+                        ElementPos seq_1_size = (ElementPos)solution.sequences[i1].elements.size();
                         if (seq_1_size < block_size_1)
                             break;
                         for (SequenceId i2: sequences_2_) {
-                            ElementPos seq_2_size = (ElementPos)solution.sequences[i2].sequence.size();
+                            ElementPos seq_2_size = (ElementPos)solution.sequences[i2].elements.size();
                             if (seq_2_size < block_size_2)
                                 break;
                             if (i2 == i1)
@@ -2084,46 +2083,47 @@ public:
                         for (SequenceId i = 0; i < m; ++i)
                             if (i != i1_best && i != i2_best)
                                 solution_tmp_.sequences[i] = solution.sequences[i];
-                        const Sequence& sequence_1 = solution.sequences[i1_best];
-                        const Sequence& sequence_2 = solution.sequences[i2_best];
+                        const auto& elements_1 = solution.sequences[i1_best].elements;
+                        const auto& elements_2 = solution.sequences[i2_best].elements;
+                        SequencePos seq_1_size = elements_1.size();
+                        SequencePos seq_2_size = elements_2.size();
                         // Sequence 1.
                         Sequence& sequence_tmp_1 = solution_tmp_.sequences[i1_best];
                         sequence_tmp_1 = empty_sequence(i1_best);
                         for (ElementPos p = 0; p < pos_1_best; ++p)
-                            local_scheme_0_.append(sequence_tmp_1, sequence_1.sequence[p]);
+                            append(sequence_tmp_1, elements_1[p]);
                         for (ElementPos p = pos_2_best; p < pos_2_best + block_size_2; ++p)
-                            local_scheme_0_.append(sequence_tmp_1, sequence_2.sequence[p]);
-                        for (ElementPos p = pos_1_best + block_size_1; p < (ElementPos)sequence_1.sequence.size(); ++p)
-                            local_scheme_0_.append(sequence_tmp_1, sequence_1.sequence[p]);
+                            append(sequence_tmp_1, elements_2[p]);
+                        for (ElementPos p = pos_1_best + block_size_1; p < seq_1_size; ++p)
+                            append(sequence_tmp_1, elements_1[p]);
                         // Sequence 2.
                         Sequence& sequence_tmp_2 = solution_tmp_.sequences[i2_best];
                         sequence_tmp_2 = empty_sequence(i2_best);
                         for (ElementPos p = 0; p < pos_2_best; ++p)
-                            local_scheme_0_.append(sequence_tmp_2, sequence_2.sequence[p]);
+                            append(sequence_tmp_2, elements_2[p]);
                         for (ElementPos p = pos_1_best; p < pos_1_best + block_size_1; ++p)
-                            local_scheme_0_.append(sequence_tmp_2, sequence_1.sequence[p]);
-                        for (ElementPos p = pos_2_best + block_size_2; p < (ElementPos)sequence_2.sequence.size(); ++p)
-                            local_scheme_0_.append(sequence_tmp_2, sequence_2.sequence[p]);
+                            append(sequence_tmp_2, elements_1[p]);
+                        for (ElementPos p = pos_2_best + block_size_2; p < seq_2_size; ++p)
+                            append(sequence_tmp_2, elements_2[p]);
                         compute_global_cost(solution_tmp_);
                         // Check new current solution size.
-                        if (sequence_tmp_1.sequence.size()
-                               + sequence_tmp_2.sequence.size()
-                               != sequence_1.sequence.size()
-                               + sequence_2.sequence.size()) {
+                        if (seq_1_size + seq_2_size
+                               != (ElementPos)elements_1.size()
+                               + (ElementPos)elements_2.size()) {
                             throw std::logic_error(
                                     "Inter-(" + std::to_string(block_size_1)
                                     + "," + std::to_string(block_size_2)
                                     + ")-swap."
                                     + " Sizes do not match:\n"
                                     + "* Old sequences: "
-                                    + std::to_string(sequence_1.sequence.size())
+                                    + std::to_string(seq_1_size)
                                     + " "
-                                    + std::to_string(sequence_2.sequence.size())
+                                    + std::to_string(seq_2_size)
                                     + "\n"
                                     + "* New sequences: "
-                                    + std::to_string(sequence_tmp_1.sequence.size())
+                                    + std::to_string(elements_1.size())
                                     + " "
-                                    + std::to_string(sequence_tmp_2.sequence.size())
+                                    + std::to_string(elements_2.size())
                                     + "\n");
                         }
                         solution = solution_tmp_;
@@ -2158,7 +2158,7 @@ public:
                     ElementPos pos_2_best = -1;
                     GlobalCost c_best = global_cost(solution);
                     for (SequenceId i1: sequences_1_) {
-                        ElementPos seq_1_size = (ElementPos)solution.sequences[i1].sequence.size();
+                        ElementPos seq_1_size = (ElementPos)solution.sequences[i1].elements.size();
                         if (seq_1_size < block_size)
                             break;
                         for (SequenceId i2: sequences_2_) {
@@ -2206,24 +2206,26 @@ public:
                         for (SequenceId i = 0; i < m; ++i)
                             if (i != i1_best && i != i2_best)
                                 solution_tmp_.sequences[i] = solution.sequences[i];
-                        const Sequence& sequence_1 = solution.sequences[i1_best];
-                        const Sequence& sequence_2 = solution.sequences[i2_best];
+                        const auto& elements_1 = solution.sequences[i1_best].elements;
+                        const auto& elements_2 = solution.sequences[i2_best].elements;
+                        SequencePos seq_1_size = elements_1.size();
+                        SequencePos seq_2_size = elements_2.size();
                         // Sequence 1.
                         Sequence& sequence_tmp_1 = solution_tmp_.sequences[i1_best];
                         sequence_tmp_1 = empty_sequence(i1_best);
                         for (ElementPos p = 0; p < pos_1_best; ++p)
-                            local_scheme_0_.append(sequence_tmp_1, sequence_1.sequence[p]);
-                        for (ElementPos p = pos_1_best + block_size; p < (ElementPos)sequence_1.sequence.size(); ++p)
-                            local_scheme_0_.append(sequence_tmp_1, sequence_1.sequence[p]);
+                            append(sequence_tmp_1, elements_1[p]);
+                        for (ElementPos p = pos_1_best + block_size; p < seq_1_size; ++p)
+                            append(sequence_tmp_1, elements_1[p]);
                         // Sequence 2.
                         Sequence& sequence_tmp_2 = solution_tmp_.sequences[i2_best];
                         sequence_tmp_2 = empty_sequence(i2_best);
                         for (ElementPos p = 0; p < pos_2_best; ++p)
-                            local_scheme_0_.append(sequence_tmp_2, sequence_2.sequence[p]);
+                            append(sequence_tmp_2, elements_2[p]);
                         for (ElementPos p = pos_1_best + block_size - 1; p >= pos_1_best; --p)
-                            local_scheme_0_.append(sequence_tmp_2, sequence_1.sequence[p]);
-                        for (ElementPos p = pos_2_best; p < (ElementPos)sequence_2.sequence.size(); ++p)
-                            local_scheme_0_.append(sequence_tmp_2, sequence_2.sequence[p]);
+                            append(sequence_tmp_2, elements_1[p]);
+                        for (ElementPos p = pos_2_best; p < seq_2_size; ++p)
+                            append(sequence_tmp_2, elements_2[p]);
                         compute_global_cost(solution_tmp_);
                         solution = solution_tmp_;
                         // Check new current solution cost.
@@ -2265,8 +2267,13 @@ public:
     {
         for (SequenceId i = 0; i < number_of_sequences(); ++i) {
             os << "Sequence " << i << ":";
-            for (ElementId j: solution.sequences[i].sequence)
-                os << " " << j;
+            for (SequenceElement se: solution.sequences[i].elements) {
+                if (maximum_number_of_modes_ == 1) {
+                    os << " " << se.j;
+                } else {
+                    os << " " << se.j << " " << se.mode;
+                }
+            }
             os << std::endl;
             os << "    Cost: " << to_string(global_cost(solution.sequences[i])) << std::endl;
         }
@@ -2280,22 +2287,32 @@ public:
     {
         if (certificate_path.empty())
             return;
-        std::ofstream cert(certificate_path);
-        if (!cert.good()) {
+        std::ofstream file(certificate_path);
+        if (!file.good()) {
             throw std::runtime_error(
                     "Unable to open file \"" + certificate_path + "\".");
         }
 
         SequenceId m = number_of_sequences();
         if (m == 1) {
-            for (ElementId j: solution.sequences[0].sequence)
-                cert << j << " ";
+            for (SequenceElement se: solution.sequences[0].elements) {
+                if (maximum_number_of_modes_ == 1) {
+                    file << se.j << " ";
+                } else {
+                    file << se.j << " " << se.mode << " ";
+                }
+            }
         } else {
             for (SequenceId i = 0; i < m; ++i) {
-                cert << solution.sequences[i].sequence.size() << std::endl;
-                for (ElementId j: solution.sequences[i].sequence)
-                    cert << " " << j;
-                cert << std::endl;
+                file << solution.sequences[i].elements.size() << std::endl;
+                for (SequenceElement se: solution.sequences[i].elements) {
+                    if (maximum_number_of_modes_ == 1) {
+                        file << se.j << " ";
+                    } else {
+                        file << se.j << " " << se.mode << " ";
+                    }
+                }
+                file << std::endl;
             }
         }
     }
@@ -2492,7 +2509,229 @@ public:
 private:
 
     /*
-     * global_cost(gc1, gc2).
+     * number_of_sequences().
+     */
+
+    template<typename, typename T>
+    struct HasNumberOfSequencesMethod
+    {
+        static_assert(
+                std::integral_constant<T, false>::value,
+                "Second template parameter needs to be of function type.");
+    };
+
+    template<typename C, typename Ret, typename... Args>
+    struct HasNumberOfSequencesMethod<C, Ret(Args...)>
+    {
+
+    private:
+
+        template<typename T>
+        static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().number_of_sequences(std::declval<Args>()...)), Ret>::type;
+
+        template<typename>
+        static constexpr std::false_type check(...);
+
+        typedef decltype(check<C>(0)) type;
+
+    public:
+
+        static constexpr bool value = type::value;
+
+    };
+
+    SequencePos number_of_sequences(
+            std::false_type) const
+    {
+        return 1;
+    }
+
+    SequencePos number_of_sequences(
+            std::true_type) const
+    {
+        return local_scheme_0_.number_of_sequences();;
+    }
+
+    SequencePos number_of_sequences() const
+    {
+        return number_of_sequences(
+                std::integral_constant<
+                    bool,
+                    HasNumberOfSequencesMethod<LocalScheme0, SequencePos()>::value>());
+    }
+
+    /*
+     * number_of_modes(j).
+     */
+
+    template<typename, typename T>
+    struct HasNumberOfModesMethod
+    {
+        static_assert(
+                std::integral_constant<T, false>::value,
+                "Second template parameter needs to be of function type.");
+    };
+
+    template<typename C, typename Ret, typename... Args>
+    struct HasNumberOfModesMethod<C, Ret(Args...)>
+    {
+
+    private:
+
+        template<typename T>
+        static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().number_of_modes(std::declval<Args>()...)), Ret>::type;
+
+        template<typename>
+        static constexpr std::false_type check(...);
+
+        typedef decltype(check<C>(0)) type;
+
+    public:
+
+        static constexpr bool value = type::value;
+
+    };
+
+    SequencePos number_of_modes(
+            ElementId,
+            std::false_type) const
+    {
+        return 1;
+    }
+
+    SequencePos number_of_modes(
+            ElementId j,
+            std::true_type) const
+    {
+        return local_scheme_0_.number_of_modes(j);;
+    }
+
+    Mode number_of_modes(ElementId j) const
+    {
+        return number_of_modes(
+                j,
+                std::integral_constant<
+                    bool,
+                    HasNumberOfModesMethod<LocalScheme0, Mode(ElementId)>::value>());
+    }
+
+    /*
+     * append(sequence_data, j, mode).
+     */
+
+    template<typename, typename T>
+    struct HasAppendMethod
+    {
+        static_assert(
+                std::integral_constant<T, false>::value,
+                "Second template parameter needs to be of function type.");
+    };
+
+    template<typename C, typename Ret, typename... Args>
+    struct HasAppendMethod<C, Ret(Args...)>
+    {
+
+    private:
+
+        template<typename T>
+        static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().append(std::declval<Args>()...)), Ret>::type;
+
+        template<typename>
+        static constexpr std::false_type check(...);
+
+        typedef decltype(check<C>(0)) type;
+
+    public:
+
+        static constexpr bool value = type::value;
+
+    };
+
+    void append(
+            SequenceData& sequence_data,
+            SequenceElement se,
+            std::false_type) const
+    {
+        local_scheme_0_.append(sequence_data, se.j);;
+    }
+
+    void append(
+            SequenceData& sequence_data,
+            SequenceElement se,
+            std::true_type) const
+    {
+        local_scheme_0_.append(sequence_data, se.j, se.mode);;
+    }
+
+    void append(
+            SequenceData& sequence_data,
+            SequenceElement se) const
+    {
+        return append(
+                sequence_data,
+                se,
+                std::integral_constant<
+                    bool,
+                    HasAppendMethod<LocalScheme0, void(ElementId, Mode)>::value>());
+    }
+
+    /*
+     * empty_sequence_data(i).
+     */
+
+    template<typename, typename T>
+    struct HasEmptySequenceDataMethod
+    {
+        static_assert(
+                std::integral_constant<T, false>::value,
+                "Second template parameter needs to be of function type.");
+    };
+
+    template<typename C, typename Ret, typename... Args>
+    struct HasEmptySequenceDataMethod<C, Ret(Args...)>
+    {
+
+    private:
+
+        template<typename T>
+        static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().empty_sequence_data(std::declval<Args>()...)), Ret>::type;
+
+        template<typename>
+        static constexpr std::false_type check(...);
+
+        typedef decltype(check<C>(0)) type;
+
+    public:
+
+        static constexpr bool value = type::value;
+
+    };
+
+    SequenceData empty_sequence_data(
+            SequenceId,
+            std::false_type) const
+    {
+        return SequenceData();
+    }
+
+    SequenceData empty_sequence_data(
+            SequenceId i,
+            std::true_type) const
+    {
+        return local_scheme_0_.empty_sequence_data(i);;
+    }
+
+    SequenceData empty_sequence_data(SequenceId i) const
+    {
+        return empty_sequence_data(
+                i,
+                std::integral_constant<
+                    bool,
+                    HasEmptySequenceDataMethod<LocalScheme0, SequenceData(SequenceId)>::value>());
+    }
+
+    /*
+     * global_cost_merge(gc1, gc2).
      */
 
     template<typename, typename T>
@@ -2650,7 +2889,8 @@ private:
     {
         SequenceId m = number_of_sequences();
         GlobalCost gc = global_cost(solution);
-        const Sequence& sequence = solution.sequences[i];
+        const auto& elements = solution.sequences[i].elements;
+        SequencePos seq_size = elements.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i);
         // Initialize sequence_cur_.
@@ -2666,7 +2906,7 @@ private:
                 (ElementPos)0,
                 block_pos - parameters_.shift_maximum_distance);
         ElementPos pos_max = std::min(
-                (ElementPos)sequence.sequence.size() - block_size,
+                seq_size - block_size,
                 block_pos + parameters_.shift_maximum_distance);
         for (ElementPos pos_new = pos_min; pos_new <= pos_max; ++pos_new) {
 
@@ -2679,8 +2919,7 @@ private:
             if (!reverse) {
                 for (ElementPos p = block_pos; p < block_pos + block_size && !stop; ++p) {
                     // Add element to sequence_tmp_1_.
-                    ElementId j = sequence.sequence[p];
-                    local_scheme_0_.append(sequence_tmp_1_, j);
+                    append(sequence_tmp_1_, elements[p]);
                     // Check early termination.
                     if (m == 1) {
                         if (bound(sequence_tmp_1_) >= gc)
@@ -2693,8 +2932,7 @@ private:
             } else {
                 for (ElementPos p = block_pos + block_size - 1; p >= block_pos && !stop; --p) {
                     // Add element to sequence_tmp_1_.
-                    ElementId j = sequence.sequence[p];
-                    local_scheme_0_.append(sequence_tmp_1_, j);
+                    append(sequence_tmp_1_, elements[p]);
                     // Check early termination.
                     if (m == 1) {
                         if (bound(sequence_tmp_1_) >= gc)
@@ -2708,13 +2946,12 @@ private:
 
             // Add the remaining elements to sequence_tmp.
             ElementPos p0 = (pos_new < block_pos)? pos_new: pos_new + block_size;
-            for (ElementPos p = p0; p < (ElementPos)sequence.sequence.size() && !stop; ++p) {
+            for (ElementPos p = p0; p < seq_size && !stop; ++p) {
                 // Skip elements from the previously added bloc.
                 if (block_pos <= p && p < block_pos + block_size)
                     continue;
                 // Add element to sequence_tmp_1_.
-                ElementId j = sequence.sequence[p];
-                local_scheme_0_.append(sequence_tmp_1_, j);
+                append(sequence_tmp_1_, elements[p]);
                 // Check early termination.
                 if (m == 1) {
                     if (bound(sequence_tmp_1_) >= gc)
@@ -2730,18 +2967,16 @@ private:
                     global_costs_1d_[pos_new] = global_cost(sequence_tmp_1_);
                 } else {
                     global_costs_1d_[pos_new] = global_cost_merge(
-                            gc0, local_scheme_0_.global_cost(sequence_tmp_1_));
+                            gc0, global_cost(sequence_tmp_1_));
                 }
             }
 
             // Stop condition.
-            if (pos_new == (ElementPos)sequence.sequence.size() - block_size)
+            if (pos_new == seq_size - block_size)
                 break;
 
-            // Add j1 to sequence_cur_.
-            assert(p0 < (ElementPos)sequence.sequence.size());
-            ElementId j1 = sequence.sequence[p0];
-            local_scheme_0_.append(sequence_cur_1_, j1);
+            // Add next element to sequence_cur_.
+            append(sequence_cur_1_, elements[p0]);
             // Check early termination.
             if (m == 1) {
                 if (bound(sequence_cur_1_) >= gc)
@@ -2760,7 +2995,8 @@ private:
     {
         SequenceId m = number_of_sequences();
         GlobalCost gc = global_cost(solution);
-        const Sequence& sequence = solution.sequences[i];
+        const auto& elements = solution.sequences[i].elements;
+        SequencePos seq_size = elements.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i);
         // Initialize sequence_cur_.
@@ -2774,7 +3010,7 @@ private:
         }
 
         // Loop through all pairs.
-        Counter pos_max = (ElementPos)sequence.sequence.size() - block_size;
+        Counter pos_max = seq_size - block_size;
         for (ElementPos pos_1 = 0; pos_1 <= pos_max; ++pos_1) {
             ElementPos pos_2_max = std::min(
                     pos_max,
@@ -2786,19 +3022,19 @@ private:
                 // Initialize sequence_tmp_1_.
                 sequence_tmp_1_ = sequence_cur_1_;
                 // Add remaining elements.
-                for (ElementPos pos = pos_1; pos < (ElementPos)sequence.sequence.size() && !stop; ++pos) {
-                    ElementId j = sequence.sequence[pos];
+                for (ElementPos pos = pos_1; pos < seq_size && !stop; ++pos) {
+                    SequenceElement se = elements[pos];
                     // If j1 or j2, swap.
                     if (pos_1 <= pos && pos < pos_1 + block_size) {
                         ElementPos diff = pos - pos_1;
-                        j = sequence.sequence[pos_2 + diff];
+                        se = elements[pos_2 + diff];
                     }
                     if (pos_2 <= pos && pos < pos_2 + block_size) {
                         ElementPos diff = pos - pos_2;
-                        j = sequence.sequence[pos_1 + diff];
+                        se = elements[pos_1 + diff];
                     }
-                    // Add element to sequence_tmp_1_.
-                    local_scheme_0_.append(sequence_tmp_1_, j);
+                    // Add next element to sequence_tmp_1_.
+                    append(sequence_tmp_1_, se);
                     // Check early termination.
                     if (m == 1) {
                         if (bound(sequence_tmp_1_) >= gc)
@@ -2812,17 +3048,16 @@ private:
                 if (!stop) {
                     if (m == 1) {
                         global_costs_2d_1_[pos_1][pos_2 - pos_1 - 1]
-                            = local_scheme_0_.global_cost(sequence_tmp_1_);
+                            = global_cost(sequence_tmp_1_);
                     } else {
                         global_costs_2d_1_[pos_1][pos_2 - pos_1 - 1]
-                            = global_cost_merge(gc0, local_scheme_0_.global_cost(sequence_tmp_1_));
+                            = global_cost_merge(gc0, global_cost(sequence_tmp_1_));
                     }
                 }
             }
 
-            // Add j1 to sequence_cur_.
-            ElementId j1 = sequence.sequence[pos_1];
-            local_scheme_0_.append(sequence_cur_1_, j1);
+            // Add next element to sequence_cur_.
+            append(sequence_cur_1_, elements[pos_1]);
             // Check early termination.
             if (m == 1) {
                 if (bound(sequence_cur_1_) >= gc)
@@ -2842,8 +3077,8 @@ private:
     {
         SequenceId m = number_of_sequences();
         GlobalCost gc = global_cost(solution);
-        const Sequence& sequence = solution.sequences[i];
-        ElementPos n = (ElementPos)sequence.sequence.size();
+        const auto& elements = solution.sequences[i].elements;
+        SequencePos seq_size = elements.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i);
         // Initialize sequence_cur_.
@@ -2857,12 +3092,12 @@ private:
         }
 
         // Loop through all pairs.
-        for (ElementPos pos = 0; pos < n; ++pos) {
+        for (ElementPos pos = 0; pos < seq_size; ++pos) {
 
             // block 1 is at [pos, pos + block_size_1[.
             ElementPos pos_1 = pos;
             ElementPos pos_2_max = std::min(
-                    n - block_size_2,
+                    seq_size - block_size_2,
                     pos + block_size_1 + parameters_.swap_maximum_distance);
             for (ElementPos pos_2 = pos + block_size_1; pos_2 <= pos_2_max; ++pos_2) {
 
@@ -2872,9 +3107,8 @@ private:
                 sequence_tmp_1_ = sequence_cur_1_;
                 // Add block 2.
                 for (ElementPos p = pos_2; p < pos_2 + block_size_2 && !stop; ++p) {
-                    // Add element to sequence_tmp_1_.
-                    ElementId j = sequence.sequence[p];
-                    local_scheme_0_.append(sequence_tmp_1_, j);
+                    // Add next element to sequence_tmp_1_.
+                    append(sequence_tmp_1_, elements[p]);
                     // Check early termination.
                     if (m == 1) {
                         if (bound(sequence_tmp_1_) >= gc)
@@ -2886,9 +3120,8 @@ private:
                 }
                 // Add middle elements.
                 for (ElementPos p = pos_1 + block_size_1; p < pos_2 && !stop; ++p) {
-                    // Add element to sequence_tmp_1_.
-                    ElementId j = sequence.sequence[p];
-                    local_scheme_0_.append(sequence_tmp_1_, j);
+                    // Add next element to sequence_tmp_1_.
+                    append(sequence_tmp_1_, elements[p]);
                     // Check early termination.
                     if (m == 1) {
                         if (bound(sequence_tmp_1_) >= gc)
@@ -2900,9 +3133,8 @@ private:
                 }
                 // Add block 1.
                 for (ElementPos p = pos_1; p < pos_1 + block_size_1 && !stop; ++p) {
-                    // Add element to sequence_tmp_1_.
-                    ElementId j = sequence.sequence[p];
-                    local_scheme_0_.append(sequence_tmp_1_, j);
+                    // Add next element to sequence_tmp_1_.
+                    append(sequence_tmp_1_, elements[p]);
                     // Check early termination.
                     if (m == 1) {
                         if (bound(sequence_tmp_1_) >= gc)
@@ -2913,10 +3145,9 @@ private:
                     }
                 }
                 // Add end elements.
-                for (ElementPos p = pos_2 + block_size_2; p < n && !stop; ++p) {
-                    // Add element to sequence_tmp_1_.
-                    ElementId j = sequence.sequence[p];
-                    local_scheme_0_.append(sequence_tmp_1_, j);
+                for (ElementPos p = pos_2 + block_size_2; p < seq_size && !stop; ++p) {
+                    // Add next element to sequence_tmp_1_.
+                    append(sequence_tmp_1_, elements[p]);
                     // Check early termination.
                     if (m == 1) {
                         if (bound(sequence_tmp_1_) >= gc)
@@ -2930,10 +3161,10 @@ private:
                 if (!stop) {
                     if (m == 1) {
                         global_costs_2d_2_[pos_1][pos_2]
-                            = local_scheme_0_.global_cost(sequence_tmp_1_);
+                            = global_cost(sequence_tmp_1_);
                     } else {
                         global_costs_2d_2_[pos_1][pos_2]
-                            = global_cost_merge(gc0, local_scheme_0_.global_cost(sequence_tmp_1_));
+                            = global_cost_merge(gc0, global_cost(sequence_tmp_1_));
                     }
                 }
             }
@@ -2941,7 +3172,7 @@ private:
             // block 2 is at [pos, pos + block_size_2[.
             ElementPos pos_2 = pos;
             ElementPos pos_1_max = std::min(
-                    n - block_size_1,
+                    seq_size - block_size_1,
                     pos + block_size_2 + parameters_.swap_maximum_distance);
             for (ElementPos pos_1 = pos + block_size_2; pos_1 <= pos_1_max; ++pos_1) {
 
@@ -2951,9 +3182,8 @@ private:
                 sequence_tmp_1_ = sequence_cur_1_;
                 // Add block 1.
                 for (ElementPos p = pos_1; p < pos_1 + block_size_1 && !stop; ++p) {
-                    // Add element to sequence_tmp_1_.
-                    ElementId j = sequence.sequence[p];
-                    local_scheme_0_.append(sequence_tmp_1_, j);
+                    // Add next element to sequence_tmp_1_.
+                    append(sequence_tmp_1_, elements[p]);
                     // Check early termination.
                     if (m == 1) {
                         if (bound(sequence_tmp_1_) >= gc)
@@ -2965,9 +3195,8 @@ private:
                 }
                 // Add middle elements.
                 for (ElementPos p = pos_2 + block_size_2; p < pos_1 && !stop; ++p) {
-                    // Add element to sequence_tmp_1_.
-                    ElementId j = sequence.sequence[p];
-                    local_scheme_0_.append(sequence_tmp_1_, j);
+                    // Add next element to sequence_tmp_1_.
+                    append(sequence_tmp_1_, elements[p]);
                     // Check early termination.
                     if (m == 1) {
                         if (bound(sequence_tmp_1_) >= gc)
@@ -2979,9 +3208,8 @@ private:
                 }
                 // Add block 2.
                 for (ElementPos p = pos_2; p < pos_2 + block_size_2 && !stop; ++p) {
-                    // Add element to sequence_tmp_1_.
-                    ElementId j = sequence.sequence[p];
-                    local_scheme_0_.append(sequence_tmp_1_, j);
+                    // Add next element to sequence_tmp_1_.
+                    append(sequence_tmp_1_, elements[p]);
                     // Check early termination.
                     if (m == 1) {
                         if (bound(sequence_tmp_1_) >= gc)
@@ -2992,10 +3220,9 @@ private:
                     }
                 }
                 // Add end elements.
-                for (ElementPos p = pos_1 + block_size_1; p < n && !stop; ++p) {
-                    // Add element to sequence_tmp_1_.
-                    ElementId j = sequence.sequence[p];
-                    local_scheme_0_.append(sequence_tmp_1_, j);
+                for (ElementPos p = pos_1 + block_size_1; p < seq_size && !stop; ++p) {
+                    // Add next element to sequence_tmp_1_.
+                    append(sequence_tmp_1_, elements[p]);
                     // Check early termination.
                     if (m == 1) {
                         if (bound(sequence_tmp_1_) >= gc)
@@ -3007,7 +3234,7 @@ private:
                 }
                 //if (pos_1 == 46 && pos_2 == 44) {
                 //    std::cout << "sequence: ";
-                //    for (ElementId j: sequence.sequence)
+                //    for (ElementId j: sequence.elements)
                 //        std::cout << " " << j;
                 //    std::cout << std::endl;
                 //    std::cout << "sequence: ";
@@ -3019,17 +3246,16 @@ private:
                 if (!stop) {
                     if (m == 1) {
                         global_costs_2d_2_[pos_1][pos_2]
-                            = local_scheme_0_.global_cost(sequence_tmp_1_);
+                            = global_cost(sequence_tmp_1_);
                     } else {
                         global_costs_2d_2_[pos_1][pos_2]
-                            = global_cost_merge(gc0, local_scheme_0_.global_cost(sequence_tmp_1_));
+                            = global_cost_merge(gc0, global_cost(sequence_tmp_1_));
                     }
                 }
             }
 
-            // Add j to sequence_cur_.
-            ElementId j = sequence.sequence[pos];
-            local_scheme_0_.append(sequence_cur_1_, j);
+            // Add next element to sequence_cur_.
+            append(sequence_cur_1_, elements[pos]);
             // Check early termination.
             if (m == 1) {
                 if (bound(sequence_cur_1_) >= gc)
@@ -3047,7 +3273,8 @@ private:
     {
         SequenceId m = number_of_sequences();
         GlobalCost gc = global_cost(solution);
-        const Sequence& sequence = solution.sequences[i];
+        const auto& elements = solution.sequences[i].elements;
+        SequencePos seq_size = elements.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i);
         // Initialize sequence_cur_.
@@ -3061,9 +3288,9 @@ private:
         }
 
         // Loop through all pairs.
-        for (ElementPos pos_1 = 0; pos_1 < (ElementPos)sequence.sequence.size(); ++pos_1) {
+        for (ElementPos pos_1 = 0; pos_1 < seq_size; ++pos_1) {
             ElementPos pos_max = std::min(
-                    (ElementPos)sequence.sequence.size(),
+                    seq_size,
                     pos_1 + parameters_.reverse_maximum_length);
             for (ElementPos pos_2 = pos_1 + 2; pos_2 < pos_max; ++pos_2) {
 
@@ -3073,9 +3300,8 @@ private:
                 sequence_tmp_1_ = sequence_cur_1_;
                 // Add reverse sequence.
                 for (ElementPos pos = pos_2; pos >= pos_1 && !stop; --pos) {
-                    // Add element to sequence_tmp_1_.
-                    ElementId j = sequence.sequence[pos];
-                    local_scheme_0_.append(sequence_tmp_1_, j);
+                    // Add next element to sequence_tmp_1_.
+                    append(sequence_tmp_1_, elements[pos]);
                     // Check early termination.
                     if (m == 1) {
                         if (bound(sequence_tmp_1_) >= gc)
@@ -3086,10 +3312,9 @@ private:
                     }
                 }
                 // Add remaining elements.
-                for (ElementPos pos = pos_2 + 1; pos < (ElementPos)sequence.sequence.size() && !stop; ++pos) {
-                    // Add element to sequence_tmp_1_.
-                    ElementId j = sequence.sequence[pos];
-                    local_scheme_0_.append(sequence_tmp_1_, j);
+                for (ElementPos pos = pos_2 + 1; pos < seq_size && !stop; ++pos) {
+                    // Add next element to sequence_tmp_1_.
+                    append(sequence_tmp_1_, elements[pos]);
                     // Check early termination.
                     if (m == 1) {
                         if (bound(sequence_tmp_1_) >= gc)
@@ -3103,17 +3328,16 @@ private:
                 if (!stop) {
                     if (m == 1) {
                         global_costs_2d_1_[pos_1][pos_2 - pos_1 - 1]
-                            = local_scheme_0_.global_cost(sequence_tmp_1_);
+                            = global_cost(sequence_tmp_1_);
                     } else {
                         global_costs_2d_1_[pos_1][pos_2 - pos_1 - 1]
-                            = global_cost_merge(gc0, local_scheme_0_.global_cost(sequence_tmp_1_));
+                            = global_cost_merge(gc0, global_cost(sequence_tmp_1_));
                     }
                 }
             }
 
-            // Add j1 to sequence_cur_.
-            ElementId j1 = sequence.sequence[pos_1];
-            local_scheme_0_.append(sequence_cur_1_, j1);
+            // Add next element to sequence_cur_.
+            append(sequence_cur_1_, elements[pos_1]);
             // Check early termination.
             if (m == 1) {
                 if (bound(sequence_cur_1_) >= gc)
@@ -3128,11 +3352,13 @@ private:
     inline void compute_cost_add(
             const Solution& solution,
             SequenceId i,
-            ElementId j0)
+            ElementId j0,
+            Mode mode)
     {
         SequenceId m = number_of_sequences();
         GlobalCost gc = global_cost(solution);
-        const Sequence& sequence = solution.sequences[i];
+        const auto& elements = solution.sequences[i].elements;
+        SequencePos seq_size = elements.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i);
         // Initialize sequence_cur_.
@@ -3144,7 +3370,7 @@ private:
                 worst<GlobalCost>());
 
         // Loop through all new positions.
-        for (ElementPos pos = 0; pos <= (ElementPos)sequence.sequence.size(); ++pos) {
+        for (ElementPos pos = 0; pos <= seq_size; ++pos) {
 
             bool stop = false;
 
@@ -3152,13 +3378,12 @@ private:
             sequence_tmp_1_ = sequence_cur_1_;
 
             // Add element j0 to sequence_tmp_1_.
-            local_scheme_0_.append(sequence_tmp_1_, j0);
+            append(sequence_tmp_1_, {j0, mode});
 
             // Add the remaining elements to sequence_tmp.
-            for (ElementPos p = pos; p < (ElementPos)sequence.sequence.size() && !stop; ++p) {
+            for (ElementPos p = pos; p < seq_size && !stop; ++p) {
                 // Add next element to sequence_tmp_1_.
-                ElementId j = sequence.sequence[p];
-                local_scheme_0_.append(sequence_tmp_1_, j);
+                append(sequence_tmp_1_, elements[p]);
                 // Check early termination.
                 if (m == 1) {
                     if (bound(sequence_tmp_1_) >= gc)
@@ -3179,12 +3404,11 @@ private:
             }
 
             // Stop condition.
-            if (pos == (ElementPos)sequence.sequence.size())
+            if (pos == seq_size)
                 break;
 
             // Add next element to sequence_cur_.
-            ElementId j = sequence.sequence[pos];
-            local_scheme_0_.append(sequence_cur_1_, j);
+            append(sequence_cur_1_, elements[pos]);
         }
     }
 
@@ -3194,7 +3418,8 @@ private:
     {
         SequenceId m = number_of_sequences();
         GlobalCost gc = global_cost(solution);
-        const Sequence& sequence = solution.sequences[i];
+        const auto& elements = solution.sequences[i].elements;
+        SequencePos seq_size = elements.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i);
         // Initialize sequence_cur_.
@@ -3206,7 +3431,7 @@ private:
                 worst<GlobalCost>());
 
         // Loop through all new positions.
-        for (ElementPos pos = 0; pos < (ElementPos)sequence.sequence.size(); ++pos) {
+        for (ElementPos pos = 0; pos < seq_size; ++pos) {
 
             bool stop = false;
 
@@ -3214,10 +3439,9 @@ private:
             sequence_tmp_1_ = sequence_cur_1_;
 
             // Add the remaining elements to sequence_tmp.
-            for (ElementPos p = pos + 1; p < (ElementPos)sequence.sequence.size() && !stop; ++p) {
+            for (ElementPos p = pos + 1; p < seq_size && !stop; ++p) {
                 // Add next element to sequence_tmp_1_.
-                ElementId j = sequence.sequence[p];
-                local_scheme_0_.append(sequence_tmp_1_, j);
+                append(sequence_tmp_1_, elements[p]);
                 // Check early termination.
                 if (m == 1) {
                     if (bound(sequence_tmp_1_) >= gc)
@@ -3233,13 +3457,12 @@ private:
                     global_costs_1d_[pos] = global_cost(sequence_tmp_1_);
                 } else {
                     global_costs_1d_[pos]
-                        = global_cost_merge(gc0, local_scheme_0_.global_cost(sequence_tmp_1_));
+                        = global_cost_merge(gc0, global_cost(sequence_tmp_1_));
                 }
             }
 
             // Add next element to sequence_cur_.
-            ElementId j = sequence.sequence[pos];
-            local_scheme_0_.append(sequence_cur_1_, j);
+            append(sequence_cur_1_, elements[pos]);
         }
     }
 
@@ -3252,10 +3475,11 @@ private:
     {
         SequenceId m = number_of_sequences();
         GlobalCost gc = global_cost(solution);
-        const Sequence& sequence_1 = solution.sequences[i1];
-        const Sequence& sequence_2 = solution.sequences[i2];
-        ElementPos n1 = sequence_1.sequence.size();
-        ElementPos n2 = sequence_2.sequence.size();
+
+        const auto& elements_1 = solution.sequences[i1].elements;
+        const auto& elements_2 = solution.sequences[i2].elements;
+        SequencePos seq_1_size = elements_1.size();
+        SequencePos seq_2_size = elements_2.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i1, i2);
         //std::cout << "i1 " << i1 << " i2 " << i2 << " gc0 " << to_string(gc0) << std::endl;
@@ -3271,16 +3495,14 @@ private:
 
         sequence_cur_1_ = empty_sequence(i1);
 
-        for (ElementPos pos_1 = 0; pos_1 <= n1 - block_size; ++pos_1) {
+        for (ElementPos pos_1 = 0; pos_1 <= seq_1_size - block_size; ++pos_1) {
             // pos_1 is the start position of the block of element to shift.
 
             // Compute first sequence, i.e. the one from which the block iof
             // elements is removed.
             sequence_tmp_1_ = sequence_cur_1_;
-            for (ElementPos p = pos_1 + block_size; p < n1; ++p) {
-                ElementId j = sequence_1.sequence[p];
-                local_scheme_0_.append(sequence_tmp_1_, j);
-            }
+            for (ElementPos p = pos_1 + block_size; p < seq_1_size; ++p)
+                append(sequence_tmp_1_, elements_1[p]);
 
             sequence_cur_2_ = empty_sequence(i2);
 
@@ -3289,7 +3511,7 @@ private:
                     (ElementPos)0,
                     pos_1 - parameters_.shift_maximum_distance);
             ElementPos pos_max = std::min(
-                    n2 + 1,
+                    seq_2_size + 1,
                     pos_1 + parameters_.shift_maximum_distance);
             for (ElementPos pos_2 = pos_min; pos_2 <= pos_max; ++pos_2) {
 
@@ -3302,8 +3524,7 @@ private:
                 if (!reverse) {
                     for (ElementPos p = pos_1; p < pos_1 + block_size && !stop; ++p) {
                         // Add next element to sequence_tmp_2_.
-                        ElementId j = sequence_1.sequence[p];
-                        local_scheme_0_.append(sequence_tmp_2_, j);
+                        append(sequence_tmp_2_, elements_1[p]);
                         // Check early termination.
                         GlobalCost bnd = global_cost_merge(
                                 bound(sequence_tmp_1_),
@@ -3316,8 +3537,7 @@ private:
                 } else {
                     for (ElementPos p = pos_1 + block_size - 1; p >= pos_1 && !stop; --p) {
                         // Add next element to sequence_tmp_2_.
-                        ElementId j = sequence_1.sequence[p];
-                        local_scheme_0_.append(sequence_tmp_2_, j);
+                        append(sequence_tmp_2_, elements_1[p]);
                         // Check early termination.
                         GlobalCost bnd = global_cost_merge(
                                 bound(sequence_tmp_1_),
@@ -3330,10 +3550,9 @@ private:
                 }
 
                 // Add the remaining elements to sequence_tmp_2_.
-                for (ElementPos p = pos_2; p < n2 && !stop; ++p) {
+                for (ElementPos p = pos_2; p < seq_2_size && !stop; ++p) {
                     // Add next element to sequence_tmp_2_.
-                    ElementId j = sequence_2.sequence[p];
-                    local_scheme_0_.append(sequence_tmp_2_, j);
+                    append(sequence_tmp_2_, elements_2[p]);
                     // Check early termination.
                     GlobalCost bnd = global_cost_merge(
                             bound(sequence_tmp_1_),
@@ -3365,12 +3584,11 @@ private:
                     }
                 }
 
-                if (pos_2 == n2)
+                if (pos_2 == seq_2_size)
                     break;
 
                 // Add next element to sequence_cur_2_.
-                ElementId j = sequence_2.sequence[pos_2];
-                local_scheme_0_.append(sequence_cur_2_, j);
+                append(sequence_cur_2_, elements_2[pos_2]);
                 // Check early termination.
                 GlobalCost bnd = global_cost_merge(
                         bound(sequence_cur_1_),
@@ -3382,8 +3600,7 @@ private:
             }
 
             // Add next element to sequence_cur_1_.
-            ElementId j = sequence_1.sequence[pos_1];
-            local_scheme_0_.append(sequence_cur_1_, j);
+            append(sequence_cur_1_, elements_1[pos_1]);
             // Check early termination.
             GlobalCost bnd = bound(sequence_cur_1_);
             if (m > 2)
@@ -3400,10 +3617,10 @@ private:
     {
         SequenceId m = number_of_sequences();
         GlobalCost gc = global_cost(solution);
-        const Sequence& sequence_1 = solution.sequences[i1];
-        const Sequence& sequence_2 = solution.sequences[i2];
-        ElementPos n1 = sequence_1.sequence.size();
-        ElementPos n2 = sequence_2.sequence.size();
+        const auto& elements_1 = solution.sequences[i1].elements;
+        const auto& elements_2 = solution.sequences[i2].elements;
+        SequencePos seq_1_size = elements_1.size();
+        SequencePos seq_2_size = elements_2.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i1, i2);
         // Reset global_costs_2d_2_.
@@ -3416,21 +3633,20 @@ private:
 
         sequence_cur_1_ = empty_sequence(i1);
 
-        for (ElementPos pos_1 = 0; pos_1 <= n1; ++pos_1) {
+        for (ElementPos pos_1 = 0; pos_1 <= seq_1_size; ++pos_1) {
 
             sequence_cur_2_ = empty_sequence(i1);
 
-            for (ElementPos pos_2 = 0; pos_2 <= n2; ++pos_2) {
+            for (ElementPos pos_2 = 0; pos_2 <= seq_2_size; ++pos_2) {
 
                 bool stop = false;
 
                 sequence_tmp_1_ = sequence_cur_1_;
                 sequence_tmp_2_ = sequence_cur_2_;
 
-                for (ElementPos p = pos_2; p < n2 && !stop; ++p) {
+                for (ElementPos p = pos_2; p < seq_2_size && !stop; ++p) {
                     // Add next element to sequence_tmp_1_.
-                    ElementId j = sequence_2.sequence[p];
-                    local_scheme_0_.append(sequence_tmp_1_, j);
+                    append(sequence_tmp_1_, elements_2[p]);
                     // Check early termination.
                     GlobalCost bnd = global_cost_merge(
                             bound(sequence_tmp_1_),
@@ -3440,10 +3656,9 @@ private:
                     if (bnd >= gc)
                         stop = true;
                 }
-                for (ElementPos p = pos_1; p < n1 && !stop; ++p) {
+                for (ElementPos p = pos_1; p < seq_1_size && !stop; ++p) {
                     // Add next element to sequence_tmp_2_.
-                    ElementId j = sequence_1.sequence[p];
-                    local_scheme_0_.append(sequence_tmp_2_, j);
+                    append(sequence_tmp_2_, elements_1[p]);
                     // Check early termination.
                     GlobalCost bnd = global_cost_merge(
                             bound(sequence_tmp_1_),
@@ -3464,12 +3679,11 @@ private:
                         global_costs_2d_2_[pos_1][pos_2] = gc_tmp;
                 }
 
-                if (pos_2 == n2)
+                if (pos_2 == seq_2_size)
                     break;
 
-                // Update sequence_cur_2.
-                ElementId j = sequence_2.sequence[pos_2];
-                local_scheme_0_.append(sequence_cur_2_, j);
+                // Add next element to sequence_cur_2_.
+                append(sequence_cur_2_, elements_2[pos_2]);
                 // Check early termination.
                 GlobalCost bnd = global_cost_merge(
                         bound(sequence_cur_1_),
@@ -3480,12 +3694,11 @@ private:
                     break;
             }
 
-            if (pos_1 == n1)
+            if (pos_1 == seq_1_size)
                 break;
 
-            // Update sequence_cur_1_.
-            ElementId j = sequence_1.sequence[pos_1];
-            local_scheme_0_.append(sequence_cur_1_, j);
+            // Add next element to sequence_cur_2_.
+            append(sequence_cur_1_, elements_1[pos_1]);
             // Check early termination.
             GlobalCost bnd = bound(sequence_cur_1_);
             if (m > 2)
@@ -3504,10 +3717,10 @@ private:
     {
         SequenceId m = number_of_sequences();
         GlobalCost gc = global_cost(solution);
-        const Sequence& sequence_1 = solution.sequences[i1];
-        const Sequence& sequence_2 = solution.sequences[i2];
-        ElementPos n1 = sequence_1.sequence.size();
-        ElementPos n2 = sequence_2.sequence.size();
+        const auto& elements_1 = solution.sequences[i1].elements;
+        const auto& elements_2 = solution.sequences[i2].elements;
+        SequencePos seq_1_size = elements_1.size();
+        SequencePos seq_2_size = elements_2.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i1, i2);
         // Reset global_costs_2d_2_.
@@ -3520,11 +3733,11 @@ private:
 
         sequence_cur_1_ = empty_sequence(i1);
 
-        for (ElementPos pos_1 = 0; pos_1 <= n1 - block_size_1; ++pos_1) {
+        for (ElementPos pos_1 = 0; pos_1 <= seq_1_size - block_size_1; ++pos_1) {
 
             sequence_cur_2_ = empty_sequence(i1);
 
-            for (ElementPos pos_2 = 0; pos_2 <= n2 - block_size_2; ++pos_2) {
+            for (ElementPos pos_2 = 0; pos_2 <= seq_2_size - block_size_2; ++pos_2) {
 
                 bool stop = false;
 
@@ -3533,8 +3746,7 @@ private:
 
                 for (ElementPos p = pos_2; p < pos_2 + block_size_2 && !stop; ++p) {
                     // Add next element to sequence_tmp_1_.
-                    ElementId j = sequence_2.sequence[p];
-                    local_scheme_0_.append(sequence_tmp_1_, j);
+                    append(sequence_tmp_1_, elements_2[p]);
                     // Check early termination.
                     GlobalCost bnd = global_cost_merge(
                             bound(sequence_tmp_1_),
@@ -3544,10 +3756,9 @@ private:
                     if (bnd >= gc)
                         stop = true;
                 }
-                for (ElementPos p = pos_1 + block_size_1; p < n1 && !stop; ++p) {
+                for (ElementPos p = pos_1 + block_size_1; p < seq_1_size && !stop; ++p) {
                     // Add next element to sequence_tmp_1_.
-                    ElementId j = sequence_1.sequence[p];
-                    local_scheme_0_.append(sequence_tmp_1_, j);
+                    append(sequence_tmp_1_, elements_1[p]);
                     // Check early termination.
                     GlobalCost bnd = global_cost_merge(
                             bound(sequence_tmp_1_),
@@ -3560,8 +3771,7 @@ private:
 
                 for (ElementPos p = pos_1; p < pos_1 + block_size_1 && !stop; ++p) {
                     // Add next element to sequence_tmp_2_.
-                    ElementId j = sequence_1.sequence[p];
-                    local_scheme_0_.append(sequence_tmp_2_, j);
+                    append(sequence_tmp_2_, elements_1[p]);
                     // Check early termination.
                     GlobalCost bnd = global_cost_merge(
                             bound(sequence_tmp_1_),
@@ -3571,10 +3781,9 @@ private:
                     if (bnd >= gc)
                         stop = true;
                 }
-                for (ElementPos p = pos_2 + block_size_2; p < n2 && !stop; ++p) {
+                for (ElementPos p = pos_2 + block_size_2; p < seq_2_size && !stop; ++p) {
                     // Add next element to sequence_tmp_2_.
-                    ElementId j = sequence_2.sequence[p];
-                    local_scheme_0_.append(sequence_tmp_2_, j);
+                    append(sequence_tmp_2_, elements_2[p]);
                     // Check early termination.
                     GlobalCost bnd = global_cost_merge(
                             bound(sequence_tmp_1_),
@@ -3595,12 +3804,11 @@ private:
                         global_costs_2d_2_[pos_1][pos_2] = gc_tmp;
                 }
 
-                if (pos_2 == n2)
+                if (pos_2 == seq_2_size)
                     break;
 
-                // Update sequence_cur_2.
-                ElementId j = sequence_2.sequence[pos_2];
-                local_scheme_0_.append(sequence_cur_2_, j);
+                // Add next element to sequence_cur_2_.
+                append(sequence_cur_2_, elements_2[pos_2]);
                 // Check early termination.
                 GlobalCost bnd = global_cost_merge(
                         bound(sequence_cur_1_),
@@ -3611,12 +3819,11 @@ private:
                     break;
             }
 
-            if (pos_1 == n1)
+            if (pos_1 == seq_1_size)
                 break;
 
-            // Update sequence_cur_1_.
-            ElementId j = sequence_1.sequence[pos_1];
-            local_scheme_0_.append(sequence_cur_1_, j);
+            // Add next element to sequence_cur_1_.
+            append(sequence_cur_1_, elements_1[pos_1]);
             // Check early termination.
             GlobalCost bnd = bound(sequence_cur_1_);
             if (m > 2)
@@ -3634,6 +3841,12 @@ private:
     LocalScheme0& local_scheme_0_;
     /** Parameters. */
     Parameters parameters_;
+    /**
+     * Maximum number of modes.
+     *
+     * Comupted in the constructor.
+     */
+    Mode maximum_number_of_modes_ = 1;
 
     /*
      * Structures to iterate in random order.
@@ -3661,6 +3874,8 @@ private:
      * Contains 'number_of_element x number_of_elements' elements.
      */
     std::vector<std::pair<ElementPos, ElementPos>> pairs_2_;
+    /** Vector containing numbers from '0' to the maximum number of modes. */
+    std::vector<Mode> modes_;
 
     /*
      * Structures storing neighborhood costs.

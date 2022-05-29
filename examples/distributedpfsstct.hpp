@@ -33,18 +33,19 @@ public:
     /** Global cost: <Number of jobs, Total completion time>; */
     using GlobalCost = std::tuple<ElementPos, Time>;
 
-    inline ElementPos&         number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Time&        total_completion_time(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline ElementPos    number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Time   total_completion_time(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline JobPos&            number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline Time&       total_completion_time(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline JobPos       number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline Time  total_completion_time(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
 
     /*
-     * Sequences.
+     * SequenceDatas.
      */
 
-    struct Sequence
+    struct SequenceData
     {
-        std::vector<ElementId> sequence;
+        JobPos number_of_jobs = 0;
+        JobId j_last = -1;
         std::vector<Time> times;
         Time total_completion_time = 0;
     };
@@ -57,15 +58,15 @@ public:
     {
         Parameters()
         {
-            sequencing_parameters.shift_block_maximum_length = 2;
-            sequencing_parameters.swap_block_maximum_length = 1;
-            sequencing_parameters.reverse = false;
-            sequencing_parameters.shift_reverse_block_maximum_length = 0;
+            sequencing_parameters.shift_block_maximum_length = 3;
+            sequencing_parameters.swap_block_maximum_length = 2;
+            sequencing_parameters.reverse = true;
+            sequencing_parameters.shift_reverse_block_maximum_length = 2;
 
-            sequencing_parameters.inter_shift_block_maximum_length = 2;
-            sequencing_parameters.inter_swap_block_maximum_length = 1;
-            sequencing_parameters.inter_two_opt = false;
-            sequencing_parameters.inter_shift_reverse_block_maximum_length = 0;
+            sequencing_parameters.inter_shift_block_maximum_length = 3;
+            sequencing_parameters.inter_swap_block_maximum_length = 2;
+            sequencing_parameters.inter_two_opt = true;
+            sequencing_parameters.inter_shift_reverse_block_maximum_length = 2;
 
             sequencing_parameters.double_bridge_number_of_perturbations = 0;
             sequencing_parameters.ruin_and_recreate_number_of_perturbations = 4;
@@ -87,25 +88,25 @@ public:
     virtual ~LocalScheme() { }
 
     /*
-     * Initial sequences.
+     * Initial sequence_datas.
      */
 
-    inline Sequence empty_sequence(sequencing2::SequenceId) const
+    inline SequenceData empty_sequence_data(sequencing2::SequenceId) const
     {
-        Sequence sequence;
-        sequence.times = std::vector<Time>(instance_.number_of_machines(), 0);
-        return sequence;
+        SequenceData sequence_data;
+        sequence_data.times = std::vector<Time>(instance_.number_of_machines(), 0);
+        return sequence_data;
     }
 
     /*
-     * Sequence properties.
+     * SequenceData properties.
      */
 
-    inline GlobalCost global_cost(const Sequence& sequence) const
+    inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
         return {
-            -sequence.sequence.size(),
-            sequence.total_completion_time,
+            -sequence_data.number_of_jobs,
+            sequence_data.total_completion_time,
         };
     }
 
@@ -117,32 +118,32 @@ public:
 
     inline ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
-    inline GlobalCost bound(const Sequence& sequence) const
+    inline GlobalCost bound(const SequenceData& sequence_data) const
     {
         return {
             -instance_.number_of_jobs(),
-            sequence.total_completion_time,
+            sequence_data.total_completion_time,
         };
     }
 
     inline void append(
-            Sequence& sequence,
+            SequenceData& sequence_data,
             ElementId j) const
     {
         MachineId m = instance_.number_of_machines();
-        // Update sequence.
-        sequence.sequence.push_back(j);
         // Update times.
-        sequence.times[0] = sequence.times[0] + instance_.processing_time(j, 0);
+        sequence_data.times[0] = sequence_data.times[0] + instance_.processing_time(j, 0);
         for (MachineId i = 1; i < m; ++i) {
-            if (sequence.times[i - 1] > sequence.times[i]) {
-                sequence.times[i] = sequence.times[i - 1] + instance_.processing_time(j, i);
+            if (sequence_data.times[i - 1] > sequence_data.times[i]) {
+                sequence_data.times[i] = sequence_data.times[i - 1] + instance_.processing_time(j, i);
             } else {
-                sequence.times[i] = sequence.times[i] + instance_.processing_time(j, i);
+                sequence_data.times[i] = sequence_data.times[i] + instance_.processing_time(j, i);
             }
         }
         // Update total completion_time.
-        sequence.total_completion_time += sequence.times[m - 1];
+        sequence_data.total_completion_time += sequence_data.times[m - 1];
+        // Update number_of_jobs.
+        sequence_data.number_of_jobs++;
     }
 
 private:

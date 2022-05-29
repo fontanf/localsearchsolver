@@ -38,12 +38,13 @@ public:
     inline Time  total_time(const GlobalCost& global_cost) { return std::get<2>(global_cost); }
 
     /*
-     * Sequences.
+     * SequenceDatas.
      */
 
-    struct Sequence
+    struct SequenceData
     {
-        std::vector<LocationId> sequence;
+        LocationPos number_of_locations = 0;
+        LocationId j_last = -1;
         Time time_cur = 0;
         Time time_full = 0;
         Profit profit = 0;
@@ -83,15 +84,15 @@ public:
     virtual ~LocalScheme() { }
 
     /*
-     * Sequence properties.
+     * SequenceData properties.
      */
 
-    inline GlobalCost global_cost(const Sequence& sequence) const
+    inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
         return {
-            std::max((Time)0, sequence.time_full - instance_.maximum_duration()),
-            -sequence.profit,
-            sequence.time_full,
+            std::max((Time)0, sequence_data.time_full - instance_.maximum_duration()),
+            -sequence_data.profit,
+            sequence_data.time_full,
         };
     }
 
@@ -101,53 +102,29 @@ public:
 
     inline LocationPos number_of_elements() const { return instance_.number_of_locations() - 2; }
 
-    inline GlobalCost bound(const Sequence& sequence) const
+    inline GlobalCost bound(const SequenceData& sequence_data) const
     {
         return {
-            std::max((Time)0, sequence.time_full - instance_.maximum_duration()),
+            std::max((Time)0, sequence_data.time_full - instance_.maximum_duration()),
             std::numeric_limits<Profit>::lowest(),
-            sequence.time_full,
+            sequence_data.time_full,
         };
     }
 
     inline void append(
-            Sequence& sequence,
+            SequenceData& sequence_data,
             LocationId j) const
     {
         // Update time_cur.
-        LocationId j_prev = (sequence.sequence.size() > 0)?
-            sequence.sequence.back():
-            -1;
-        sequence.time_cur = instance_.arrival_time(j_prev + 1, j + 1, sequence.time_cur);
-        // Update sequence.
-        sequence.sequence.push_back(j);
+        sequence_data.time_cur = instance_.arrival_time(
+                sequence_data.j_last + 1, j + 1, sequence_data.time_cur);
         // Update profit.
-        sequence.profit += instance_.location(j + 1).profit;
+        sequence_data.profit += instance_.location(j + 1).profit;
         // Update time_full.
         LocationId jn = instance_.number_of_locations() - 1;
-        sequence.time_full = instance_.arrival_time(j + 1, jn, sequence.time_cur);
-    }
-
-    std::ostream& print(
-            std::ostream &os,
-            const Sequence& sequence) const
-    {
-        Sequence sequence_tmp_;
-        for (LocationId j: sequence.sequence) {
-            append(sequence_tmp_, j);
-            os << "j " << j
-                << " time_curr " << sequence_tmp_.time_cur
-                << " time_full " << sequence_tmp_.time_full
-                << " pj " << instance_.location(j + 1).profit
-                << " pS " << sequence_tmp_.profit
-                << std::endl;
-        }
-        os << "sequence:";
-        for (LocationId j: sequence.sequence)
-            os << " " << j;
-        os << std::endl;
-        os << "cost: " << to_string(global_cost(sequence)) << std::endl;
-        return os;
+        sequence_data.time_full = instance_.arrival_time(j + 1, jn, sequence_data.time_cur);
+        // Update number_of_locations.
+        sequence_data.number_of_locations++;
     }
 
 private:
