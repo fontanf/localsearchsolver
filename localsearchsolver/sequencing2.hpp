@@ -240,6 +240,9 @@ public:
         modes_ = std::vector<Mode>(maximum_number_of_modes_);
         std::iota(modes_.begin(), modes_.end(), 0);
 
+        sequence_datas_cur_ = std::vector<std::vector<SequenceData>>(
+                m, std::vector<SequenceData>(n + 1));
+        modes_cur_ = std::vector<Mode>(n);
         solution_cur_ = empty_solution();
         solution_tmp_ = empty_solution();
 
@@ -344,6 +347,7 @@ public:
             std::shuffle(elements.begin(), elements.end(), generator);
             Solution solution = empty_solution();
             for (ElementId j: elements) {
+                compute_temporary_structures(solution);
                 GlobalCost c_best = global_cost(solution);
                 SequenceId i_best = -1;
                 Mode mode_best = -1;
@@ -412,9 +416,9 @@ public:
                         for (Mode mode: modes_) {
                             if (mode >= number_of_modes(j))
                                 continue;
-                            sequence_tmp_1_ = sequence;
-                            append(sequence_tmp_1_, {j, mode});
-                            GlobalCost c = global_cost(sequence_tmp_1_);
+                            SequenceData sequence_data = sequence.data;
+                            append(sequence_data, {j, mode});
+                            GlobalCost c = global_cost(sequence_data);
                             if (c >= c_best)
                                 continue;
                             c_best = c;
@@ -439,6 +443,7 @@ public:
             std::vector<uint8_t> contains(local_scheme_0_.number_of_elements(), 0);
             Solution solution = empty_solution();
             for (;;) {
+                compute_temporary_structures(solution);
                 GlobalCost c_best = global_cost(solution);
                 //std::cout << to_string(c_best) << std::endl;
                 SequenceId i_best = -1;
@@ -770,9 +775,19 @@ public:
         return solution.global_cost;
     }
 
+    inline GlobalCost global_cost(const SequenceData& sequence_data) const
+    {
+        return local_scheme_0_.global_cost(sequence_data);
+    }
+
     inline GlobalCost global_cost(const Sequence& sequence) const
     {
         return local_scheme_0_.global_cost(sequence.data);
+    }
+
+    inline GlobalCost bound(const SequenceData& sequence_data) const
+    {
+        return local_scheme_0_.bound(sequence_data);
     }
 
     inline GlobalCost bound(const Sequence& sequence) const
@@ -999,6 +1014,7 @@ public:
             }
             // Add back removed elements.
             for (ElementId j: elements_) {
+                compute_temporary_structures(solution_cur_);
                 std::shuffle(sequences_1_.begin(), sequences_1_.end(), generator);
                 std::shuffle(positions_2_.begin(), positions_2_.end(), generator);
                 std::shuffle(modes_.begin(), modes_.end(), generator);
@@ -1059,6 +1075,7 @@ public:
             break;
 
         } case Perturbations::ForceAdd: {
+            compute_temporary_structures(solution);
             ElementId j = move.force_add_j;
             GlobalCost c_best = global_cost(solution);
             std::mt19937_64 generator(0);
@@ -1189,6 +1206,8 @@ public:
             //    << " c " << to_string(global_cost(solution))
             //    << std::endl;
             //print(std::cout, solution);
+
+            compute_temporary_structures(solution);
 
             if (parameters_.shuffle_neighborhood_order)
                 std::shuffle(neighborhoods.begin(), neighborhoods.end(), generator);
@@ -2802,6 +2821,23 @@ private:
                         const GlobalCost&)>::value>());
     }
 
+    inline void compute_temporary_structures(
+            const Solution& solution)
+    {
+        SequencePos m = number_of_sequences();
+        std::fill(modes_cur_.begin(), modes_cur_.end(), -1);
+        for (SequenceId i = 0; i < m; ++i) {
+            const auto& elements = solution.sequences[i].elements;
+            ElementPos seq_size = (ElementPos)elements.size();
+            sequence_datas_cur_[i][0] = empty_sequence_data(i);
+            for (ElementPos pos = 0; pos < seq_size; ++pos) {
+                sequence_datas_cur_[i][pos + 1] = sequence_datas_cur_[i][pos];
+                append(sequence_datas_cur_[i][pos + 1], elements[pos]);
+                modes_cur_[elements[pos].j] = elements[pos].mode;
+            }
+        }
+    }
+
     /**
      * Compute and return the global cost of a solution.
      */
@@ -2893,8 +2929,8 @@ private:
         SequencePos seq_size = elements.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i);
-        // Initialize sequence_cur_.
-        sequence_cur_1_ = empty_sequence(i);
+        // Initialize sequence_data_cur.
+        SequenceData sequence_data_cur = empty_sequence_data(i);
         // Reset global_costs_1d_.
         std::fill(
                 global_costs_1d_.begin(),
@@ -2912,33 +2948,33 @@ private:
 
             bool stop = false;
 
-            // Initialize sequence_tmp_.
-            sequence_tmp_1_ = sequence_cur_1_;
+            // Initialize sequence_data.
+            SequenceData sequence_data = sequence_data_cur;
 
-            // Add block to sequence_tmp_1_.
+            // Add block to sequence_data.
             if (!reverse) {
                 for (ElementPos p = block_pos; p < block_pos + block_size && !stop; ++p) {
-                    // Add element to sequence_tmp_1_.
-                    append(sequence_tmp_1_, elements[p]);
+                    // Add element to sequence_data.
+                    append(sequence_data, elements[p]);
                     // Check early termination.
                     if (m == 1) {
-                        if (bound(sequence_tmp_1_) >= gc)
+                        if (bound(sequence_data) >= gc)
                             stop = true;
                     } else {
-                        if (global_cost_merge(gc0, bound(sequence_tmp_1_)) >= gc)
+                        if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
                             stop = true;
                     }
                 }
             } else {
                 for (ElementPos p = block_pos + block_size - 1; p >= block_pos && !stop; --p) {
-                    // Add element to sequence_tmp_1_.
-                    append(sequence_tmp_1_, elements[p]);
+                    // Add element to sequence_data.
+                    append(sequence_data, elements[p]);
                     // Check early termination.
                     if (m == 1) {
-                        if (bound(sequence_tmp_1_) >= gc)
+                        if (bound(sequence_data) >= gc)
                             stop = true;
                     } else {
-                        if (global_cost_merge(gc0, bound(sequence_tmp_1_)) >= gc)
+                        if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
                             stop = true;
                     }
                 }
@@ -2950,24 +2986,24 @@ private:
                 // Skip elements from the previously added bloc.
                 if (block_pos <= p && p < block_pos + block_size)
                     continue;
-                // Add element to sequence_tmp_1_.
-                append(sequence_tmp_1_, elements[p]);
+                // Add element to sequence_data.
+                append(sequence_data, elements[p]);
                 // Check early termination.
                 if (m == 1) {
-                    if (bound(sequence_tmp_1_) >= gc)
+                    if (bound(sequence_data) >= gc)
                         stop = true;
                 } else {
-                    if (global_cost_merge(gc0, bound(sequence_tmp_1_)) >= gc)
+                    if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
                         stop = true;
                 }
             }
 
             if (!stop) {
                 if (m == 1) {
-                    global_costs_1d_[pos_new] = global_cost(sequence_tmp_1_);
+                    global_costs_1d_[pos_new] = global_cost(sequence_data);
                 } else {
                     global_costs_1d_[pos_new] = global_cost_merge(
-                            gc0, global_cost(sequence_tmp_1_));
+                            gc0, global_cost(sequence_data));
                 }
             }
 
@@ -2975,14 +3011,14 @@ private:
             if (pos_new == seq_size - block_size)
                 break;
 
-            // Add next element to sequence_cur_.
-            append(sequence_cur_1_, elements[p0]);
+            // Add next element to sequence_data_cur_.
+            append(sequence_data_cur, elements[p0]);
             // Check early termination.
             if (m == 1) {
-                if (bound(sequence_cur_1_) >= gc)
+                if (bound(sequence_data_cur) >= gc)
                     break;
             } else {
-                if (global_cost_merge(gc0, bound(sequence_cur_1_)) >= gc)
+                if (global_cost_merge(gc0, bound(sequence_data_cur)) >= gc)
                     break;
             }
         }
@@ -2999,8 +3035,6 @@ private:
         SequencePos seq_size = elements.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i);
-        // Initialize sequence_cur_.
-        sequence_cur_1_ = empty_sequence(i);
         // Reset global_costs_swap_.
         for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
             std::fill(
@@ -3019,8 +3053,17 @@ private:
 
                 bool stop = false;
 
-                // Initialize sequence_tmp_1_.
-                sequence_tmp_1_ = sequence_cur_1_;
+                // Initialize sequence_data.
+                SequenceData sequence_data = sequence_datas_cur_[i][pos_1];
+                // Check early termination.
+                if (m == 1) {
+                    if (bound(sequence_data) >= gc)
+                        break;
+                } else {
+                    if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
+                        break;
+                }
+
                 // Add remaining elements.
                 for (ElementPos pos = pos_1; pos < seq_size && !stop; ++pos) {
                     SequenceElement se = elements[pos];
@@ -3033,14 +3076,14 @@ private:
                         ElementPos diff = pos - pos_2;
                         se = elements[pos_1 + diff];
                     }
-                    // Add next element to sequence_tmp_1_.
-                    append(sequence_tmp_1_, se);
+                    // Add next element to sequence_data.
+                    append(sequence_data, se);
                     // Check early termination.
                     if (m == 1) {
-                        if (bound(sequence_tmp_1_) >= gc)
+                        if (bound(sequence_data) >= gc)
                             stop = true;
                     } else {
-                        if (global_cost_merge(gc0, bound(sequence_tmp_1_)) >= gc)
+                        if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
                             stop = true;
                     }
                 }
@@ -3048,23 +3091,12 @@ private:
                 if (!stop) {
                     if (m == 1) {
                         global_costs_2d_1_[pos_1][pos_2 - pos_1 - 1]
-                            = global_cost(sequence_tmp_1_);
+                            = global_cost(sequence_data);
                     } else {
                         global_costs_2d_1_[pos_1][pos_2 - pos_1 - 1]
-                            = global_cost_merge(gc0, global_cost(sequence_tmp_1_));
+                            = global_cost_merge(gc0, global_cost(sequence_data));
                     }
                 }
-            }
-
-            // Add next element to sequence_cur_.
-            append(sequence_cur_1_, elements[pos_1]);
-            // Check early termination.
-            if (m == 1) {
-                if (bound(sequence_cur_1_) >= gc)
-                    break;
-            } else {
-                if (global_cost_merge(gc0, bound(sequence_cur_1_)) >= gc)
-                    break;
             }
         }
     }
@@ -3081,8 +3113,6 @@ private:
         SequencePos seq_size = elements.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i);
-        // Initialize sequence_cur_.
-        sequence_cur_1_ = empty_sequence(i);
         // Reset global_costs_swap_.
         for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
             std::fill(
@@ -3103,57 +3133,66 @@ private:
 
                 bool stop = false;
 
-                // Initialize sequence_tmp_1_.
-                sequence_tmp_1_ = sequence_cur_1_;
+                // Initialize sequence_data.
+                SequenceData sequence_data = sequence_datas_cur_[i][pos];
+                // Check early termination.
+                if (m == 1) {
+                    if (bound(sequence_data) >= gc)
+                        break;
+                } else {
+                    if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
+                        break;
+                }
+
                 // Add block 2.
                 for (ElementPos p = pos_2; p < pos_2 + block_size_2 && !stop; ++p) {
-                    // Add next element to sequence_tmp_1_.
-                    append(sequence_tmp_1_, elements[p]);
+                    // Add next element to sequence_data.
+                    append(sequence_data, elements[p]);
                     // Check early termination.
                     if (m == 1) {
-                        if (bound(sequence_tmp_1_) >= gc)
+                        if (bound(sequence_data) >= gc)
                             stop = true;
                     } else {
-                        if (global_cost_merge(gc0, bound(sequence_tmp_1_)) >= gc)
+                        if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
                             stop = true;
                     }
                 }
                 // Add middle elements.
                 for (ElementPos p = pos_1 + block_size_1; p < pos_2 && !stop; ++p) {
-                    // Add next element to sequence_tmp_1_.
-                    append(sequence_tmp_1_, elements[p]);
+                    // Add next element to sequence_data.
+                    append(sequence_data, elements[p]);
                     // Check early termination.
                     if (m == 1) {
-                        if (bound(sequence_tmp_1_) >= gc)
+                        if (bound(sequence_data) >= gc)
                             stop = true;
                     } else {
-                        if (global_cost_merge(gc0, bound(sequence_tmp_1_)) >= gc)
+                        if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
                             stop = true;
                     }
                 }
                 // Add block 1.
                 for (ElementPos p = pos_1; p < pos_1 + block_size_1 && !stop; ++p) {
-                    // Add next element to sequence_tmp_1_.
-                    append(sequence_tmp_1_, elements[p]);
+                    // Add next element to sequence_data.
+                    append(sequence_data, elements[p]);
                     // Check early termination.
                     if (m == 1) {
-                        if (bound(sequence_tmp_1_) >= gc)
+                        if (bound(sequence_data) >= gc)
                             stop = true;
                     } else {
-                        if (global_cost_merge(gc0, bound(sequence_tmp_1_)) >= gc)
+                        if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
                             stop = true;
                     }
                 }
                 // Add end elements.
                 for (ElementPos p = pos_2 + block_size_2; p < seq_size && !stop; ++p) {
-                    // Add next element to sequence_tmp_1_.
-                    append(sequence_tmp_1_, elements[p]);
+                    // Add next element to sequence_data.
+                    append(sequence_data, elements[p]);
                     // Check early termination.
                     if (m == 1) {
-                        if (bound(sequence_tmp_1_) >= gc)
+                        if (bound(sequence_data) >= gc)
                             stop = true;
                     } else {
-                        if (global_cost_merge(gc0, bound(sequence_tmp_1_)) >= gc)
+                        if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
                             stop = true;
                     }
                 }
@@ -3161,10 +3200,10 @@ private:
                 if (!stop) {
                     if (m == 1) {
                         global_costs_2d_2_[pos_1][pos_2]
-                            = global_cost(sequence_tmp_1_);
+                            = global_cost(sequence_data);
                     } else {
                         global_costs_2d_2_[pos_1][pos_2]
-                            = global_cost_merge(gc0, global_cost(sequence_tmp_1_));
+                            = global_cost_merge(gc0, global_cost(sequence_data));
                     }
                 }
             }
@@ -3178,57 +3217,66 @@ private:
 
                 bool stop = false;
 
-                // Initialize sequence_tmp_1_.
-                sequence_tmp_1_ = sequence_cur_1_;
+                // Initialize sequence_data.
+                SequenceData sequence_data = sequence_datas_cur_[i][pos];
+                // Check early termination.
+                if (m == 1) {
+                    if (bound(sequence_data) >= gc)
+                        break;
+                } else {
+                    if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
+                        break;
+                }
+
                 // Add block 1.
                 for (ElementPos p = pos_1; p < pos_1 + block_size_1 && !stop; ++p) {
-                    // Add next element to sequence_tmp_1_.
-                    append(sequence_tmp_1_, elements[p]);
+                    // Add next element to sequence_data.
+                    append(sequence_data, elements[p]);
                     // Check early termination.
                     if (m == 1) {
-                        if (bound(sequence_tmp_1_) >= gc)
+                        if (bound(sequence_data) >= gc)
                             stop = true;
                     } else {
-                        if (global_cost_merge(gc0, bound(sequence_tmp_1_)) >= gc)
+                        if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
                             stop = true;
                     }
                 }
                 // Add middle elements.
                 for (ElementPos p = pos_2 + block_size_2; p < pos_1 && !stop; ++p) {
-                    // Add next element to sequence_tmp_1_.
-                    append(sequence_tmp_1_, elements[p]);
+                    // Add next element to sequence_data.
+                    append(sequence_data, elements[p]);
                     // Check early termination.
                     if (m == 1) {
-                        if (bound(sequence_tmp_1_) >= gc)
+                        if (bound(sequence_data) >= gc)
                             stop = true;
                     } else {
-                        if (global_cost_merge(gc0, bound(sequence_tmp_1_)) >= gc)
+                        if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
                             stop = true;
                     }
                 }
                 // Add block 2.
                 for (ElementPos p = pos_2; p < pos_2 + block_size_2 && !stop; ++p) {
-                    // Add next element to sequence_tmp_1_.
-                    append(sequence_tmp_1_, elements[p]);
+                    // Add next element to sequence_data.
+                    append(sequence_data, elements[p]);
                     // Check early termination.
                     if (m == 1) {
-                        if (bound(sequence_tmp_1_) >= gc)
+                        if (bound(sequence_data) >= gc)
                             stop = true;
                     } else {
-                        if (global_cost_merge(gc0, bound(sequence_tmp_1_)) >= gc)
+                        if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
                             stop = true;
                     }
                 }
                 // Add end elements.
                 for (ElementPos p = pos_1 + block_size_1; p < seq_size && !stop; ++p) {
-                    // Add next element to sequence_tmp_1_.
-                    append(sequence_tmp_1_, elements[p]);
+                    // Add next element to sequence_data.
+                    append(sequence_data, elements[p]);
                     // Check early termination.
                     if (m == 1) {
-                        if (bound(sequence_tmp_1_) >= gc)
+                        if (bound(sequence_data) >= gc)
                             stop = true;
                     } else {
-                        if (global_cost_merge(gc0, bound(sequence_tmp_1_)) >= gc)
+                        if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
                             stop = true;
                     }
                 }
@@ -3238,7 +3286,7 @@ private:
                 //        std::cout << " " << j;
                 //    std::cout << std::endl;
                 //    std::cout << "sequence: ";
-                //    for (ElementId j: sequence_tmp_1_.sequence)
+                //    for (ElementId j: sequence_data.sequence)
                 //        std::cout << " " << j;
                 //    std::cout << std::endl;
                 //}
@@ -3246,23 +3294,12 @@ private:
                 if (!stop) {
                     if (m == 1) {
                         global_costs_2d_2_[pos_1][pos_2]
-                            = global_cost(sequence_tmp_1_);
+                            = global_cost(sequence_data);
                     } else {
                         global_costs_2d_2_[pos_1][pos_2]
-                            = global_cost_merge(gc0, global_cost(sequence_tmp_1_));
+                            = global_cost_merge(gc0, global_cost(sequence_data));
                     }
                 }
-            }
-
-            // Add next element to sequence_cur_.
-            append(sequence_cur_1_, elements[pos]);
-            // Check early termination.
-            if (m == 1) {
-                if (bound(sequence_cur_1_) >= gc)
-                    break;
-            } else {
-                if (global_cost_merge(gc0, bound(sequence_cur_1_)) >= gc)
-                    break;
             }
         }
     }
@@ -3277,8 +3314,6 @@ private:
         SequencePos seq_size = elements.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i);
-        // Initialize sequence_cur_.
-        sequence_cur_1_ = empty_sequence(i);
         // Reset global_costs_swap_.
         for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
             std::fill(
@@ -3296,31 +3331,40 @@ private:
 
                 bool stop = false;
 
-                // Initialize sequence_tmp_1_.
-                sequence_tmp_1_ = sequence_cur_1_;
+                // Initialize sequence_data.
+                SequenceData sequence_data = sequence_datas_cur_[i][pos_1];
+                // Check early termination.
+                if (m == 1) {
+                    if (bound(sequence_data) >= gc)
+                        break;
+                } else {
+                    if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
+                        break;
+                }
+
                 // Add reverse sequence.
                 for (ElementPos pos = pos_2; pos >= pos_1 && !stop; --pos) {
-                    // Add next element to sequence_tmp_1_.
-                    append(sequence_tmp_1_, elements[pos]);
+                    // Add next element to sequence_data.
+                    append(sequence_data, elements[pos]);
                     // Check early termination.
                     if (m == 1) {
-                        if (bound(sequence_tmp_1_) >= gc)
+                        if (bound(sequence_data) >= gc)
                             stop = true;
                     } else {
-                        if (global_cost_merge(gc0, bound(sequence_tmp_1_)) >= gc)
+                        if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
                             stop = true;
                     }
                 }
                 // Add remaining elements.
                 for (ElementPos pos = pos_2 + 1; pos < seq_size && !stop; ++pos) {
-                    // Add next element to sequence_tmp_1_.
-                    append(sequence_tmp_1_, elements[pos]);
+                    // Add next element to sequence_data.
+                    append(sequence_data, elements[pos]);
                     // Check early termination.
                     if (m == 1) {
-                        if (bound(sequence_tmp_1_) >= gc)
+                        if (bound(sequence_data) >= gc)
                             stop = true;
                     } else {
-                        if (global_cost_merge(gc0, bound(sequence_tmp_1_)) >= gc)
+                        if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
                             stop = true;
                     }
                 }
@@ -3328,23 +3372,12 @@ private:
                 if (!stop) {
                     if (m == 1) {
                         global_costs_2d_1_[pos_1][pos_2 - pos_1 - 1]
-                            = global_cost(sequence_tmp_1_);
+                            = global_cost(sequence_data);
                     } else {
                         global_costs_2d_1_[pos_1][pos_2 - pos_1 - 1]
-                            = global_cost_merge(gc0, global_cost(sequence_tmp_1_));
+                            = global_cost_merge(gc0, global_cost(sequence_data));
                     }
                 }
-            }
-
-            // Add next element to sequence_cur_.
-            append(sequence_cur_1_, elements[pos_1]);
-            // Check early termination.
-            if (m == 1) {
-                if (bound(sequence_cur_1_) >= gc)
-                    break;
-            } else {
-                if (global_cost_merge(gc0, bound(sequence_cur_1_)) >= gc)
-                    break;
             }
         }
     }
@@ -3361,8 +3394,6 @@ private:
         SequencePos seq_size = elements.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i);
-        // Initialize sequence_cur_.
-        sequence_cur_1_ = empty_sequence(i);
         // Reset global_costs_1d_.
         std::fill(
                 global_costs_1d_.begin(),
@@ -3374,41 +3405,34 @@ private:
 
             bool stop = false;
 
-            // Initialize sequence_tmp_1_.
-            sequence_tmp_1_ = sequence_cur_1_;
+            // Initialize sequence_data.
+            SequenceData sequence_data = sequence_datas_cur_[i][pos];
 
-            // Add element j0 to sequence_tmp_1_.
-            append(sequence_tmp_1_, {j0, mode});
+            // Add element j0 to sequence_data.
+            append(sequence_data, {j0, mode});
 
             // Add the remaining elements to sequence_tmp.
             for (ElementPos p = pos; p < seq_size && !stop; ++p) {
-                // Add next element to sequence_tmp_1_.
-                append(sequence_tmp_1_, elements[p]);
+                // Add next element to sequence_data.
+                append(sequence_data, elements[p]);
                 // Check early termination.
                 if (m == 1) {
-                    if (bound(sequence_tmp_1_) >= gc)
+                    if (bound(sequence_data) >= gc)
                         stop = true;
                 } else {
-                    if (global_cost_merge(gc0, bound(sequence_tmp_1_)) >= gc)
+                    if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
                         stop = true;
                 }
             }
 
             if (!stop) {
                 if (m == 1) {
-                    global_costs_1d_[pos] = global_cost(sequence_tmp_1_);
+                    global_costs_1d_[pos] = global_cost(sequence_data);
                 } else {
                     global_costs_1d_[pos]
-                        = global_cost_merge(gc0, global_cost(sequence_tmp_1_));
+                        = global_cost_merge(gc0, global_cost(sequence_data));
                 }
             }
-
-            // Stop condition.
-            if (pos == seq_size)
-                break;
-
-            // Add next element to sequence_cur_.
-            append(sequence_cur_1_, elements[pos]);
         }
     }
 
@@ -3422,8 +3446,6 @@ private:
         SequencePos seq_size = elements.size();
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i);
-        // Initialize sequence_cur_.
-        sequence_cur_1_ = empty_sequence(i);
         // Reset global_costs_1d_.
         std::fill(
                 global_costs_1d_.begin(),
@@ -3435,34 +3457,31 @@ private:
 
             bool stop = false;
 
-            // Initialize sequence_tmp_1_.
-            sequence_tmp_1_ = sequence_cur_1_;
+            // Initialize sequence_data.
+            SequenceData sequence_data = sequence_datas_cur_[i][pos];
 
             // Add the remaining elements to sequence_tmp.
             for (ElementPos p = pos + 1; p < seq_size && !stop; ++p) {
-                // Add next element to sequence_tmp_1_.
-                append(sequence_tmp_1_, elements[p]);
+                // Add next element to sequence_data.
+                append(sequence_data, elements[p]);
                 // Check early termination.
                 if (m == 1) {
-                    if (bound(sequence_tmp_1_) >= gc)
+                    if (bound(sequence_data) >= gc)
                         stop = true;
                 } else {
-                    if (global_cost_merge(gc0, bound(sequence_tmp_1_)) >= gc)
+                    if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
                         stop = true;
                 }
             }
 
             if (!stop) {
                 if (m == 1) {
-                    global_costs_1d_[pos] = global_cost(sequence_tmp_1_);
+                    global_costs_1d_[pos] = global_cost(sequence_data);
                 } else {
                     global_costs_1d_[pos]
-                        = global_cost_merge(gc0, global_cost(sequence_tmp_1_));
+                        = global_cost_merge(gc0, global_cost(sequence_data));
                 }
             }
-
-            // Add next element to sequence_cur_.
-            append(sequence_cur_1_, elements[pos]);
         }
     }
 
@@ -3483,8 +3502,6 @@ private:
         // Global cost without sequence i.
         GlobalCost gc0 = compute_global_cost(solution, i1, i2);
         //std::cout << "i1 " << i1 << " i2 " << i2 << " gc0 " << to_string(gc0) << std::endl;
-        // Initialize sequence_cur_.
-        sequence_cur_2_ = empty_sequence(i2);
         // Reset global_costs_2d_2_.
         for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
             std::fill(
@@ -3493,42 +3510,52 @@ private:
                     worst<GlobalCost>());
         }
 
-        sequence_cur_1_ = empty_sequence(i1);
-
         for (ElementPos pos_1 = 0; pos_1 <= seq_1_size - block_size; ++pos_1) {
             // pos_1 is the start position of the block of element to shift.
 
             // Compute first sequence, i.e. the one from which the block iof
             // elements is removed.
-            sequence_tmp_1_ = sequence_cur_1_;
+            SequenceData sequence_data_1 = sequence_datas_cur_[i1][pos_1];
             for (ElementPos p = pos_1 + block_size; p < seq_1_size; ++p)
-                append(sequence_tmp_1_, elements_1[p]);
-
-            sequence_cur_2_ = empty_sequence(i2);
+                append(sequence_data_1, elements_1[p]);
+            // Check early termination.
+            GlobalCost bnd = bound(sequence_data_1);
+            if (m > 2)
+                bnd = global_cost_merge(gc0, bnd);
+            if (bnd >= gc)
+                break;
 
             // Loop through all new positions.
             ElementPos pos_min = std::max(
                     (ElementPos)0,
                     pos_1 - parameters_.shift_maximum_distance);
             ElementPos pos_max = std::min(
-                    seq_2_size + 1,
+                    seq_2_size,
                     pos_1 + parameters_.shift_maximum_distance);
             for (ElementPos pos_2 = pos_min; pos_2 <= pos_max; ++pos_2) {
 
                 bool stop = false;
 
-                // Initialize sequence_tmp_2_.
-                sequence_tmp_2_ = sequence_cur_2_;
+                // Initialize sequence_data_2.
+                SequenceData sequence_data_2 = sequence_datas_cur_[i2][pos_2];
+                // Check early termination.
+                GlobalCost bnd = global_cost_merge(
+                        bound(sequence_data_1),
+                        bound(sequence_data_2));
+                if (m > 2)
+                    bnd = global_cost_merge(gc0, bnd);
+                if (bnd >= gc)
+                    break;
 
-                // Add block to sequence_tmp_2_.
+                // Add block to sequence_data_2.
                 if (!reverse) {
                     for (ElementPos p = pos_1; p < pos_1 + block_size && !stop; ++p) {
-                        // Add next element to sequence_tmp_2_.
-                        append(sequence_tmp_2_, elements_1[p]);
+                        // Add next element to sequence_data_2.
+                        append(sequence_data_2, elements_1[p]);
                         // Check early termination.
                         GlobalCost bnd = global_cost_merge(
-                                bound(sequence_tmp_1_),
-                                bound(sequence_tmp_2_));
+                                bound(sequence_data_1),
+                                bound(sequence_data_2));
                         if (m > 2)
                             bnd = global_cost_merge(gc0, bnd);
                         if (bnd >= gc)
@@ -3536,12 +3563,12 @@ private:
                     }
                 } else {
                     for (ElementPos p = pos_1 + block_size - 1; p >= pos_1 && !stop; --p) {
-                        // Add next element to sequence_tmp_2_.
-                        append(sequence_tmp_2_, elements_1[p]);
+                        // Add next element to sequence_data_2.
+                        append(sequence_data_2, elements_1[p]);
                         // Check early termination.
                         GlobalCost bnd = global_cost_merge(
-                                bound(sequence_tmp_1_),
-                                bound(sequence_tmp_2_));
+                                bound(sequence_data_1),
+                                bound(sequence_data_2));
                         if (m > 2)
                             bnd = global_cost_merge(gc0, bnd);
                         if (bnd >= gc)
@@ -3549,14 +3576,14 @@ private:
                     }
                 }
 
-                // Add the remaining elements to sequence_tmp_2_.
+                // Add the remaining elements to sequence_data_2.
                 for (ElementPos p = pos_2; p < seq_2_size && !stop; ++p) {
-                    // Add next element to sequence_tmp_2_.
-                    append(sequence_tmp_2_, elements_2[p]);
+                    // Add next element to sequence_data_2.
+                    append(sequence_data_2, elements_2[p]);
                     // Check early termination.
                     GlobalCost bnd = global_cost_merge(
-                            bound(sequence_tmp_1_),
-                            bound(sequence_tmp_2_));
+                            bound(sequence_data_1),
+                            bound(sequence_data_2));
                     if (m > 2)
                         bnd = global_cost_merge(gc0, bnd);
                     if (bnd >= gc)
@@ -3565,48 +3592,25 @@ private:
 
                 if (!stop) {
                     GlobalCost gc_tmp = global_cost_merge(
-                            global_cost(sequence_tmp_1_),
-                            global_cost(sequence_tmp_2_));
+                            global_cost(sequence_data_1),
+                            global_cost(sequence_data_2));
                     if (m > 2)
                         gc_tmp = global_cost_merge(gc0, gc_tmp);
                     if (gc_tmp < gc) {
-                        //for (ElementId j: sequence_tmp_1_.sequence)
+                        //for (ElementId j: sequence_data_1.sequence)
                         //    std::cout << " " << j;
                         //std::cout << std::endl;
-                        //for (ElementId j: sequence_tmp_2_.sequence)
+                        //for (ElementId j: sequence_data_2.sequence)
                         //    std::cout << " " << j;
                         //std::cout << std::endl;
                         //std::cout << "gc0 " << to_string(gc0) << std::endl;
-                        //std::cout << "gc1 " << to_string(global_cost(sequence_tmp_1_)) << std::endl;
-                        //std::cout << "gc2 " << to_string(global_cost(sequence_tmp_2_)) << std::endl;
+                        //std::cout << "gc1 " << to_string(global_cost(sequence_data_1)) << std::endl;
+                        //std::cout << "gc2 " << to_string(global_cost(sequence_data_2)) << std::endl;
                         //std::cout << "gc_tmp " << to_string(gc_tmp) << std::endl;
                         global_costs_2d_2_[pos_1][pos_2] = gc_tmp;
                     }
                 }
-
-                if (pos_2 == seq_2_size)
-                    break;
-
-                // Add next element to sequence_cur_2_.
-                append(sequence_cur_2_, elements_2[pos_2]);
-                // Check early termination.
-                GlobalCost bnd = global_cost_merge(
-                        bound(sequence_cur_1_),
-                        bound(sequence_cur_2_));
-                if (m > 2)
-                    bnd = global_cost_merge(gc0, bnd);
-                if (bnd >= gc)
-                    break;
             }
-
-            // Add next element to sequence_cur_1_.
-            append(sequence_cur_1_, elements_1[pos_1]);
-            // Check early termination.
-            GlobalCost bnd = bound(sequence_cur_1_);
-            if (m > 2)
-                bnd = global_cost_merge(gc0, bnd);
-            if (bnd >= gc)
-                break;
         }
     }
 
@@ -3631,38 +3635,42 @@ private:
                     worst<GlobalCost>());
         }
 
-        sequence_cur_1_ = empty_sequence(i1);
-
         for (ElementPos pos_1 = 0; pos_1 <= seq_1_size; ++pos_1) {
-
-            sequence_cur_2_ = empty_sequence(i1);
 
             for (ElementPos pos_2 = 0; pos_2 <= seq_2_size; ++pos_2) {
 
                 bool stop = false;
 
-                sequence_tmp_1_ = sequence_cur_1_;
-                sequence_tmp_2_ = sequence_cur_2_;
+                SequenceData sequence_data_1 = sequence_datas_cur_[i1][pos_1];
+                SequenceData sequence_data_2 = sequence_datas_cur_[i2][pos_2];
+                // Check early termination.
+                GlobalCost bnd = global_cost_merge(
+                        bound(sequence_data_1),
+                        bound(sequence_data_2));
+                if (m > 2)
+                    bnd = global_cost_merge(gc0, bnd);
+                if (bnd >= gc)
+                    break;
 
                 for (ElementPos p = pos_2; p < seq_2_size && !stop; ++p) {
-                    // Add next element to sequence_tmp_1_.
-                    append(sequence_tmp_1_, elements_2[p]);
+                    // Add next element to sequence_data_1.
+                    append(sequence_data_1, elements_2[p]);
                     // Check early termination.
                     GlobalCost bnd = global_cost_merge(
-                            bound(sequence_tmp_1_),
-                            bound(sequence_tmp_2_));
+                            bound(sequence_data_1),
+                            bound(sequence_data_2));
                     if (m > 2)
                         bnd = global_cost_merge(gc0, bnd);
                     if (bnd >= gc)
                         stop = true;
                 }
                 for (ElementPos p = pos_1; p < seq_1_size && !stop; ++p) {
-                    // Add next element to sequence_tmp_2_.
-                    append(sequence_tmp_2_, elements_1[p]);
+                    // Add next element to sequence_data_2.
+                    append(sequence_data_2, elements_1[p]);
                     // Check early termination.
                     GlobalCost bnd = global_cost_merge(
-                            bound(sequence_tmp_1_),
-                            bound(sequence_tmp_2_));
+                            bound(sequence_data_1),
+                            bound(sequence_data_2));
                     if (m > 2)
                         bnd = global_cost_merge(gc0, bnd);
                     if (bnd >= gc)
@@ -3671,40 +3679,14 @@ private:
 
                 if (!stop) {
                     GlobalCost gc_tmp = global_cost_merge(
-                            global_cost(sequence_tmp_1_),
-                            global_cost(sequence_tmp_2_));
+                            global_cost(sequence_data_1),
+                            global_cost(sequence_data_2));
                     if (m > 2)
                         gc_tmp = global_cost_merge(gc0, gc_tmp);
                     if (gc_tmp < gc)
                         global_costs_2d_2_[pos_1][pos_2] = gc_tmp;
                 }
-
-                if (pos_2 == seq_2_size)
-                    break;
-
-                // Add next element to sequence_cur_2_.
-                append(sequence_cur_2_, elements_2[pos_2]);
-                // Check early termination.
-                GlobalCost bnd = global_cost_merge(
-                        bound(sequence_cur_1_),
-                        bound(sequence_cur_2_));
-                if (m > 2)
-                    bnd = global_cost_merge(gc0, bnd);
-                if (bnd >= gc)
-                    break;
             }
-
-            if (pos_1 == seq_1_size)
-                break;
-
-            // Add next element to sequence_cur_2_.
-            append(sequence_cur_1_, elements_1[pos_1]);
-            // Check early termination.
-            GlobalCost bnd = bound(sequence_cur_1_);
-            if (m > 2)
-                bnd = global_cost_merge(gc0, bnd);
-            if (bnd >= gc)
-                break;
         }
     }
 
@@ -3731,38 +3713,42 @@ private:
                     worst<GlobalCost>());
         }
 
-        sequence_cur_1_ = empty_sequence(i1);
-
         for (ElementPos pos_1 = 0; pos_1 <= seq_1_size - block_size_1; ++pos_1) {
-
-            sequence_cur_2_ = empty_sequence(i1);
 
             for (ElementPos pos_2 = 0; pos_2 <= seq_2_size - block_size_2; ++pos_2) {
 
                 bool stop = false;
 
-                sequence_tmp_1_ = sequence_cur_1_;
-                sequence_tmp_2_ = sequence_cur_2_;
+                SequenceData sequence_data_1 = sequence_datas_cur_[i1][pos_1];
+                SequenceData sequence_data_2 = sequence_datas_cur_[i2][pos_2];
+                // Check early termination.
+                GlobalCost bnd = global_cost_merge(
+                        bound(sequence_data_1),
+                        bound(sequence_data_2));
+                if (m > 2)
+                    bnd = global_cost_merge(gc0, bnd);
+                if (bnd >= gc)
+                    break;
 
                 for (ElementPos p = pos_2; p < pos_2 + block_size_2 && !stop; ++p) {
-                    // Add next element to sequence_tmp_1_.
-                    append(sequence_tmp_1_, elements_2[p]);
+                    // Add next element to sequence_data_1.
+                    append(sequence_data_1, elements_2[p]);
                     // Check early termination.
                     GlobalCost bnd = global_cost_merge(
-                            bound(sequence_tmp_1_),
-                            bound(sequence_tmp_2_));
+                            bound(sequence_data_1),
+                            bound(sequence_data_2));
                     if (m > 2)
                         bnd = global_cost_merge(gc0, bnd);
                     if (bnd >= gc)
                         stop = true;
                 }
                 for (ElementPos p = pos_1 + block_size_1; p < seq_1_size && !stop; ++p) {
-                    // Add next element to sequence_tmp_1_.
-                    append(sequence_tmp_1_, elements_1[p]);
+                    // Add next element to sequence_data_1.
+                    append(sequence_data_1, elements_1[p]);
                     // Check early termination.
                     GlobalCost bnd = global_cost_merge(
-                            bound(sequence_tmp_1_),
-                            bound(sequence_tmp_2_));
+                            bound(sequence_data_1),
+                            bound(sequence_data_2));
                     if (m > 2)
                         bnd = global_cost_merge(gc0, bnd);
                     if (bnd >= gc)
@@ -3770,24 +3756,24 @@ private:
                 }
 
                 for (ElementPos p = pos_1; p < pos_1 + block_size_1 && !stop; ++p) {
-                    // Add next element to sequence_tmp_2_.
-                    append(sequence_tmp_2_, elements_1[p]);
+                    // Add next element to sequence_data_2.
+                    append(sequence_data_2, elements_1[p]);
                     // Check early termination.
                     GlobalCost bnd = global_cost_merge(
-                            bound(sequence_tmp_1_),
-                            bound(sequence_tmp_2_));
+                            bound(sequence_data_1),
+                            bound(sequence_data_2));
                     if (m > 2)
                         bnd = global_cost_merge(gc0, bnd);
                     if (bnd >= gc)
                         stop = true;
                 }
                 for (ElementPos p = pos_2 + block_size_2; p < seq_2_size && !stop; ++p) {
-                    // Add next element to sequence_tmp_2_.
-                    append(sequence_tmp_2_, elements_2[p]);
+                    // Add next element to sequence_data_2.
+                    append(sequence_data_2, elements_2[p]);
                     // Check early termination.
                     GlobalCost bnd = global_cost_merge(
-                            bound(sequence_tmp_1_),
-                            bound(sequence_tmp_2_));
+                            bound(sequence_data_1),
+                            bound(sequence_data_2));
                     if (m > 2)
                         bnd = global_cost_merge(gc0, bnd);
                     if (bnd >= gc)
@@ -3796,40 +3782,14 @@ private:
 
                 if (!stop) {
                     GlobalCost gc_tmp = global_cost_merge(
-                            global_cost(sequence_tmp_1_),
-                            global_cost(sequence_tmp_2_));
+                            global_cost(sequence_data_1),
+                            global_cost(sequence_data_2));
                     if (m > 2)
                         gc_tmp = global_cost_merge(gc0, gc_tmp);
                     if (gc_tmp < gc)
                         global_costs_2d_2_[pos_1][pos_2] = gc_tmp;
                 }
-
-                if (pos_2 == seq_2_size)
-                    break;
-
-                // Add next element to sequence_cur_2_.
-                append(sequence_cur_2_, elements_2[pos_2]);
-                // Check early termination.
-                GlobalCost bnd = global_cost_merge(
-                        bound(sequence_cur_1_),
-                        bound(sequence_cur_2_));
-                if (m > 2)
-                    bnd = global_cost_merge(gc0, bnd);
-                if (bnd >= gc)
-                    break;
             }
-
-            if (pos_1 == seq_1_size)
-                break;
-
-            // Add next element to sequence_cur_1_.
-            append(sequence_cur_1_, elements_1[pos_1]);
-            // Check early termination.
-            GlobalCost bnd = bound(sequence_cur_1_);
-            if (m > 2)
-                bnd = global_cost_merge(gc0, bnd);
-            if (bnd >= gc)
-                break;
         }
     }
 
@@ -3901,11 +3861,9 @@ private:
      * Temporary structures.
      */
 
-    Sequence sequence_cur_1_;
-    Sequence sequence_cur_2_;
+    std::vector<std::vector<SequenceData>> sequence_datas_cur_;
+    std::vector<Mode> modes_cur_;
     Solution solution_cur_;
-    Sequence sequence_tmp_1_;
-    Sequence sequence_tmp_2_;
     Solution solution_tmp_;
 
     /*
