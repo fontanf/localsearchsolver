@@ -108,8 +108,9 @@ struct MainArgs
     std::vector<std::string> local_scheme_args;
     std::vector<char*> local_scheme_argv;
     optimizationtools::Info info = optimizationtools::Info();
-    bool print_instance = false;
-    bool print_solution = false;
+    int print_instance = 1;
+    int print_solution = 1;
+    int print_checker = 1;
     bool has_goal = false;
     double goal = 0;
     std::vector<Counter> initial_solution_ids = {0};
@@ -135,8 +136,9 @@ MainArgs read_args(int argc, char *argv[], MainArgs& main_args)
         ("goal,g", boost::program_options::value<double>(&main_args.goal), "set goal")
         ("only-write-at-the-end,e", "Only write output and certificate files at the end")
         ("verbose,v", "")
-        ("print-instance", "")
-        ("print-solution", "")
+        ("print-instance", boost::program_options::value<int>(&main_args.print_instance), "print instance")
+        ("print-solution", boost::program_options::value<int>(&main_args.print_solution), "print solution")
+        ("print-checker", boost::program_options::value<int>(&main_args.print_checker), "print checker")
         ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
@@ -151,8 +153,6 @@ MainArgs read_args(int argc, char *argv[], MainArgs& main_args)
         throw "";
     }
 
-    main_args.print_instance = (vm.count("print-instance"));
-    main_args.print_solution = (vm.count("print-solution"));
     main_args.has_goal = (vm.count("goal"));
 
     main_args.algorithm_args = boost::program_options::split_unix(main_args.algorithm);

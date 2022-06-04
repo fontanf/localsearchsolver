@@ -71,23 +71,22 @@ inline RestartingLocalSearchOutput<LocalScheme> restarting_local_search(
         RestartingLocalSearchOptionalParameters<LocalScheme> parameters)
 {
     // Initial display.
-    FFOT_VER(parameters.info,
-               "=======================================" << std::endl
-            << "          Local Search Solver          " << std::endl
-            << "=======================================" << std::endl
-            << std::endl
-            << "Algorithm" << std::endl
-            << "---------" << std::endl
-            << "Restarting Local Search" << std::endl
-            << std::endl
-            << "Parameters" << std::endl
-            << "----------" << std::endl
-            << "Maximum number of restarts:      " << parameters.maximum_number_of_restarts << std::endl
-            << "Seed:                            " << parameters.seed << std::endl
-            << "Maximum size of the pool:        " << parameters.maximum_size_of_the_solution_pool << std::endl
-            << "Time limit:                      " << parameters.info.time_limit << std::endl
-            << std::endl
-       );
+    parameters.info.os()
+        << "=======================================" << std::endl
+        << "          Local Search Solver          " << std::endl
+        << "=======================================" << std::endl
+        << std::endl
+        << "Algorithm" << std::endl
+        << "---------" << std::endl
+        << "Restarting Local Search" << std::endl
+        << std::endl
+        << "Parameters" << std::endl
+        << "----------" << std::endl
+        << "Maximum number of restarts:      " << parameters.maximum_number_of_restarts << std::endl
+        << "Seed:                            " << parameters.seed << std::endl
+        << "Maximum size of the pool:        " << parameters.maximum_size_of_the_solution_pool << std::endl
+        << "Time limit:                      " << parameters.info.time_limit << std::endl
+        << std::endl;
 
     //std::cout << "iterated_local_search start" << std::endl;
     RestartingLocalSearchOutput<LocalScheme> output(
@@ -136,8 +135,8 @@ inline RestartingLocalSearchOutput<LocalScheme> restarting_local_search(
     }
 
     output.solution_pool.display_end(parameters.info);
-    FFOT_VER(parameters.info, "Number of restarts:         " << output.number_of_restarts << std::endl);
-    FFOT_PUT(parameters.info, "Algorithm", "NumberOfRestarts", output.number_of_restarts);
+    parameters.info.os() << "Number of restarts:         " << output.number_of_restarts << std::endl;
+    parameters.info.add_to_json("Algorithm", "NumberOfRestarts", output.number_of_restarts);
     return output;
 }
 

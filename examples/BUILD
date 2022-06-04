@@ -270,6 +270,30 @@ cc_binary(
 
 
 cc_library(
+        name = "travelingsalesmanwithreleasedates",
+        hdrs = ["travelingsalesmanwithreleasedates.hpp"],
+        deps = [
+                "//localsearchsolver:localsearchsolver",
+                "@orproblems//orproblems:travelingsalesmanwithreleasedates",
+        ],
+        visibility = ["//visibility:public"],
+)
+
+cc_binary(
+        name = "travelingsalesmanwithreleasedates_main",
+        srcs = ["travelingsalesmanwithreleasedates_main.cpp"],
+        deps = [
+                ":travelingsalesmanwithreleasedates",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
+
+cc_library(
         name = "roadef2020",
         hdrs = ["roadef2020.hpp"],
         srcs = ["roadef2020.cpp"],

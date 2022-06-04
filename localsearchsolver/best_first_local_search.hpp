@@ -461,23 +461,23 @@ inline BestFirstLocalSearchOutput<LocalScheme> best_first_local_search(
         BestFirstLocalSearchOptionalParameters<LocalScheme> parameters)
 {
     // Initial display.
-    FFOT_VER(parameters.info, ""
-            << "=======================================" << std::endl
-            << "          Local Search Solver          " << std::endl
-            << "=======================================" << std::endl
-            << std::endl
-            << "Algorithm" << std::endl
-            << "---------" << std::endl
-            << "Best First Local Search" << std::endl
-            << std::endl
-            << "Parameters" << std::endl
-            << "----------" << std::endl
-            << "Maximum number of nodes:     " << parameters.maximum_number_of_nodes << std::endl
-            << "Seed:                        " << parameters.seed << std::endl
-            << "Maximum size of the pool:    " << parameters.maximum_size_of_the_solution_pool << std::endl
-            << "Time limit:                  " << parameters.info.time_limit << std::endl);
+    parameters.info.os()
+        << "=======================================" << std::endl
+        << "          Local Search Solver          " << std::endl
+        << "=======================================" << std::endl
+        << std::endl
+        << "Algorithm" << std::endl
+        << "---------" << std::endl
+        << "Best First Local Search" << std::endl
+        << std::endl
+        << "Parameters" << std::endl
+        << "----------" << std::endl
+        << "Maximum number of nodes:     " << parameters.maximum_number_of_nodes << std::endl
+        << "Seed:                        " << parameters.seed << std::endl
+        << "Maximum size of the pool:    " << parameters.maximum_size_of_the_solution_pool << std::endl
+        << "Time limit:                  " << parameters.info.time_limit << std::endl;
     print_local_scheme_parameters(local_scheme, parameters.info);
-    FFOT_VER(parameters.info, std::endl);
+    parameters.info.os() << std::endl;
 
 
     //std::cout << "best_first_local_search start" << std::endl;
@@ -503,8 +503,6 @@ inline BestFirstLocalSearchOutput<LocalScheme> best_first_local_search(
         threads[thread_id].join();
 
     output.solution_pool.display_end(parameters.info);
-    //FFOT_VER(parameters.info, "Number of nodes:            " << output.number_of_nodes << std::endl);
-    //FFOT_PUT(parameters.info, "Algorithm", "NumberOfNodes", output.number_of_nodes);
     print_local_scheme_statistics(local_scheme, parameters.info);
     return output;
 }

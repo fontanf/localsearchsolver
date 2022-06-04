@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 
     // Read instance.
     Instance instance(instance_path, format);
-    FFOT_VER(info, instance << std::endl);
+    info.os() << instance << std::endl;
 
     // Create LocalScheme.
     LocalScheme::Parameters parameters_local_scheme;
@@ -114,8 +114,8 @@ int main(int argc, char *argv[])
                 info.output->number_of_solutions++;
                 double t = info.elapsed_time();
                 std::string sol_str = "Solution" + std::to_string(info.output->number_of_solutions);
-                FFOT_PUT(info, sol_str, "Value", local_scheme.real_cost(solution));
-                FFOT_PUT(info, sol_str, "Time", t);
+                info.output->json[sol_str]["Value"] = local_scheme.real_cost(solution);
+                info.output->json[sol_str]["Time"] = t;
                 if (!info.output->only_write_at_the_end) {
                     info.write_json_output();
                     local_scheme.write(solution, info.output->certificate_path);
@@ -127,8 +127,8 @@ int main(int argc, char *argv[])
     const LocalScheme::Solution& solution = output.solution_pool.best();
     double t = info.elapsed_time();
     std::string sol_str = "Solution";
-    FFOT_PUT(info, sol_str, "Time", t);
-    FFOT_PUT(info, sol_str, "Value", local_scheme.real_cost(solution));
+    info.output->json[sol_str]["Time"] = t;
+    info.output->json[sol_str]["Value"] = local_scheme.real_cost(solution);
     info.write_json_output();
     local_scheme.write(solution, info.output->certificate_path);
 

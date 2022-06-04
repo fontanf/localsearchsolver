@@ -46,6 +46,10 @@ A specific implementation is also available for sequencing problems. The neighbo
     * Swap a block of `k1` consecutive elements from a sequence with another block of `k2` consecutive elements from another sequence
     * Shift and reverse a block of `k` consecutive elements from one sequence to another
   * Remove an element from the solution / Add an element into the solution
+  * Modes:
+    * Shift an element `j` in the same sequence and change its mode
+    * Swap the mode of element `j1` with the mode of another element `j2` from the same sequence
+    * Swap an elemnt `j1` with another element `j2` from the same sequence and swap their modes
 * Perturbations:
   * Swap two blocks of consecutive elements (double-bridge) (single sequence only)
   * Remove `k` elements and re-insert them (ruin-and-recreate)
@@ -150,6 +154,16 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/flowshopsc
 
 </p>
 </details>
+
+#### Single sequence + modes
+
+[Traveling salesman problem with release dates](examples/travelingsalesmanwithreleasedates.hpp)
+
+#### Single sub-sequence + modes
+
+#### Multiple sequences + modes
+
+#### Multiple sub-sequences + modes
 
 ## Other examples
 

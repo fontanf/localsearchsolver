@@ -89,25 +89,25 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
     typedef typename LocalScheme::Move Move;
 
     // Initial display.
-    FFOT_VER(parameters.info, ""
-            << "=======================================" << std::endl
-            << "          Local Search Solver          " << std::endl
-            << "=======================================" << std::endl
-            << std::endl
-            << "Algorithm" << std::endl
-            << "---------" << std::endl
-            << "Iterated Local Search" << std::endl
-            << std::endl
-            << "Parameters" << std::endl
-            << "----------" << std::endl
-            << "Maximum number of iterations:     " << parameters.maximum_number_of_iterations << std::endl
-            << "Maximum number of restarts:       " << parameters.maximum_number_of_restarts << std::endl
-            << "Minimum number of perturbations:  " << parameters.minimum_number_of_perturbations << std::endl
-            << "Seed:                             " << parameters.seed << std::endl
-            << "Maximum size of the pool:         " << parameters.maximum_size_of_the_solution_pool << std::endl
-            << "Time limit:                       " << parameters.info.time_limit << std::endl);
+    parameters.info.os()
+        << "=======================================" << std::endl
+        << "          Local Search Solver          " << std::endl
+        << "=======================================" << std::endl
+        << std::endl
+        << "Algorithm" << std::endl
+        << "---------" << std::endl
+        << "Iterated Local Search" << std::endl
+        << std::endl
+        << "Parameters" << std::endl
+        << "----------" << std::endl
+        << "Maximum number of iterations:     " << parameters.maximum_number_of_iterations << std::endl
+        << "Maximum number of restarts:       " << parameters.maximum_number_of_restarts << std::endl
+        << "Minimum number of perturbations:  " << parameters.minimum_number_of_perturbations << std::endl
+        << "Seed:                             " << parameters.seed << std::endl
+        << "Maximum size of the pool:         " << parameters.maximum_size_of_the_solution_pool << std::endl
+        << "Time limit:                       " << parameters.info.time_limit << std::endl;
     print_local_scheme_parameters(local_scheme, parameters.info);
-    FFOT_VER(parameters.info, std::endl);
+    parameters.info.os() << std::endl;
 
     auto move_compare = [](const Move& move_1, const Move& move_2) -> bool
     {
@@ -241,10 +241,10 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
     }
 
     output.solution_pool.display_end(parameters.info);
-    FFOT_VER(parameters.info, "Number of restarts:         " << output.number_of_restarts << std::endl);
-    FFOT_VER(parameters.info, "Number of iterations:       " << output.number_of_iterations << std::endl);
-    FFOT_PUT(parameters.info, "Algorithm", "NumberOfRestarts", output.number_of_restarts);
-    FFOT_PUT(parameters.info, "Algorithm", "NumberOfIterations", output.number_of_iterations);
+    parameters.info.os() << "Number of restarts:         " << output.number_of_restarts << std::endl;
+    parameters.info.os() << "Number of iterations:       " << output.number_of_iterations << std::endl;
+    parameters.info.add_to_json("Algorithm", "NumberOfRestarts", output.number_of_restarts);
+    parameters.info.add_to_json("Algorithm", "NumberOfIterations", output.number_of_iterations);
     print_local_scheme_statistics(local_scheme, parameters.info);
     return output;
 }

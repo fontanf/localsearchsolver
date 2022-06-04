@@ -44,9 +44,9 @@ enum class Neighborhoods
     InterSwap,
     InterShiftReverse,
 
-    //ShiftChangeMode,
-    //ModeSwap,
-    //SwapWithModes,
+    ShiftChangeMode,
+    ModeSwap,
+    SwapWithModes,
 };
 
 struct Parameters
@@ -86,6 +86,16 @@ struct Parameters
      */
 
     bool add_remove = false;
+
+    /*
+     * Neighborhoods - Modes.
+     */
+
+    bool shift_change_mode = false;
+
+    bool mode_swap = false;
+
+    bool swap_with_modes = false;
 
     /*
      * Perturbations.
@@ -258,35 +268,35 @@ public:
         // Initialize statistics structures.
         shift_number_of_explorations_ = std::vector<Counter>(
                 parameters_.shift_block_maximum_length + 1, 0);
-        shift_number_of_sucesses_ = std::vector<Counter>(
+        shift_number_of_successes_ = std::vector<Counter>(
                 parameters_.shift_block_maximum_length + 1, 0);
         swap_number_of_explorations_ = std::vector<std::vector<Counter>>(
                 parameters_.swap_block_maximum_length + 1);
-        swap_number_of_sucesses_ = std::vector<std::vector<Counter>>(
+        swap_number_of_successes_ = std::vector<std::vector<Counter>>(
                 parameters_.swap_block_maximum_length + 1);
         for (ElementPos p = 0; p <= parameters_.swap_block_maximum_length; ++p) {
             swap_number_of_explorations_[p] = std::vector<Counter>(p + 1, 0);
-            swap_number_of_sucesses_[p] = std::vector<Counter>(p + 1, 0);
+            swap_number_of_successes_[p] = std::vector<Counter>(p + 1, 0);
         }
         shift_reverse_number_of_explorations_ = std::vector<Counter>(
                 parameters_.shift_reverse_block_maximum_length + 1, 0);
-        shift_reverse_number_of_sucesses_ = std::vector<Counter>(
+        shift_reverse_number_of_successes_ = std::vector<Counter>(
                 parameters_.shift_reverse_block_maximum_length + 1, 0);
         inter_shift_number_of_explorations_ = std::vector<Counter>(
                 parameters_.inter_shift_block_maximum_length + 1, 0);
-        inter_shift_number_of_sucesses_ = std::vector<Counter>(
+        inter_shift_number_of_successes_ = std::vector<Counter>(
                 parameters_.inter_shift_block_maximum_length + 1, 0);
         inter_swap_number_of_explorations_ = std::vector<std::vector<Counter>>(
                 parameters_.inter_swap_block_maximum_length + 1);
-        inter_swap_number_of_sucesses_ = std::vector<std::vector<Counter>>(
+        inter_swap_number_of_successes_ = std::vector<std::vector<Counter>>(
                 parameters_.inter_swap_block_maximum_length + 1);
         for (ElementPos p = 0; p <= parameters_.inter_swap_block_maximum_length; ++p) {
             inter_swap_number_of_explorations_[p] = std::vector<Counter>(p + 1, 0);
-            inter_swap_number_of_sucesses_[p] = std::vector<Counter>(p + 1, 0);
+            inter_swap_number_of_successes_[p] = std::vector<Counter>(p + 1, 0);
         }
         inter_shift_reverse_number_of_explorations_ = std::vector<Counter>(
                 parameters_.inter_shift_reverse_block_maximum_length + 1, 0);
-        inter_shift_reverse_number_of_sucesses_ = std::vector<Counter>(
+        inter_shift_reverse_number_of_successes_ = std::vector<Counter>(
                 parameters_.inter_shift_reverse_block_maximum_length + 1, 0);
     }
 
@@ -1176,8 +1186,10 @@ public:
                         Neighborhoods::SwapK1K2, block_size_1, block_size_2});
             }
         }
+
         if (parameters_.reverse)
             neighborhoods.push_back({Neighborhoods::Reverse, 0, 0});
+
         for (ElementPos block_size = 2;
                 block_size <= parameters_.shift_reverse_block_maximum_length;
                 ++block_size) {
@@ -1210,6 +1222,13 @@ public:
                 }
             }
         }
+
+        if (parameters_.shift_change_mode)
+            neighborhoods.push_back({Neighborhoods::ShiftChangeMode, 0, 0});
+        if (parameters_.mode_swap)
+            neighborhoods.push_back({Neighborhoods::ModeSwap, 0, 0});
+        if (parameters_.swap_with_modes)
+            neighborhoods.push_back({Neighborhoods::SwapWithModes, 0, 0});
 
         Counter it = 0;
         for (;; ++it) {
@@ -1320,7 +1339,7 @@ public:
                                     + to_string(global_cost(solution)) + "\n");
                         }
                         // Update statistics.
-                        shift_number_of_sucesses_[block_size]++;
+                        shift_number_of_successes_[block_size]++;
                     }
                     // Update statistics.
                     shift_number_of_explorations_[block_size]++;
@@ -1360,8 +1379,8 @@ public:
                         // Check that the move is improving.
                         if (c_best >= global_cost(solution)) {
                             throw std::logic_error(
-                                    std::to_string(block_size)
-                                    + "-swap. Best cost is worse than current cost:\n"
+                                    std::to_string(block_size) + "-swap."
+                                    " Best cost is worse than current cost:\n"
                                     + "* Best cost: "
                                     + to_string(c_best) + "\n"
                                     + "* Current cost: "
@@ -1394,15 +1413,15 @@ public:
                         // Check new current solution cost.
                         if (global_cost(solution) != c_best) {
                             throw std::logic_error(
-                                    std::to_string(block_size)
-                                    + "-swap. Costs do not match:\n"
+                                    std::to_string(block_size) + "-swap."
+                                    " Costs do not match:\n"
                                     + "* Expected new cost: "
                                     + to_string(c_best) + "\n"
                                     + "* Actual new cost: "
                                     + to_string(global_cost(solution)) + "\n");
                         }
                         // Update statistics.
-                        swap_number_of_sucesses_[block_size][block_size]++;
+                        swap_number_of_successes_[block_size][block_size]++;
                     }
                     // Update statistics.
                     swap_number_of_explorations_[block_size][block_size]++;
@@ -1447,7 +1466,8 @@ public:
                             throw std::logic_error(
                                     "(" + std::to_string(block_size_1)
                                     + "," + std::to_string(block_size_2)
-                                    + ")-swap. Best cost is worse than current cost:\n"
+                                    + ")-swap."
+                                    " Best cost is worse than current cost:\n"
                                     + "* Best cost: "
                                     + to_string(c_best) + "\n"
                                     + "* Current cost: "
@@ -1493,14 +1513,15 @@ public:
                             throw std::logic_error(
                                     "(" + std::to_string(block_size_1)
                                     + "," + std::to_string(block_size_2)
-                                    + ")-swap. Costs do not match:\n"
+                                    + ")-swap."
+                                    " Costs do not match:\n"
                                     + "* Expected new cost: "
                                     + to_string(c_best) + "\n"
                                     + "* Actual new cost: "
                                     + to_string(global_cost(solution)) + "\n");
                         }
                         // Update statistics.
-                        swap_number_of_sucesses_[block_size_1][block_size_2]++;
+                        swap_number_of_successes_[block_size_1][block_size_2]++;
                     }
                     // Update statistics.
                     swap_number_of_explorations_[block_size_1][block_size_2]++;
@@ -1537,7 +1558,8 @@ public:
                         // Check that the move is improving.
                         if (c_best >= global_cost(solution)) {
                             throw std::logic_error(
-                                    "Reverse. Best cost is worse than current cost:\n"
+                                    "Reverse."
+                                    " Best cost is worse than current cost:\n"
                                     "* Best cost: "
                                     + to_string(c_best) + "\n"
                                     + "* Current cost: "
@@ -1564,14 +1586,15 @@ public:
                         // Check new current solution cost.
                         if (global_cost(solution) != c_best) {
                             throw std::logic_error(
-                                    "Reverse. Costs do not match:\n"
+                                    "Reverse."
+                                    " Costs do not match:\n"
                                     "* Expected new cost: "
                                     + to_string(c_best) + "\n"
                                     + "* Actual new cost: "
                                     + to_string(global_cost(solution)) + "\n");
                         }
                         // Update statistics.
-                        reverse_number_of_sucesses_++;
+                        reverse_number_of_successes_++;
                     }
                     // Update statistics.
                     reverse_number_of_explorations_++;
@@ -1620,7 +1643,8 @@ public:
                         if (c_best >= global_cost(solution)) {
                             throw std::logic_error(
                                     std::to_string(block_size)
-                                    + "-shift-reverse. Best cost is worse than current cost:\n"
+                                    + "-shift-reverse."
+                                    " Best cost is worse than current cost:\n"
                                     + "* Best cost: "
                                     + to_string(c_best) + "\n"
                                     + "* Current cost: "
@@ -1661,14 +1685,15 @@ public:
                         if (global_cost(solution) != c_best) {
                             throw std::logic_error(
                                     std::to_string(block_size)
-                                    + "-shift-reverse. Costs do not match:\n"
+                                    + "-shift-reverse."
+                                    " Costs do not match:\n"
                                     + "* Expected new cost: "
                                     + to_string(c_best) + "\n"
                                     + "* Actual new cost: "
                                     + to_string(global_cost(solution)) + "\n");
                         }
                         // Update statistics.
-                        shift_reverse_number_of_sucesses_[block_size]++;
+                        shift_reverse_number_of_successes_[block_size]++;
                     }
                     // Update statistics.
                     shift_reverse_number_of_explorations_[block_size]++;
@@ -1723,7 +1748,8 @@ public:
                         // Check that the move is improving.
                         if (c_best >= global_cost(solution)) {
                             throw std::logic_error(
-                                    "Add. Best cost is worse than current cost:\n"
+                                    "Add."
+                                    " Best cost is worse than current cost:\n"
                                     "* Best cost: "
                                     + to_string(c_best) + "\n"
                                     + "* Current cost: "
@@ -1749,14 +1775,15 @@ public:
                         // Check new current solution cost.
                         if (global_cost(solution) != c_best) {
                             throw std::logic_error(
-                                    "Add. Costs do not match:\n"
+                                    "Add."
+                                    " Costs do not match:\n"
                                     "* Expected new cost: "
                                     + to_string(c_best) + "\n"
                                     + "* Actual new cost: "
                                     + to_string(global_cost(solution)) + "\n");
                         }
                         // Update statistics.
-                        add_number_of_sucesses_++;
+                        add_number_of_successes_++;
                     }
                     // Update statistics.
                     add_number_of_explorations_++;
@@ -1796,7 +1823,8 @@ public:
                         // Check that the move is improving.
                         if (c_best >= global_cost(solution)) {
                             throw std::logic_error(
-                                    "Remove. Best cost is worse than current cost:\n"
+                                    "Remove."
+                                    " Best cost is worse than current cost:\n"
                                     "* Best cost: "
                                     + to_string(c_best) + "\n"
                                     + "* Current cost: "
@@ -1822,17 +1850,267 @@ public:
                         // Check new current solution cost.
                         if (global_cost(solution) != c_best) {
                             throw std::logic_error(
-                                    "Remove. Costs do not match:\n"
+                                    "Remove."
+                                    " Costs do not match:\n"
                                     "* Expected new cost: "
                                     + to_string(c_best) + "\n"
                                     + "* Actual new cost: "
                                     + to_string(global_cost(solution)) + "\n");
                         }
                         // Update statistics.
-                        remove_number_of_sucesses_++;
+                        remove_number_of_successes_++;
                     }
                     // Update statistics.
                     remove_number_of_explorations_++;
+                    break;
+
+                } case Neighborhoods::ShiftChangeMode: {
+                    std::shuffle(sequences_1_.begin(), sequences_1_.end(), generator);
+                    std::shuffle(positions_2_.begin(), positions_2_.end(), generator);
+                    std::shuffle(modes_.begin(), modes_.end(), generator);
+                    SequenceId i_best = -1;
+                    ElementPos pos_best = -1;
+                    ElementPos pos_new_best = -1;
+                    Mode mode_best = -1;
+                    GlobalCost c_best = global_cost(solution);
+                    for (SequenceId i: sequences_1_) {
+                        const auto& elements = solution.sequences[i].elements;
+                        ElementPos seq_size = (ElementPos)elements.size();
+                        for (ElementPos pos: positions_1_) {
+                            if (pos > seq_size - 1)
+                                continue;
+                            compute_cost_shift_change_mode(solution, i, pos);
+                            for (ElementPos pos_new: positions_2_) {
+                                if (pos == pos_new || pos_new > seq_size - 1)
+                                    continue;
+                                for (Mode mode: modes_) {
+                                    if (mode >= number_of_modes(elements[pos].j)
+                                            || mode == modes_cur_[elements[pos].j])
+                                        continue;
+                                    GlobalCost c = global_costs_n_modes_[pos_new][mode];
+                                    if (c >= c_best)
+                                        continue;
+                                    if (pos_best != -1 && !dominates(c, c_best))
+                                        continue;
+                                    i_best = i;
+                                    pos_best = pos;
+                                    pos_new_best = pos_new;
+                                    mode_best = mode;
+                                    c_best = c;
+                                }
+                            }
+                        }
+                    }
+                    if (i_best != -1) {
+                        //std::cout << "add "
+                        //    << "j_best " << j_best
+                        //    << " pos_best " << pos_best
+                        //    << std::endl;
+
+                        // Check that the move is improving.
+                        if (c_best >= global_cost(solution)) {
+                            throw std::logic_error(
+                                    "Shift-change-mode."
+                                    " Best cost is worse than current cost:\n"
+                                    "* Best cost: "
+                                    + to_string(c_best) + "\n"
+                                    + "* Current cost: "
+                                    + to_string(global_cost(solution)) + "\n");
+                        }
+                        improved = true;
+
+                        // Apply best move.
+                        for (SequenceId i = 0; i < m; ++i)
+                            if (i != i_best)
+                                solution_tmp_.sequences[i] = solution.sequences[i];
+                        const auto& elements = solution.sequences[i_best].elements;
+                        SequencePos seq_size = elements.size();
+                        Sequence& sequence_tmp = solution_tmp_.sequences[i_best];
+                        sequence_tmp = empty_sequence(i_best);
+                        if (pos_best > pos_new_best) {
+                            for (ElementPos p = 0; p < pos_new_best; ++p)
+                                append(sequence_tmp, elements[p]);
+                            append(sequence_tmp, {elements[pos_best].j, mode_best});
+                            for (ElementPos p = pos_new_best; p < pos_best; ++p)
+                                append(sequence_tmp, elements[p]);
+                            for (ElementPos p = pos_best + 1; p < seq_size; ++p)
+                                append(sequence_tmp, elements[p]);
+                        } else {
+                            for (ElementPos p = 0; p < pos_best; ++p)
+                                append(sequence_tmp, elements[p]);
+                            for (ElementPos p = pos_best + 1; p < pos_new_best + 1; ++p)
+                                append(sequence_tmp, elements[p]);
+                            append(sequence_tmp, {elements[pos_best].j, mode_best});
+                            for (ElementPos p = pos_new_best + 1; p < seq_size; ++p)
+                                append(sequence_tmp, elements[p]);
+                        }
+                        compute_global_cost(solution_tmp_);
+                        solution = solution_tmp_;
+                        // Check new current solution cost.
+                        if (global_cost(solution) != c_best) {
+                            throw std::logic_error(
+                                    "Shift-change-mode."
+                                    " Costs do not match:\n"
+                                    "* Expected new cost: "
+                                    + to_string(c_best) + "\n"
+                                    + "* Actual new cost: "
+                                    + to_string(global_cost(solution)) + "\n");
+                        }
+                        // Update statistics.
+                        shift_change_mode_number_of_successes_++;
+                    }
+                    // Update statistics.
+                    shift_change_mode_number_of_explorations_++;
+                    break;
+
+                } case Neighborhoods::ModeSwap: {
+                    std::shuffle(sequences_1_.begin(), sequences_1_.end(), generator);
+                    std::shuffle(pairs_1_.begin(), pairs_1_.end(), generator);
+                    SequenceId i_best = -1;
+                    ElementPos pos_1_best = -1;
+                    ElementPos pos_2_best = -1;
+                    GlobalCost c_best = global_cost(solution);
+                    for (SequenceId i: sequences_1_) {
+                        compute_cost_mode_swap(solution, i);
+                        for (auto pair: pairs_1_) {
+                            GlobalCost c = global_costs_n_n2_[pair.first][pair.second - pair.first - 1];
+                            if (c >= c_best)
+                                continue;
+                            if (i_best != -1 && !dominates(c, c_best))
+                                continue;
+                            i_best = i;
+                            pos_1_best = pair.first;
+                            pos_2_best = pair.second;
+                            c_best = c;
+                        }
+                    }
+                    if (i_best != -1) {
+                        //std::cout << "swap"
+                        //    << " pos_1_best " << pos_1_best
+                        //    << " pos_2_best " << pos_2_best
+                        //    << std::endl;
+
+                        // Check that the move is improving.
+                        if (c_best >= global_cost(solution)) {
+                            throw std::logic_error(
+                                    "Mode-swap."
+                                    " Best cost is worse than current cost:\n"
+                                    "* Best cost: "
+                                    + to_string(c_best) + "\n"
+                                    + "* Current cost: "
+                                    + to_string(global_cost(solution)) + "\n");
+                        }
+                        improved = true;
+
+                        // Apply best move.
+                        for (SequenceId i = 0; i < m; ++i)
+                            if (i != i_best)
+                                solution_tmp_.sequences[i] = solution.sequences[i];
+                        const auto& elements = solution.sequences[i_best].elements;
+                        SequencePos seq_size = elements.size();
+                        Sequence& sequence_tmp = solution_tmp_.sequences[i_best];
+                        sequence_tmp = empty_sequence(i_best);
+                        for (ElementPos p = 0; p < seq_size; ++p) {
+                            SequenceElement se = elements[p];
+                            if (p == pos_1_best) {
+                                se.mode = elements[pos_2_best].mode;
+                            } else if (p == pos_2_best) {
+                                se.mode = elements[pos_1_best].mode;
+                            }
+                            append(sequence_tmp, se);
+                        }
+                        compute_global_cost(solution_tmp_);
+                        solution = solution_tmp_;
+                        // Check new current solution cost.
+                        if (global_cost(solution) != c_best) {
+                            throw std::logic_error(
+                                    "Mode-swap."
+                                    " Costs do not match:\n"
+                                    "* Expected new cost: "
+                                    + to_string(c_best) + "\n"
+                                    + "* Actual new cost: "
+                                    + to_string(global_cost(solution)) + "\n");
+                        }
+                        // Update statistics.
+                        mode_swap_number_of_successes_++;
+                    }
+                    // Update statistics.
+                    mode_swap_number_of_explorations_++;
+                    break;
+
+                } case Neighborhoods::SwapWithModes: {
+                    std::shuffle(sequences_1_.begin(), sequences_1_.end(), generator);
+                    std::shuffle(pairs_1_.begin(), pairs_1_.end(), generator);
+                    SequenceId i_best = -1;
+                    ElementPos pos_1_best = -1;
+                    ElementPos pos_2_best = -1;
+                    GlobalCost c_best = global_cost(solution);
+                    for (SequenceId i: sequences_1_) {
+                        compute_cost_swap_with_modes(solution, i);
+                        for (auto pair: pairs_1_) {
+                            GlobalCost c = global_costs_n_n2_[pair.first][pair.second - pair.first - 1];
+                            if (c >= c_best)
+                                continue;
+                            if (i_best != -1 && !dominates(c, c_best))
+                                continue;
+                            i_best = i;
+                            pos_1_best = pair.first;
+                            pos_2_best = pair.second;
+                            c_best = c;
+                        }
+                    }
+                    if (i_best != -1) {
+                        //std::cout << "swap"
+                        //    << " pos_1_best " << pos_1_best
+                        //    << " pos_2_best " << pos_2_best
+                        //    << std::endl;
+
+                        // Check that the move is improving.
+                        if (c_best >= global_cost(solution)) {
+                            throw std::logic_error(
+                                    "Swap-with-modes."
+                                    " Best cost is worse than current cost:\n"
+                                    "* Best cost: "
+                                    + to_string(c_best) + "\n"
+                                    + "* Current cost: "
+                                    + to_string(global_cost(solution)) + "\n");
+                        }
+                        improved = true;
+
+                        // Apply best move.
+                        for (SequenceId i = 0; i < m; ++i)
+                            if (i != i_best)
+                                solution_tmp_.sequences[i] = solution.sequences[i];
+                        const auto& elements = solution.sequences[i_best].elements;
+                        SequencePos seq_size = elements.size();
+                        Sequence& sequence_tmp = solution_tmp_.sequences[i_best];
+                        sequence_tmp = empty_sequence(i_best);
+                        for (ElementPos p = 0; p < seq_size; ++p) {
+                            SequenceElement se = elements[p];
+                            if (p == pos_1_best) {
+                                se.j = elements[pos_2_best].j;
+                            } else if (p == pos_2_best) {
+                                se.j = elements[pos_1_best].j;
+                            }
+                            append(sequence_tmp, se);
+                        }
+                        compute_global_cost(solution_tmp_);
+                        solution = solution_tmp_;
+                        // Check new current solution cost.
+                        if (global_cost(solution) != c_best) {
+                            throw std::logic_error(
+                                    "Swap-with-modes."
+                                    " Costs do not match:\n"
+                                    "* Expected new cost: "
+                                    + to_string(c_best) + "\n"
+                                    + "* Actual new cost: "
+                                    + to_string(global_cost(solution)) + "\n");
+                        }
+                        // Update statistics.
+                        swap_with_modes_number_of_successes_++;
+                    }
+                    // Update statistics.
+                    swap_with_modes_number_of_explorations_++;
                     break;
 
                 } case Neighborhoods::InterTwoOpt: {
@@ -1918,7 +2196,7 @@ public:
                                     + to_string(global_cost(solution)) + "\n");
                         }
                         // Update statistics.
-                        inter_two_opt_number_of_sucesses_++;
+                        inter_two_opt_number_of_successes_++;
                     }
                     // Update statistics.
                     inter_two_opt_number_of_explorations_++;
@@ -2042,7 +2320,7 @@ public:
                                     + to_string(global_cost(solution)) + "\n");
                         }
                         // Update statistics.
-                        inter_shift_number_of_sucesses_[block_size]++;
+                        inter_shift_number_of_successes_[block_size]++;
                     }
                     // Update statistics.
                     inter_shift_number_of_explorations_[block_size]++;
@@ -2170,7 +2448,7 @@ public:
                                     + to_string(global_cost(solution)) + "\n");
                         }
                         // Update statistics.
-                        inter_swap_number_of_sucesses_[block_size_1][block_size_2]++;
+                        inter_swap_number_of_successes_[block_size_1][block_size_2]++;
 
                     }
                     // Update statistics.
@@ -2270,7 +2548,7 @@ public:
                                     + to_string(global_cost(solution)) + "\n");
                         }
                         // Update statistics.
-                        inter_shift_reverse_number_of_sucesses_[block_size]++;
+                        inter_shift_reverse_number_of_successes_[block_size]++;
                     }
                     // Update statistics.
                     inter_shift_reverse_number_of_explorations_[block_size]++;
@@ -2352,187 +2630,234 @@ public:
     {
         SequencePos m = number_of_sequences();
         ElementPos n = local_scheme_0_.number_of_elements();
-        FFOT_VER(info, ""
-                << "Number of sequences:                           " << m << std::endl
-                << "Number of elements:                            " << n << std::endl
-                << "Neighborhoods" << std::endl
-                << "    Shift" << std::endl
-                << "        Block maximum length:                  " << parameters_.shift_block_maximum_length << std::endl
-                << "    Swap" << std::endl
-                << "        Block maximum length:                  " << parameters_.swap_block_maximum_length << std::endl
-                << "    Reverse:                                   " << parameters_.reverse << std::endl
-                << "    Shift-reverse" << std::endl
-                << "        Block maximum length:                  " << parameters_.shift_reverse_block_maximum_length << std::endl
-                << "    Add/Remove:                                " << parameters_.add_remove << std::endl
-                );
+        info.os()
+            << "Number of sequences:                           " << m << std::endl
+            << "Number of elements:                            " << n << std::endl
+            << "Maximum number of modes:                       " << maximum_number_of_modes_ << std::endl
+            << "Neighborhoods" << std::endl
+            << "    Shift" << std::endl
+            << "        Block maximum length:                  " << parameters_.shift_block_maximum_length << std::endl
+            << "    Swap" << std::endl
+            << "        Block maximum length:                  " << parameters_.swap_block_maximum_length << std::endl
+            << "    Reverse:                                   " << parameters_.reverse << std::endl
+            << "    Shift-reverse" << std::endl
+            << "        Block maximum length:                  " << parameters_.shift_reverse_block_maximum_length << std::endl
+            << "    Add/Remove:                                " << parameters_.add_remove << std::endl;
         if (m > 1) {
-            FFOT_VER(info, ""
+            info.os()
                 << "    Inter-shift" << std::endl
                 << "        Block maximum length:                  " << parameters_.inter_shift_block_maximum_length << std::endl
                 << "    Inter-swap" << std::endl
                 << "        Block maximum length:                  " << parameters_.inter_swap_block_maximum_length << std::endl
                 << "    Inter-two-opt:                             " << parameters_.inter_two_opt << std::endl
                 << "    Inter-shift-reverse" << std::endl
-                << "        Block maximum length:                  " << parameters_.inter_shift_reverse_block_maximum_length << std::endl
-                );
+                << "        Block maximum length:                  " << parameters_.inter_shift_reverse_block_maximum_length << std::endl;
         }
-        FFOT_VER(info, ""
-                << "Perturbations" << std::endl
-                << "    Double-bridge" << std::endl
-                << "        Number of perturbations:               " << parameters_.double_bridge_number_of_perturbations << std::endl
-                << "    Ruin-and-recreate" << std::endl
-                << "        Number of perturbations:               " << parameters_.ruin_and_recreate_number_of_perturbations << std::endl
-                << "        Number of elements removed:            " << parameters_.ruin_and_recreate_number_of_elements_removed << std::endl
-                << "    Force-add:                                 " << parameters_.force_add << std::endl
-                );
+        if (maximum_number_of_modes_ > 1) {
+            info.os()
+                << "    Shfit-change-mode:                         " << parameters_.shift_change_mode << std::endl
+                << "    Mode-swap:                                 " << parameters_.mode_swap << std::endl
+                << "    Swap-with-modes:                           " << parameters_.swap_with_modes << std::endl;
+        }
+        info.os()
+            << "Perturbations" << std::endl
+            << "    Double-bridge" << std::endl
+            << "        Number of perturbations:               " << parameters_.double_bridge_number_of_perturbations << std::endl
+            << "    Ruin-and-recreate" << std::endl
+            << "        Number of perturbations:               " << parameters_.ruin_and_recreate_number_of_perturbations << std::endl
+            << "        Number of elements removed:            " << parameters_.ruin_and_recreate_number_of_elements_removed << std::endl
+            << "    Force-add:                                 " << parameters_.force_add << std::endl;
     }
 
     void print_statistics(
             optimizationtools::Info& info) const
     {
         for (ElementPos block_size = 1; block_size <= parameters_.shift_block_maximum_length; ++block_size) {
-            FFOT_VER(info,
-                    std::left << std::setw(28) << ("Shift " + std::to_string(block_size) + ":")
-                    << shift_number_of_explorations_[block_size]
-                    << " / " << shift_number_of_sucesses_[block_size]
-                    << " / " << (double)shift_number_of_sucesses_[block_size] / shift_number_of_explorations_[block_size] * 100 << "%"
-                    << std::endl);
-            FFOT_PUT(info,
+            info.os()
+                << std::left << std::setw(28) << ("Shift " + std::to_string(block_size) + ":")
+                << shift_number_of_explorations_[block_size]
+                << " / " << shift_number_of_successes_[block_size]
+                << " / " << (double)shift_number_of_successes_[block_size] / shift_number_of_explorations_[block_size] * 100 << "%"
+                << std::endl;
+            info.add_to_json(
                     "Algorithm", ("Shift" + std::to_string(block_size) + "NumberOfExplorations"),
                     shift_number_of_explorations_[block_size]);
-            FFOT_PUT(info,
+            info.add_to_json(
                     "Algorithm", ("Shift" + std::to_string(block_size) + "NumberOfSuccesses"),
                     shift_number_of_explorations_[block_size]);
         }
         for (ElementPos block_size_1 = 1; block_size_1 <= parameters_.swap_block_maximum_length; ++block_size_1) {
             for (ElementPos block_size_2 = 1; block_size_2 <= block_size_1; ++block_size_2) {
-                FFOT_VER(info,
-                        std::left << std::setw(28) << ("Swap " + std::to_string(block_size_1) + "," + std::to_string(block_size_2) + ":")
-                        << swap_number_of_explorations_[block_size_1][block_size_2]
-                        << " / " << swap_number_of_sucesses_[block_size_1][block_size_2]
-                        << " / " << (double)swap_number_of_sucesses_[block_size_1][block_size_2] / swap_number_of_explorations_[block_size_1][block_size_2] * 100 << "%"
-                        << std::endl);
-                FFOT_PUT(info,
+                info.os()
+                    << std::left << std::setw(28) << ("Swap " + std::to_string(block_size_1) + "," + std::to_string(block_size_2) + ":")
+                    << swap_number_of_explorations_[block_size_1][block_size_2]
+                    << " / " << swap_number_of_successes_[block_size_1][block_size_2]
+                    << " / " << (double)swap_number_of_successes_[block_size_1][block_size_2] / swap_number_of_explorations_[block_size_1][block_size_2] * 100 << "%"
+                    << std::endl;
+                info.add_to_json(
                         "Algorithm", ("Swap" + std::to_string(block_size_1) + "," + std::to_string(block_size_2) + "NumberOfExplorations"),
                         swap_number_of_explorations_[block_size_1][block_size_2]);
-                FFOT_PUT(info,
+                info.add_to_json(
                         "Algorithm", ("Shift" + std::to_string(block_size_1) + "," + std::to_string(block_size_2) + "NumberOfSuccesses"),
                         swap_number_of_explorations_[block_size_1][block_size_2]);
             }
         }
         if (parameters_.reverse) {
-            FFOT_VER(info,
-                    std::left << std::setw(28) << ("Reverse:")
-                    << reverse_number_of_explorations_
-                    << " / " << reverse_number_of_sucesses_
-                    << " / " << (double)reverse_number_of_sucesses_ / reverse_number_of_explorations_ * 100 << "%"
-                    << std::endl);
-            FFOT_PUT(info,
+            info.os()
+                << std::left << std::setw(28) << ("Reverse:")
+                << reverse_number_of_explorations_
+                << " / " << reverse_number_of_successes_
+                << " / " << (double)reverse_number_of_successes_ / reverse_number_of_explorations_ * 100 << "%"
+                << std::endl;
+            info.add_to_json(
                     "Algorithm", ("ReverseNumberOfExplorations"),
                     reverse_number_of_explorations_);
-            FFOT_PUT(info,
+            info.add_to_json(
                     "Algorithm", ("ReverseNumberOfSuccesses"),
                     reverse_number_of_explorations_);
         }
         for (ElementPos block_size = 2; block_size <= parameters_.shift_reverse_block_maximum_length; ++block_size) {
-            FFOT_VER(info,
-                    std::left << std::setw(28) << ("Shift-reverse " + std::to_string(block_size) + ":")
-                    << shift_reverse_number_of_explorations_[block_size]
-                    << " / " << shift_reverse_number_of_sucesses_[block_size]
-                    << " / " << (double)shift_reverse_number_of_sucesses_[block_size] / shift_reverse_number_of_explorations_[block_size] * 100 << "%"
-                    << std::endl);
-            FFOT_PUT(info,
+            info.os()
+                << std::left << std::setw(28) << ("Shift-reverse " + std::to_string(block_size) + ":")
+                << shift_reverse_number_of_explorations_[block_size]
+                << " / " << shift_reverse_number_of_successes_[block_size]
+                << " / " << (double)shift_reverse_number_of_successes_[block_size] / shift_reverse_number_of_explorations_[block_size] * 100 << "%"
+                << std::endl;
+            info.add_to_json(
                     "Algorithm", ("ShiftReverse" + std::to_string(block_size) + "NumberOfExplorations"),
                     shift_reverse_number_of_explorations_[block_size]);
-            FFOT_PUT(info,
+            info.add_to_json(
                     "Algorithm", ("ShiftReverse" + std::to_string(block_size) + "NumberOfSuccesses"),
                     shift_reverse_number_of_explorations_[block_size]);
         }
 
         if (parameters_.add_remove) {
-            FFOT_VER(info,
-                    std::left << std::setw(28) << ("Add:")
-                    << add_number_of_explorations_
-                    << " / " << add_number_of_sucesses_
-                    << " / " << (double)add_number_of_sucesses_ / add_number_of_explorations_ * 100 << "%"
-                    << std::endl);
-            FFOT_PUT(info,
+            info.os()
+                << std::left << std::setw(28) << ("Add:")
+                << add_number_of_explorations_
+                << " / " << add_number_of_successes_
+                << " / " << (double)add_number_of_successes_ / add_number_of_explorations_ * 100 << "%"
+                << std::endl;
+            info.add_to_json(
                     "Algorithm", ("ReverseNumberOfExplorations"),
                     add_number_of_explorations_);
-            FFOT_PUT(info,
+            info.add_to_json(
                     "Algorithm", ("ReverseNumberOfSuccesses"),
                     add_number_of_explorations_);
-            FFOT_VER(info,
-                    std::left << std::setw(28) << ("Remove:")
-                    << remove_number_of_explorations_
-                    << " / " << remove_number_of_sucesses_
-                    << " / " << (double)remove_number_of_sucesses_ / remove_number_of_explorations_ * 100 << "%"
-                    << std::endl);
-            FFOT_PUT(info,
+            info.os()
+                << std::left << std::setw(28) << ("Remove:")
+                << remove_number_of_explorations_
+                << " / " << remove_number_of_successes_
+                << " / " << (double)remove_number_of_successes_ / remove_number_of_explorations_ * 100 << "%"
+                << std::endl;
+            info.add_to_json(
                     "Algorithm", ("RemoveNumberOfExplorations"),
                     remove_number_of_explorations_);
-            FFOT_PUT(info,
+            info.add_to_json(
                     "Algorithm", ("RemoveNumberOfSuccesses"),
                     remove_number_of_explorations_);
         }
 
         for (ElementPos block_size = 1; block_size <= parameters_.inter_shift_block_maximum_length; ++block_size) {
-            FFOT_VER(info,
-                    std::left << std::setw(28) << ("Inter-shift " + std::to_string(block_size) + ":")
-                    << inter_shift_number_of_explorations_[block_size]
-                    << " / " << inter_shift_number_of_sucesses_[block_size]
-                    << " / " << (double)inter_shift_number_of_sucesses_[block_size] / inter_shift_number_of_explorations_[block_size] * 100 << "%"
-                    << std::endl);
-            FFOT_PUT(info,
+            info.os()
+                << std::left << std::setw(28) << ("Inter-shift " + std::to_string(block_size) + ":")
+                << inter_shift_number_of_explorations_[block_size]
+                << " / " << inter_shift_number_of_successes_[block_size]
+                << " / " << (double)inter_shift_number_of_successes_[block_size] / inter_shift_number_of_explorations_[block_size] * 100 << "%"
+                << std::endl;
+            info.add_to_json(
                     "Algorithm", ("InterShift" + std::to_string(block_size) + "NumberOfExplorations"),
                     inter_shift_number_of_explorations_[block_size]);
-            FFOT_PUT(info,
+            info.add_to_json(
                     "Algorithm", ("InterShift" + std::to_string(block_size) + "NumberOfSuccesses"),
                     inter_shift_number_of_explorations_[block_size]);
         }
         for (ElementPos block_size_1 = 1; block_size_1 <= parameters_.inter_swap_block_maximum_length; ++block_size_1) {
             for (ElementPos block_size_2 = 1; block_size_2 <= block_size_1; ++block_size_2) {
-                FFOT_VER(info,
-                        std::left << std::setw(28) << ("Inter-swap " + std::to_string(block_size_1) + "," + std::to_string(block_size_2) + ":")
-                        << inter_swap_number_of_explorations_[block_size_1][block_size_2]
-                        << " / " << inter_swap_number_of_sucesses_[block_size_1][block_size_2]
-                        << " / " << (double)inter_swap_number_of_sucesses_[block_size_1][block_size_2] / inter_swap_number_of_explorations_[block_size_1][block_size_2] * 100 << "%"
-                        << std::endl);
-                FFOT_PUT(info,
+                info.os()
+                    << std::left << std::setw(28) << ("Inter-swap " + std::to_string(block_size_1) + "," + std::to_string(block_size_2) + ":")
+                    << inter_swap_number_of_explorations_[block_size_1][block_size_2]
+                    << " / " << inter_swap_number_of_successes_[block_size_1][block_size_2]
+                    << " / " << (double)inter_swap_number_of_successes_[block_size_1][block_size_2] / inter_swap_number_of_explorations_[block_size_1][block_size_2] * 100 << "%"
+                    << std::endl;
+                info.add_to_json(
                         "Algorithm", ("InterSwap" + std::to_string(block_size_1) + "," + std::to_string(block_size_2) + "NumberOfExplorations"),
                         inter_swap_number_of_explorations_[block_size_1][block_size_2]);
-                FFOT_PUT(info,
+                info.add_to_json(
                         "Algorithm", ("InterShift" + std::to_string(block_size_1) + "," + std::to_string(block_size_2) + "NumberOfSuccesses"),
                         inter_swap_number_of_explorations_[block_size_1][block_size_2]);
             }
         }
         if (parameters_.inter_two_opt) {
-            FFOT_VER(info,
-                    std::left << std::setw(28) << ("Inter-two-opt:")
-                    << inter_two_opt_number_of_explorations_
-                    << " / " << inter_two_opt_number_of_sucesses_
-                    << " / " << (double)inter_two_opt_number_of_sucesses_ / inter_two_opt_number_of_explorations_ * 100 << "%"
-                    << std::endl);
-            FFOT_PUT(info,
+            info.os()
+                << std::left << std::setw(28) << ("Inter-two-opt:")
+                << inter_two_opt_number_of_explorations_
+                << " / " << inter_two_opt_number_of_successes_
+                << " / " << (double)inter_two_opt_number_of_successes_ / inter_two_opt_number_of_explorations_ * 100 << "%"
+                << std::endl;
+            info.add_to_json(
                     "Algorithm", ("InterTwoOptNumberOfExplorations"),
                     inter_two_opt_number_of_explorations_);
-            FFOT_PUT(info,
+            info.add_to_json(
                     "Algorithm", ("InterTwoOptNumberOfSuccesses"),
                     inter_two_opt_number_of_explorations_);
         }
         for (ElementPos block_size = 2; block_size <= parameters_.inter_shift_reverse_block_maximum_length; ++block_size) {
-            FFOT_VER(info,
-                    std::left << std::setw(28) << ("Inter-shift-reverse " + std::to_string(block_size) + ":")
-                    << inter_shift_reverse_number_of_explorations_[block_size]
-                    << " / " << inter_shift_reverse_number_of_sucesses_[block_size]
-                    << " / " << (double)inter_shift_reverse_number_of_sucesses_[block_size] / inter_shift_reverse_number_of_explorations_[block_size] * 100 << "%"
-                    << std::endl);
-            FFOT_PUT(info,
+            info.os()
+                << std::left << std::setw(28) << ("Inter-shift-reverse " + std::to_string(block_size) + ":")
+                << inter_shift_reverse_number_of_explorations_[block_size]
+                << " / " << inter_shift_reverse_number_of_successes_[block_size]
+                << " / " << (double)inter_shift_reverse_number_of_successes_[block_size] / inter_shift_reverse_number_of_explorations_[block_size] * 100 << "%"
+                << std::endl;
+            info.add_to_json(
                     "Algorithm", ("InterShiftReverse" + std::to_string(block_size) + "NumberOfExplorations"),
                     inter_shift_reverse_number_of_explorations_[block_size]);
-            FFOT_PUT(info,
+            info.add_to_json(
                     "Algorithm", ("InterShiftReverse" + std::to_string(block_size) + "NumberOfSuccesses"),
                     inter_shift_reverse_number_of_explorations_[block_size]);
+        }
+
+        if (parameters_.shift_change_mode) {
+            info.os()
+                << std::left << std::setw(28) << ("ShiftChangeMode:")
+                << shift_change_mode_number_of_explorations_
+                << " / " << shift_change_mode_number_of_successes_
+                << " / " << (double)shift_change_mode_number_of_successes_ / shift_change_mode_number_of_explorations_ * 100 << "%"
+                << std::endl;
+            info.add_to_json(
+                    "Algorithm", ("ShiftChangeModeNumberOfExplorations"),
+                    shift_change_mode_number_of_explorations_);
+            info.add_to_json(
+                    "Algorithm", ("ShiftChangeModeNumberOfSuccesses"),
+                    shift_change_mode_number_of_explorations_);
+        }
+        if (parameters_.mode_swap) {
+            info.os()
+                << std::left << std::setw(28) << ("ModeSwap:")
+                << mode_swap_number_of_explorations_
+                << " / " << mode_swap_number_of_successes_
+                << " / " << (double)mode_swap_number_of_successes_ / mode_swap_number_of_explorations_ * 100 << "%"
+                << std::endl;
+            info.add_to_json(
+                    "Algorithm", ("ModeSwapNumberOfExplorations"),
+                    mode_swap_number_of_explorations_);
+            info.add_to_json(
+                    "Algorithm", ("ModeSwapNumberOfSuccesses"),
+                    mode_swap_number_of_explorations_);
+        }
+        if (parameters_.swap_with_modes) {
+            info.os()
+                << std::left << std::setw(28) << ("SwapWithModes:")
+                << swap_with_modes_number_of_explorations_
+                << " / " << swap_with_modes_number_of_successes_
+                << " / " << (double)swap_with_modes_number_of_successes_ / swap_with_modes_number_of_explorations_ * 100 << "%"
+                << std::endl;
+            info.add_to_json(
+                    "Algorithm", ("SwapWithModesNumberOfExplorations"),
+                    swap_with_modes_number_of_explorations_);
+            info.add_to_json(
+                    "Algorithm", ("SwapWithModesNumberOfSuccesses"),
+                    swap_with_modes_number_of_explorations_);
         }
     }
 
@@ -2702,7 +3027,7 @@ private:
                 se,
                 std::integral_constant<
                     bool,
-                    HasAppendMethod<LocalScheme0, void(ElementId, Mode)>::value>());
+                    HasAppendMethod<LocalScheme0, void(SequenceData&, ElementId, Mode)>::value>());
     }
 
     /*
@@ -3808,6 +4133,249 @@ private:
         }
     }
 
+    inline void compute_cost_shift_change_mode(
+            const Solution& solution,
+            SequenceId i,
+            ElementPos block_pos)
+    {
+        SequenceId m = number_of_sequences();
+        GlobalCost gc = global_cost(solution);
+        const auto& elements = solution.sequences[i].elements;
+        SequencePos seq_size = elements.size();
+        // Global cost without sequence i.
+        GlobalCost gc0 = compute_global_cost(solution, i);
+        // Initialize sequence_data_cur.
+        SequenceData sequence_data_cur = empty_sequence_data(i);
+        // Reset global_costs_n_modes_.
+        for (ElementPos pos = 0; pos < local_scheme_0_.number_of_elements(); ++pos) {
+            std::fill(
+                    global_costs_n_modes_[pos].begin(),
+                    global_costs_n_modes_[pos].end(),
+                    worst<GlobalCost>());
+        }
+
+        // Loop through all new positions.
+        ElementPos pos_min = std::max(
+                (ElementPos)0,
+                block_pos - parameters_.shift_maximum_distance);
+        ElementPos pos_max = std::min(
+                seq_size - 1,
+                block_pos + parameters_.shift_maximum_distance);
+        for (ElementPos pos_new = pos_min; pos_new <= pos_max; ++pos_new) {
+            ElementPos p0 = (pos_new < block_pos)? pos_new: pos_new + 1;
+
+            for (Mode mode = 0; mode < number_of_modes(elements[block_pos].j); ++mode) {
+
+                bool stop = false;
+
+                // Initialize sequence_data.
+                SequenceData sequence_data = sequence_data_cur;
+
+                // Add element to sequence_data.
+                append(sequence_data, {elements[block_pos].j, mode});
+                // Check early termination.
+                if (m == 1) {
+                    if (bound(sequence_data) >= gc)
+                        stop = true;
+                } else {
+                    if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
+                        stop = true;
+                }
+
+                // Add the remaining elements to sequence_tmp.
+                for (ElementPos p = p0; p < seq_size && !stop; ++p) {
+                    // Skip elements from the previously added bloc.
+                    if (p == block_pos)
+                        continue;
+                    // Add element to sequence_data.
+                    append(sequence_data, elements[p]);
+                    // Check early termination.
+                    if (m == 1) {
+                        if (bound(sequence_data) >= gc)
+                            stop = true;
+                    } else {
+                        if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
+                            stop = true;
+                    }
+                }
+
+                if (!stop) {
+                    if (m == 1) {
+                        global_costs_n_modes_[pos_new][mode] = global_cost(sequence_data);
+                    } else {
+                        global_costs_n_modes_[pos_new][mode] = global_cost_merge(
+                                gc0, global_cost(sequence_data));
+                    }
+                }
+            }
+
+            // Stop condition.
+            if (pos_new == seq_size - 1)
+                break;
+
+            // Add next element to sequence_data_cur_.
+            append(sequence_data_cur, elements[p0]);
+            // Check early termination.
+            if (m == 1) {
+                if (bound(sequence_data_cur) >= gc)
+                    break;
+            } else {
+                if (global_cost_merge(gc0, bound(sequence_data_cur)) >= gc)
+                    break;
+            }
+        }
+    }
+
+    inline void compute_cost_mode_swap(
+            const Solution& solution,
+            SequenceId i)
+    {
+        SequenceId m = number_of_sequences();
+        GlobalCost gc = global_cost(solution);
+        const auto& elements = solution.sequences[i].elements;
+        SequencePos seq_size = elements.size();
+        // Global cost without sequence i.
+        GlobalCost gc0 = compute_global_cost(solution, i);
+        // Reset global_costs_swap_.
+        for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
+            std::fill(
+                    global_costs_n_n2_[pos_1].begin(),
+                    global_costs_n_n2_[pos_1].end(),
+                    worst<GlobalCost>());
+        }
+
+        // Loop through all pairs.
+        Counter pos_max = seq_size - 1;
+        for (ElementPos pos_1 = 0; pos_1 <= pos_max; ++pos_1) {
+            ElementPos pos_2_max = std::min(
+                    pos_max,
+                    pos_1 + parameters_.swap_maximum_distance);
+            for (ElementPos pos_2 = pos_1 + 1; pos_2 < pos_2_max; ++pos_2) {
+
+                if (modes_cur_[elements[pos_1].j]
+                        == modes_cur_[elements[pos_2].j])
+                    continue;
+
+                bool stop = false;
+
+                // Initialize sequence_data.
+                SequenceData sequence_data = sequence_datas_cur_[i][pos_1];
+                // Check early termination.
+                if (m == 1) {
+                    if (bound(sequence_data) >= gc)
+                        break;
+                } else {
+                    if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
+                        break;
+                }
+
+                // Add remaining elements.
+                for (ElementPos pos = pos_1; pos < seq_size && !stop; ++pos) {
+                    SequenceElement se = elements[pos];
+                    // If j1 or j2, swap mode.
+                    if (pos == pos_1) {
+                        se.mode = elements[pos_2].mode;
+                    } else if (pos == pos_2) {
+                        se.mode = elements[pos_1].mode;
+                    }
+                    // Add next element to sequence_data.
+                    append(sequence_data, se);
+                    // Check early termination.
+                    if (m == 1) {
+                        if (bound(sequence_data) >= gc)
+                            stop = true;
+                    } else {
+                        if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
+                            stop = true;
+                    }
+                }
+
+                if (!stop) {
+                    if (m == 1) {
+                        global_costs_n_n2_[pos_1][pos_2 - pos_1 - 1]
+                            = global_cost(sequence_data);
+                    } else {
+                        global_costs_n_n2_[pos_1][pos_2 - pos_1 - 1]
+                            = global_cost_merge(gc0, global_cost(sequence_data));
+                    }
+                }
+            }
+        }
+    }
+
+    inline void compute_cost_swap_with_modes(
+            const Solution& solution,
+            SequenceId i)
+    {
+        SequenceId m = number_of_sequences();
+        GlobalCost gc = global_cost(solution);
+        const auto& elements = solution.sequences[i].elements;
+        SequencePos seq_size = elements.size();
+        // Global cost without sequence i.
+        GlobalCost gc0 = compute_global_cost(solution, i);
+        // Reset global_costs_swap_.
+        for (ElementPos pos_1 = 0; pos_1 < local_scheme_0_.number_of_elements(); ++pos_1) {
+            std::fill(
+                    global_costs_n_n2_[pos_1].begin(),
+                    global_costs_n_n2_[pos_1].end(),
+                    worst<GlobalCost>());
+        }
+
+        // Loop through all pairs.
+        Counter pos_max = seq_size - 1;
+        for (ElementPos pos_1 = 0; pos_1 <= pos_max; ++pos_1) {
+            ElementPos pos_2_max = std::min(
+                    pos_max,
+                    pos_1 + parameters_.swap_maximum_distance);
+            for (ElementPos pos_2 = pos_1 + 1; pos_2 < pos_2_max; ++pos_2) {
+
+                bool stop = false;
+
+                // Initialize sequence_data.
+                SequenceData sequence_data = sequence_datas_cur_[i][pos_1];
+                // Check early termination.
+                if (m == 1) {
+                    if (bound(sequence_data) >= gc)
+                        break;
+                } else {
+                    if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
+                        break;
+                }
+
+                // Add remaining elements.
+                for (ElementPos pos = pos_1; pos < seq_size && !stop; ++pos) {
+                    SequenceElement se = elements[pos];
+                    // If j1 or j2, swap.
+                    if (pos == pos_1) {
+                        se.j = elements[pos_2].j;
+                    } else if (pos == pos_2) {
+                        se.j = elements[pos_1].j;
+                    }
+                    // Add next element to sequence_data.
+                    append(sequence_data, se);
+                    // Check early termination.
+                    if (m == 1) {
+                        if (bound(sequence_data) >= gc)
+                            stop = true;
+                    } else {
+                        if (global_cost_merge(gc0, bound(sequence_data)) >= gc)
+                            stop = true;
+                    }
+                }
+
+                if (!stop) {
+                    if (m == 1) {
+                        global_costs_n_n2_[pos_1][pos_2 - pos_1 - 1]
+                            = global_cost(sequence_data);
+                    } else {
+                        global_costs_n_n2_[pos_1][pos_2 - pos_1 - 1]
+                            = global_cost_merge(gc0, global_cost(sequence_data));
+                    }
+                }
+            }
+        }
+    }
+
     /*
      * Private attributes.
      */
@@ -3891,25 +4459,34 @@ private:
      */
 
     std::vector<Counter> shift_number_of_explorations_;
-    std::vector<Counter> shift_number_of_sucesses_;
+    std::vector<Counter> shift_number_of_successes_;
     std::vector<std::vector<Counter>> swap_number_of_explorations_;
-    std::vector<std::vector<Counter>> swap_number_of_sucesses_;
+    std::vector<std::vector<Counter>> swap_number_of_successes_;
     Counter reverse_number_of_explorations_ = 0;
-    Counter reverse_number_of_sucesses_ = 0;
+    Counter reverse_number_of_successes_ = 0;
     std::vector<Counter> shift_reverse_number_of_explorations_;
-    std::vector<Counter> shift_reverse_number_of_sucesses_;
+    std::vector<Counter> shift_reverse_number_of_successes_;
+
     Counter add_number_of_explorations_ = 0;
-    Counter add_number_of_sucesses_ = 0;
+    Counter add_number_of_successes_ = 0;
     Counter remove_number_of_explorations_ = 0;
-    Counter remove_number_of_sucesses_ = 0;
+    Counter remove_number_of_successes_ = 0;
+
     std::vector<Counter> inter_shift_number_of_explorations_;
-    std::vector<Counter> inter_shift_number_of_sucesses_;
+    std::vector<Counter> inter_shift_number_of_successes_;
     std::vector<std::vector<Counter>> inter_swap_number_of_explorations_;
-    std::vector<std::vector<Counter>> inter_swap_number_of_sucesses_;
+    std::vector<std::vector<Counter>> inter_swap_number_of_successes_;
     Counter inter_two_opt_number_of_explorations_ = 0;
-    Counter inter_two_opt_number_of_sucesses_ = 0;
+    Counter inter_two_opt_number_of_successes_ = 0;
     std::vector<Counter> inter_shift_reverse_number_of_explorations_;
-    std::vector<Counter> inter_shift_reverse_number_of_sucesses_;
+    std::vector<Counter> inter_shift_reverse_number_of_successes_;
+
+    Counter shift_change_mode_number_of_explorations_ = 0;
+    Counter shift_change_mode_number_of_successes_ = 0;
+    Counter mode_swap_number_of_explorations_ = 0;
+    Counter mode_swap_number_of_successes_ = 0;
+    Counter swap_with_modes_number_of_explorations_ = 0;
+    Counter swap_with_modes_number_of_successes_ = 0;
 
 };
 

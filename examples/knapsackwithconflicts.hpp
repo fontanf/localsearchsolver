@@ -542,54 +542,47 @@ public:
     void print_parameters(
             optimizationtools::Info& info) const
     {
-        FFOT_VER(info, ""
+        info.os() << ""
                 << "Swap:                        " << parameters_.swap << std::endl
-                << "(2,1)-swap:                  " << parameters_.swap_2_1 << std::endl
-                );
+                << "(2,1)-swap:                  " << parameters_.swap_2_1 << std::endl;
     }
 
     void print_statistics(
             optimizationtools::Info& info) const
     {
-        FFOT_VER(info,
-                std::left << std::setw(28) << ("Toggle:")
-                << toggle_number_of_explorations_
-                << " / " << toggle_number_of_sucesses_
-                << " / " << (double)toggle_number_of_sucesses_ / toggle_number_of_explorations_ * 100 << "%"
-                << std::endl);
-        FFOT_PUT(info,
-                "Algorithm", ("ToggleNumberOfExplorations"),
-                toggle_number_of_explorations_);
-        FFOT_PUT(info,
-                "Algorithm", ("ToggleNumberOfSuccesses"),
-                toggle_number_of_explorations_);
+        info.os()
+            << std::left << std::setw(28) << ("Toggle:")
+            << toggle_number_of_explorations_
+            << " / " << toggle_number_of_sucesses_
+            << " / " << (double)toggle_number_of_sucesses_ / toggle_number_of_explorations_ * 100 << "%"
+            << std::endl;
+        info.output->json["Algorithm"]["ToggleNumberOfExplorations"]
+            = toggle_number_of_explorations_;
+        info.output->json["Algorithm"]["ToggleNumberOfSuccesses"]
+            = toggle_number_of_explorations_;
         if (parameters_.swap) {
-            FFOT_VER(info,
-                    std::left << std::setw(28) << ("Swap:")
-                    << swap_number_of_explorations_
-                    << " / " << swap_number_of_sucesses_
-                    << " / " << (double)swap_number_of_sucesses_ / swap_number_of_explorations_ * 100 << "%"
-                    << std::endl);
-            FFOT_PUT(info,
-                    "Algorithm", ("SwapNumberOfExplorations"),
-                    swap_number_of_explorations_);
-            FFOT_PUT(info,
-                    "Algorithm", ("SwapNumberOfSuccesses"),
-                    swap_number_of_explorations_);
+            info.os()
+                << std::left << std::setw(28) << ("Swap:")
+                << swap_number_of_explorations_
+                << " / " << swap_number_of_sucesses_
+                << " / " << (double)swap_number_of_sucesses_ / swap_number_of_explorations_ * 100 << "%"
+                << std::endl;
+            info.output->json["Algorithm"]["SwapNumberOfExplorations"]
+                = swap_number_of_explorations_;
+            info.output->json["Algorithm"]["SwapNumberOfSuccesses"]
+                = swap_number_of_explorations_;
         }
         if (parameters_.swap_2_1) {
-            FFOT_VER(info,
-                    std::left << std::setw(28) << ("(2-1)-swap:")
-                    << swap_2_1_number_of_explorations_
-                    << " / " << swap_2_1_number_of_sucesses_
-                    << " / " << (double)swap_2_1_number_of_sucesses_ / swap_2_1_number_of_explorations_ * 100 << "%"
-                    << std::endl);
-            FFOT_PUT(info,
-                    "Algorithm", ("Swap2,1NumberOfExplorations"),
-                    swap_2_1_number_of_explorations_);
-            FFOT_PUT(info,
-                    "Algorithm", ("Swap2,1NumberOfSuccesses"),
-                    swap_2_1_number_of_explorations_);
+            info.os()
+                << std::left << std::setw(28) << ("(2-1)-swap:")
+                << swap_2_1_number_of_explorations_
+                << " / " << swap_2_1_number_of_sucesses_
+                << " / " << (double)swap_2_1_number_of_sucesses_ / swap_2_1_number_of_explorations_ * 100 << "%"
+                << std::endl;
+            info.output->json["Algorithm"]["Swap2,1NumberOfExplorations"]
+                = swap_2_1_number_of_explorations_;
+            info.output->json["Algorithm"]["Swap2,1NumberOfSuccesses"]
+                = swap_2_1_number_of_explorations_;
         }
     }
 

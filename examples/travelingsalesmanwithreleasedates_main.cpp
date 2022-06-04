@@ -1,8 +1,8 @@
-#include "examples/timedependentorienteering.hpp"
+#include "examples/travelingsalesmanwithreleasedates.hpp"
 #include "localsearchsolver/read_args.hpp"
 
 using namespace localsearchsolver;
-using namespace timedependentorienteering;
+using namespace travelingsalesmanwithreleasedates;
 
 inline LocalScheme::Parameters read_local_scheme_args(
         const std::vector<char*> argv)
@@ -12,9 +12,14 @@ inline LocalScheme::Parameters read_local_scheme_args(
     desc.add_options()
         ("shift-block-maximum-length,", boost::program_options::value<LocationPos>(&parameters.sequencing_parameters.shift_block_maximum_length), "")
         ("swap-block-maximum-length,", boost::program_options::value<LocationPos>(&parameters.sequencing_parameters.swap_block_maximum_length), "")
-        ("double-bridge-number-of-pertubrations", boost::program_options::value<LocationPos>(&parameters.sequencing_parameters.double_bridge_number_of_perturbations), "")
-        ("ruin-and-recreate-number-of-pertubrations", boost::program_options::value<LocationPos>(&parameters.sequencing_parameters.ruin_and_recreate_number_of_perturbations), "")
-        ("ruin-and-recreate-number-of-elements-removed", boost::program_options::value<LocationPos>(&parameters.sequencing_parameters.ruin_and_recreate_number_of_elements_removed), "")
+        ("reverse,", boost::program_options::value<bool>(&parameters.sequencing_parameters.reverse), "")
+        ("shift-reverse-block-maximum-length,", boost::program_options::value<LocationPos>(&(parameters.sequencing_parameters.shift_reverse_block_maximum_length)), "")
+        ("double-bridge-number-of-perturbations,", boost::program_options::value<LocationPos>(&parameters.sequencing_parameters.double_bridge_number_of_perturbations), "")
+        ("ruin-and-recreate-number-of-perturbations,", boost::program_options::value<LocationPos>(&parameters.sequencing_parameters.ruin_and_recreate_number_of_perturbations), "")
+        ("ruin-and-recreate-number-of-elements-removed,", boost::program_options::value<LocationPos>(&parameters.sequencing_parameters.ruin_and_recreate_number_of_elements_removed), "")
+        ("crossover-ox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_ox_weight), "")
+        ("crossover-sjox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_sjox_weight), "")
+        ("crossover-sbox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_sbox_weight), "")
         ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line((Counter)argv.size(), argv.data(), desc), vm);
@@ -31,6 +36,7 @@ int main(int argc, char *argv[])
 {
     MainArgs main_args;
     main_args.algorithm = "best_first_local_search";
+    main_args.initial_solution_ids = {2};
     read_args(argc, argv, main_args);
     auto& os = main_args.info.os();
 
@@ -67,15 +73,25 @@ int main(int argc, char *argv[])
             throw std::runtime_error(
                     "Unable to open file \"" + certificate_path + "\".");
         }
-        for (auto se: solution_pool.best().sequences[0].elements)
-            file << se.j + 1 << " ";
+        std::vector<std::vector<LocationId>> solution;
+        for (auto se: solution_pool.best().sequences[0].elements) {
+            if (solution.empty() || se.mode == 1)
+                solution.push_back({});
+            solution.back().push_back(se.j);
+        }
+        for (const auto& trip: solution) {
+            file << trip.size() << std::endl;
+            for (LocationId j: trip)
+                file << j + 1 << " ";
+            file << std::endl;
+        }
     }
 
-    if (main_args.print_solution) {
-        std::cout << std::endl
+    if (main_args.print_solution > 0) {
+        os << std::endl
             << "Solution" << std::endl
             << "--------" << std::endl;
-        local_scheme.print(std::cout, solution_pool.best());
+        local_scheme.print(os, solution_pool.best());
     }
 
     // Run checker.

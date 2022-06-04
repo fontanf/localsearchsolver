@@ -261,12 +261,12 @@ public:
             const std::stringstream& ss,
             optimizationtools::Info& info)
     {
-        info.output->mutex_solutions.lock();
+        info.output->mutex.lock();
         // If the solution is worse than the worst solution of the pool, stop.
         if ((Counter)solutions_.size() >= size_max_) {
             if (scheme_.global_cost(solution)
                     > scheme_.global_cost(*std::prev(solutions_.end()))) {
-                info.output->mutex_solutions.unlock();
+                info.output->mutex.unlock();
                 return 0;
             }
         }
@@ -282,9 +282,9 @@ public:
             info.output->number_of_solutions++;
             double t = info.elapsed_time();
             std::string sol_str = "Solution" + std::to_string(info.output->number_of_solutions);
-            FFOT_PUT(info, sol_str, "Value", print_local_scheme_global_cost(scheme_, scheme_.global_cost(solution)));
-            FFOT_PUT(info, sol_str, "Time", t);
-            FFOT_PUT(info, sol_str, "Comment", ss.str());
+            info.add_to_json(sol_str, "Value", print_local_scheme_global_cost(scheme_, scheme_.global_cost(solution)));
+            info.add_to_json(sol_str, "Time", t);
+            info.add_to_json(sol_str, "Comment", ss.str());
             if (!info.output->only_write_at_the_end) {
                 info.write_json_output();
                 scheme_.write(*solutions_.begin(), info.output->certificate_path);
@@ -296,44 +296,45 @@ public:
             solutions_.erase(std::prev(solutions_.end()));
         best_ = *solutions_.begin();
         worst_ = *std::prev(solutions_.end());
-        info.output->mutex_solutions.unlock();
+        info.output->mutex.unlock();
         return (new_best)? 2: 1;
     }
 
     void display_init(optimizationtools::Info& info)
     {
-        FFOT_VER(info,
-                std::setw(10) << "Time"
-                << std::setw(40) << "Value"
-                << std::setw(40) << "Comment" << std::endl
-                << std::setw(10) << "----"
-                << std::setw(40) << "-----"
-                << std::setw(40) << "-------" << std::endl);
+        info.os()
+            << std::setw(10) << "Time"
+            << std::setw(40) << "Value"
+            << std::setw(40) << "Comment" << std::endl
+            << std::setw(10) << "----"
+            << std::setw(40) << "-----"
+            << std::setw(40) << "-------" << std::endl;
     }
 
     void display(const std::stringstream& ss, optimizationtools::Info& info)
     {
         double t = info.elapsed_time();
         std::streamsize precision = std::cout.precision();
-        FFOT_VER(info,
-                std::setw(10) << std::fixed << std::setprecision(3) << t << std::defaultfloat << std::setprecision(precision)
-                << std::setw(40) << to_string(scheme_.global_cost(best()))
-                << std::setw(40) << ss.str()
-                << std::endl);
+        info.os()
+            << std::setw(10) << std::fixed << std::setprecision(3) << t << std::defaultfloat << std::setprecision(precision)
+            << std::setw(40) << to_string(scheme_.global_cost(best()))
+            << std::setw(40) << ss.str()
+            << std::endl;
     }
 
     void display_end(optimizationtools::Info& info)
     {
         double t = info.elapsed_time();
-        FFOT_VER(info, std::endl
-                << "Final statistics" << std::endl
-                << "----------------" << std::endl
-                << "Value:                      " << to_string(scheme_.global_cost(best())) << std::endl
-                << "Time:                       " << t << std::endl);
+        info.os()
+            << std::endl
+            << "Final statistics" << std::endl
+            << "----------------" << std::endl
+            << "Value:                      " << to_string(scheme_.global_cost(best())) << std::endl
+            << "Time:                       " << t << std::endl;
 
         std::string sol_str = "Solution";
-        FFOT_PUT(info, sol_str, "Time", t);
-        FFOT_PUT(info, sol_str, "Value", print_local_scheme_global_cost(scheme_, scheme_.global_cost(*solutions_.begin())));
+        info.add_to_json(sol_str, "Time", t);
+        info.add_to_json(sol_str, "Value", print_local_scheme_global_cost(scheme_, scheme_.global_cost(*solutions_.begin())));
         info.write_json_output();
         scheme_.write(best_, info.output->certificate_path);
     }
@@ -463,9 +464,10 @@ void print_local_scheme_parameters(
         optimizationtools::Info& info,
         std::true_type)
 {
-    FFOT_VER(info, std::endl
-            << "Local scheme parameters" << std::endl
-            << "-----------------------" << std::endl);
+    info.os()
+       <<  std::endl
+       << "Local scheme parameters" << std::endl
+       << "-----------------------" << std::endl;
     local_scheme.print_parameters(info);
 }
 
@@ -530,9 +532,10 @@ void print_local_scheme_statistics(
         optimizationtools::Info& info,
         std::true_type)
 {
-    FFOT_VER(info, std::endl
-            << "Local scheme statistics" << std::endl
-            << "-----------------------" << std::endl);
+    info.os()
+       << std::endl
+       << "Local scheme statistics" << std::endl
+       << "-----------------------" << std::endl;
     local_scheme.print_statistics(info);
 }
 
