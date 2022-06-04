@@ -10,7 +10,7 @@
 
 
 #include "localsearchsolver/common.hpp"
-#include "localsearchsolver/sequencing2.hpp"
+#include "localsearchsolver/sequencing.hpp"
 
 #include "orproblems/sequentialordering.hpp"
 
@@ -27,8 +27,8 @@ class LocalScheme
 
 public:
 
-    using ElementId = sequencing2::ElementId;
-    using ElementPos = sequencing2::ElementPos;
+    using ElementId = sequencing::ElementId;
+    using ElementPos = sequencing::ElementPos;
 
     /** Global cost: <Number of vertices, Number of precedence violations, Total distance>; */
     using GlobalCost = std::tuple<ElementPos, ElementPos, Distance>;
@@ -70,7 +70,7 @@ public:
             sequencing_parameters.ruin_and_recreate_number_of_perturbations = 10;
         }
 
-        sequencing2::Parameters sequencing_parameters;
+        sequencing::Parameters sequencing_parameters;
     };
 
     LocalScheme(
@@ -88,7 +88,7 @@ public:
      * Initial sequence_datas.
      */
 
-    inline SequenceData empty_sequence_data(sequencing2::SequenceId) const
+    inline SequenceData empty_sequence_data(sequencing::SequenceId) const
     {
         SequenceData sequence_data;
         sequence_data.contains = std::vector<uint8_t>(

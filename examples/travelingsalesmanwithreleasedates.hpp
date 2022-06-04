@@ -10,7 +10,7 @@
 
 
 #include "localsearchsolver/common.hpp"
-#include "localsearchsolver/sequencing2.hpp"
+#include "localsearchsolver/sequencing.hpp"
 
 #include "orproblems/travelingsalesmanwithreleasedates.hpp"
 
@@ -27,9 +27,9 @@ class LocalScheme
 
 public:
 
-    using ElementId = sequencing2::ElementId;
-    using ElementPos = sequencing2::ElementPos;
-    using Mode = sequencing2::Mode;
+    using ElementId = sequencing::ElementId;
+    using ElementPos = sequencing::ElementPos;
+    using Mode = sequencing::Mode;
 
     /** Global cost: <Number of locations, Total duration>; */
     using GlobalCost = std::tuple<ElementPos, Time>;
@@ -76,7 +76,7 @@ public:
             sequencing_parameters.ruin_and_recreate_number_of_elements_removed = 10;
         }
 
-        sequencing2::Parameters sequencing_parameters;
+        sequencing::Parameters sequencing_parameters;
     };
 
     LocalScheme(

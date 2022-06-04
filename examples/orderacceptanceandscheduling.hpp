@@ -11,7 +11,7 @@
 
 
 #include "localsearchsolver/common.hpp"
-#include "localsearchsolver/sequencing2.hpp"
+#include "localsearchsolver/sequencing.hpp"
 
 #include "orproblems/orderacceptanceandscheduling.hpp"
 
@@ -70,7 +70,7 @@ public:
             sequencing_parameters.force_add = true;
         }
 
-        sequencing2::Parameters sequencing_parameters;
+        sequencing::Parameters sequencing_parameters;
     };
 
     LocalScheme(

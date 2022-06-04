@@ -9,7 +9,7 @@
  */
 
 #include "localsearchsolver/common.hpp"
-#include "localsearchsolver/sequencing2.hpp"
+#include "localsearchsolver/sequencing.hpp"
 
 #include "orproblems/permutationflowshopschedulingtt.hpp"
 
@@ -26,8 +26,8 @@ class LocalScheme
 
 public:
 
-    using ElementId = sequencing2::ElementId;
-    using ElementPos = sequencing2::ElementPos;
+    using ElementId = sequencing::ElementId;
+    using ElementPos = sequencing::ElementPos;
 
     /** Global cost: <Number of jobs, Total tardiness>; */
     using GlobalCost = std::tuple<ElementPos, Time>;
@@ -65,7 +65,7 @@ public:
             sequencing_parameters.ruin_and_recreate_number_of_elements_removed = 4;
         }
 
-        sequencing2::Parameters sequencing_parameters;
+        sequencing::Parameters sequencing_parameters;
     };
 
     LocalScheme(
@@ -83,7 +83,7 @@ public:
      * Initial sequence_datas.
      */
 
-    inline SequenceData empty_sequence_data(sequencing2::SequenceId) const
+    inline SequenceData empty_sequence_data(sequencing::SequenceId) const
     {
         SequenceData sequence_data;
         sequence_data.times = std::vector<Time>(instance_.number_of_machines(), 0);
@@ -103,7 +103,7 @@ public:
     }
 
     /*
-     * Methods required by sequencing2::LocalScheme.
+     * Methods required by sequencing::LocalScheme.
      */
 
     inline ElementPos number_of_elements() const { return instance_.number_of_jobs(); }

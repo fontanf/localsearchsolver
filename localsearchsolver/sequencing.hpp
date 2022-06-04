@@ -11,7 +11,7 @@
 namespace localsearchsolver
 {
 
-namespace sequencing2
+namespace sequencing
 {
 
 using SequenceId = int64_t;

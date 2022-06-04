@@ -11,7 +11,7 @@
 
 
 #include "localsearchsolver/common.hpp"
-#include "localsearchsolver/sequencing2.hpp"
+#include "localsearchsolver/sequencing.hpp"
 
 #include "orproblems/schedulingwithsdsttwt.hpp"
 
@@ -28,8 +28,8 @@ class LocalScheme
 
 public:
 
-    using ElementId = sequencing2::ElementId;
-    using ElementPos = sequencing2::ElementPos;
+    using ElementId = sequencing::ElementId;
+    using ElementPos = sequencing::ElementPos;
 
     /** Global cost: <Number of jobs, Total weighted tardiness>; */
     using GlobalCost = std::tuple<JobPos, Weight>;
@@ -67,7 +67,7 @@ public:
             sequencing_parameters.ruin_and_recreate_number_of_perturbations = 10;
         }
 
-        sequencing2::Parameters sequencing_parameters;
+        sequencing::Parameters sequencing_parameters;
     };
 
     LocalScheme(
