@@ -31,11 +31,6 @@ public:
     /** Global cost: <Reversed time, Total weighted tardiness - Profit>; */
     using GlobalCost = std::tuple<Time, Weight>;
 
-    inline Time&        reverse_time(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Weight&         objective(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline Time  reversed_time(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Weight    objective(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
-
     /*
      * Solutions.
      */

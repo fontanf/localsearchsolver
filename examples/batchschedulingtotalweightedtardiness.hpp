@@ -33,13 +33,6 @@ public:
     /** Global cost: <Number of jobs, Overcapacity, Total weighted tardiness>; */
     using GlobalCost = std::tuple<JobPos, Size, Weight>;
 
-    inline JobPos&               number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Size&                   overcapacity(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline Time&       total_weighted_tardiness(GlobalCost& global_cost) { return std::get<2>(global_cost); }
-    inline JobPos          number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Size              overcapacity(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline Time  total_weighted_tardiness(const GlobalCost& global_cost) { return std::get<2>(global_cost); }
-
     /*
      * SequenceDatas.
      */

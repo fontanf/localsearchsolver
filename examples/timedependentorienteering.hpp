@@ -30,13 +30,6 @@ public:
     /** Global cost: <Overtime, Profit, Total time>; */
     using GlobalCost = std::tuple<Time, Profit, Time>;
 
-    inline Time&         overtime(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Profit&         profit(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline Time&       total_time(GlobalCost& global_cost) { return std::get<2>(global_cost); }
-    inline Time    overtime(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Profit    profit(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline Time  total_time(const GlobalCost& global_cost) { return std::get<2>(global_cost); }
-
     /*
      * SequenceDatas.
      */

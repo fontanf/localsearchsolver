@@ -33,11 +33,6 @@ public:
     /** Global cost: <Number of locations, Total duration>; */
     using GlobalCost = std::tuple<ElementPos, Time>;
 
-    inline LocationPos&       number_of_vertices(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Time&                        duration(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline LocationPos  number_of_vertices(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Time                   duration(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
-
     /*
      * SequenceDatas.
      */

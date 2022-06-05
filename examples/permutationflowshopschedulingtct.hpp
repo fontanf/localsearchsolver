@@ -32,11 +32,6 @@ public:
     /** Global cost: <Number of jobs, Total completion time>; */
     using GlobalCost = std::tuple<ElementPos, Time>;
 
-    inline JobPos&             number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Time&        total_completion_time(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline JobPos        number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Time   total_completion_time(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-
     /*
      * SequenceDatas.
      */

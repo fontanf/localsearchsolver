@@ -33,13 +33,6 @@ public:
     /** Global cost: <Number of vertices, Number of precedence violations, Total distance>; */
     using GlobalCost = std::tuple<ElementPos, ElementPos, Distance>;
 
-    inline VertexPos&                    number_of_vertices(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline VertexPos&       number_of_precedence_violations(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline Distance&                                 length(GlobalCost& global_cost) { return std::get<2>(global_cost); }
-    inline VertexPos               number_of_vertices(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline VertexPos  number_of_precedence_violations(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline Distance                            length(const GlobalCost& global_cost) { return std::get<2>(global_cost); }
-
     /*
      * SequenceDatas.
      */

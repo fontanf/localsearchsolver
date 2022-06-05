@@ -34,11 +34,6 @@ public:
     /** Global cost: <Number of jobs, Total weighted tardiness>; */
     using GlobalCost = std::tuple<JobPos, Weight>;
 
-    inline JobPos&                 number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Weight&       total_weighted_tardiness(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline JobPos            number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Weight  total_weighted_tardiness(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
-
     /*
      * Sequence.
      */
