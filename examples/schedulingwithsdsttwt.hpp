@@ -1,5 +1,3 @@
-#pragma once
-
 /**
  * Single machine scheduling problem with sequence-dependent setup times, Total
  * weighted tardiness.
@@ -9,6 +7,7 @@
  *
  */
 
+#pragma once
 
 #include "localsearchsolver/common.hpp"
 #include "localsearchsolver/sequencing.hpp"
@@ -28,15 +27,12 @@ class LocalScheme
 
 public:
 
-    using ElementId = sequencing::ElementId;
-    using ElementPos = sequencing::ElementPos;
-
-    /** Global cost: <Number of jobs, Total weighted tardiness>; */
-    using GlobalCost = std::tuple<JobPos, Weight>;
-
-    /*
-     * Sequence.
+    /**
+     * Global cost:
+     * - Number of jobs
+     * - Total weighted tardiness
      */
+    using GlobalCost = std::tuple<JobPos, Weight>;
 
     struct SequenceData
     {
@@ -45,10 +41,6 @@ public:
         Time time = 0;
         Weight total_weighted_tardiness = 0;
     };
-
-    /*
-     * Constructors and destructor.
-     */
 
     struct Parameters
     {
@@ -77,10 +69,6 @@ public:
 
     virtual ~LocalScheme() { }
 
-    /*
-     * Sequence properties.
-     */
-
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
         return {
@@ -97,11 +85,7 @@ public:
         };
     }
 
-    /*
-     * Methods required by sequencing::LocalScheme.
-     */
-
-    inline ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
+    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {
@@ -113,7 +97,7 @@ public:
 
     inline void append(
             SequenceData& sequence_data,
-            ElementId j) const
+            sequencing::ElementId j) const
     {
         // Update number_of_jobs.
         sequence_data.number_of_jobs++;
@@ -133,10 +117,6 @@ public:
     }
 
 private:
-
-    /*
-     * Private attributes.
-     */
 
     const Instance& instance_;
     Parameters parameters_;

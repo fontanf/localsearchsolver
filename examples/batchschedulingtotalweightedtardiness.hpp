@@ -26,10 +26,6 @@ class LocalScheme
 
 public:
 
-    using ElementId = sequencing::ElementId;
-    using ElementPos = sequencing::ElementPos;
-    using Mode = sequencing::Mode;
-
     /**
      * Global cost:
      * - Number of jobs
@@ -102,9 +98,9 @@ public:
         };
     }
 
-    inline ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
+    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
-    inline Mode number_of_modes(ElementId) const
+    inline sequencing::Mode number_of_modes(sequencing::ElementId) const
     {
         // Mode 0: Add next job to the current batch.
         // Mode 1: Add next job in a new batch.
@@ -122,8 +118,8 @@ public:
 
     inline void append(
             SequenceData& sequence_data,
-            ElementId j,
-            Mode mode) const
+            sequencing::ElementId j,
+            sequencing::Mode mode) const
     {
         if (mode == 1) {  // New batch.
             sequence_data.current_batch_jobs.clear();

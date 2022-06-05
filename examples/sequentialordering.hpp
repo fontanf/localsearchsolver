@@ -26,23 +26,20 @@ class LocalScheme
 
 public:
 
-    using ElementId = sequencing::ElementId;
-    using ElementPos = sequencing::ElementPos;
-
     /**
      * Global cost:
      * - Number of vertices
      * - Number of precedence violations
      * - Total distance
      */
-    using GlobalCost = std::tuple<ElementPos, ElementPos, Distance>;
+    using GlobalCost = std::tuple<VertexPos, VertexPos, Distance>;
 
     struct SequenceData
     {
         VertexPos number_of_vertices = 0;
         VertexId j_last = -1;
         Distance length = 0;
-        ElementPos number_of_precedence_violations = 0;
+        VertexPos number_of_precedence_violations = 0;
         std::vector<uint8_t> contains;
     };
 
@@ -99,7 +96,7 @@ public:
         };
     }
 
-    inline ElementPos number_of_elements() const { return instance_.number_of_vertices(); }
+    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_vertices(); }
 
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {
@@ -112,10 +109,10 @@ public:
 
     inline void append(
             SequenceData& sequence_data,
-            ElementPos j) const
+            sequencing::ElementId j) const
     {
         // Update number_of_precedence_violations.
-        for (ElementId j: instance_.predecessors(j))
+        for (VertexId j: instance_.predecessors(j))
             if (!sequence_data.contains[j])
                 sequence_data.number_of_precedence_violations++;
         // Update time.

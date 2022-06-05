@@ -26,16 +26,12 @@ class LocalScheme
 
 public:
 
-    using ElementId = sequencing::ElementId;
-    using ElementPos = sequencing::ElementPos;
-    using SequencePos = sequencing::SequencePos;
-
     /**
      * Global cost:
      * - Number of jobs
      * - Total completion time
      */
-    using GlobalCost = std::tuple<ElementPos, Time>;
+    using GlobalCost = std::tuple<JobPos, Time>;
 
     struct SequenceData
     {
@@ -93,9 +89,9 @@ public:
         };
     }
 
-    inline SequencePos number_of_sequences() const { return instance_.number_of_factories(); }
+    inline sequencing::SequencePos number_of_sequences() const { return instance_.number_of_factories(); }
 
-    inline ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
+    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {
@@ -107,7 +103,7 @@ public:
 
     inline void append(
             SequenceData& sequence_data,
-            ElementId j) const
+            sequencing::ElementId j) const
     {
         MachineId m = instance_.number_of_machines();
         // Update times.

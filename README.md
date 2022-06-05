@@ -33,7 +33,7 @@ Implemented algorithms:
 
 ## Sequencing module
 
-A specific implementation is also available for sequencing problems. The neighborhoods, crossovers and perturbations are already implemented. It is only required to provide an `append(solution, j)` method to use them:
+A specific implementation is also available for sequencing problems. The neighborhoods, crossovers and perturbations are already implemented. It is only required to provide an `append(sequence_data, j)` method to use them:
 * Local search neighborhoods:
   * Intra:
     * Shift a block of `k` consecutive elements

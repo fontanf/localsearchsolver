@@ -94,7 +94,7 @@ public:
         };
     }
 
-    inline JobPos number_of_elements() const { return instance_.number_of_jobs() - 2; }
+    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_jobs() - 2; }
 
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {
@@ -106,7 +106,7 @@ public:
 
     inline void append(
             SequenceData& sequence_data,
-            JobId j) const
+            sequencing::ElementId j) const
     {
         // Update time.
         Time rj = instance_.job(j + 1).release_date;

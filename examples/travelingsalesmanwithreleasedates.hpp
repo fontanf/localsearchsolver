@@ -26,16 +26,12 @@ class LocalScheme
 
 public:
 
-    using ElementId = sequencing::ElementId;
-    using ElementPos = sequencing::ElementPos;
-    using Mode = sequencing::Mode;
-
     /**
      * Global cost:
      * - Number of locations
      * - Total duration
      */
-    using GlobalCost = std::tuple<ElementPos, Time>;
+    using GlobalCost = std::tuple<LocationPos, Time>;
 
     struct SequenceData
     {
@@ -96,13 +92,13 @@ public:
         };
     }
 
-    inline ElementPos number_of_elements() const
+    inline sequencing::ElementPos number_of_elements() const
     {
         // -1 since we don't schedule the depot.
         return instance_.number_of_locations() - 1;
     }
 
-    inline Mode number_of_modes(ElementId) const
+    inline sequencing::Mode number_of_modes(sequencing::ElementId) const
     {
         // Mode 0: Visit next location without returning to the depot.
         //         The last departure might be delayed.
@@ -120,8 +116,8 @@ public:
 
     inline void append(
             SequenceData& sequence_data,
-            ElementId j,
-            Mode mode) const
+            sequencing::ElementId j,
+            sequencing::Mode mode) const
     {
         // Update last_start and time.
         Time rj = instance_.release_date(j + 1);

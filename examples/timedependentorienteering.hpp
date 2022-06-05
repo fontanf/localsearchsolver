@@ -80,7 +80,7 @@ public:
         };
     }
 
-    inline LocationPos number_of_elements() const { return instance_.number_of_locations() - 2; }
+    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_locations() - 2; }
 
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {
@@ -93,7 +93,7 @@ public:
 
     inline void append(
             SequenceData& sequence_data,
-            LocationId j) const
+            sequencing::ElementId j) const
     {
         // Update time_cur.
         sequence_data.time_cur = instance_.arrival_time(
