@@ -65,6 +65,7 @@ public:
 
             sequencing_parameters.double_bridge_number_of_perturbations = 0;
             sequencing_parameters.ruin_and_recreate_number_of_perturbations = 10;
+            sequencing_parameters.ruin_and_recreate_number_of_elements_removed = 2;
         }
 
         sequencing::Parameters sequencing_parameters;

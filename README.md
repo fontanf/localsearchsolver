@@ -155,15 +155,9 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/flowshopsc
 </p>
 </details>
 
-#### Single sequence + modes
+#### Single sequence, modes
 
 [Traveling salesman problem with release dates](examples/travelingsalesmanwithreleasedates.hpp)
-
-#### Single sub-sequence + modes
-
-#### Multiple sequences + modes
-
-#### Multiple sub-sequences + modes
 
 ## Other examples
 
