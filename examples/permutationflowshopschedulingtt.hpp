@@ -1,5 +1,3 @@
-#pragma once
-
 /**
  * Permutation flow shop scheduling problem, Total tardiness.
  *
@@ -7,6 +5,8 @@
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/permutationflowshopschedulingtt.hpp
  *
  */
+
+#pragma once
 
 #include "localsearchsolver/common.hpp"
 #include "localsearchsolver/sequencing.hpp"
@@ -29,7 +29,11 @@ public:
     using ElementId = sequencing::ElementId;
     using ElementPos = sequencing::ElementPos;
 
-    /** Global cost: <Number of jobs, Total tardiness>; */
+    /**
+     * Global cost:
+     * - Number of jobs
+     * - Total tardiness
+     */
     using GlobalCost = std::tuple<ElementPos, Time>;
 
     inline JobPos&       number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
@@ -37,20 +41,12 @@ public:
     inline JobPos  number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
     inline Time   total_tardiness(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
 
-    /*
-     * SequenceDatas.
-     */
-
     struct SequenceData
     {
         JobPos number_of_jobs = 0;
         std::vector<Time> times;
         Time total_tardiness = 0;
     };
-
-    /*
-     * Constructors and destructor.
-     */
 
     struct Parameters
     {
@@ -79,20 +75,12 @@ public:
 
     virtual ~LocalScheme() { }
 
-    /*
-     * Initial sequence_datas.
-     */
-
     inline SequenceData empty_sequence_data(sequencing::SequenceId) const
     {
         SequenceData sequence_data;
         sequence_data.times = std::vector<Time>(instance_.number_of_machines(), 0);
         return sequence_data;
     }
-
-    /*
-     * SequenceData properties.
-     */
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
@@ -101,10 +89,6 @@ public:
             sequence_data.total_tardiness,
         };
     }
-
-    /*
-     * Methods required by sequencing::LocalScheme.
-     */
 
     inline ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
@@ -146,10 +130,6 @@ public:
     }
 
 private:
-
-    /*
-     * Private attributes.
-     */
 
     const Instance& instance_;
     Parameters parameters_;

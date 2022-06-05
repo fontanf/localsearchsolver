@@ -1,5 +1,3 @@
-#pragma once
-
 /**
  * Single machine order acceptance and scheduling problem with time windows and
  * sequence_data-dependent setup times, Total weighted tardiness.
@@ -9,6 +7,7 @@
  *
  */
 
+#pragma once
 
 #include "localsearchsolver/common.hpp"
 #include "localsearchsolver/sequencing.hpp"
@@ -28,12 +27,12 @@ class LocalScheme
 
 public:
 
-    /** Global cost: <Reversed time, Total weighted tardiness - Profit>; */
-    using GlobalCost = std::tuple<Time, Weight>;
-
-    /*
-     * Solutions.
+    /**
+     * Global cost:
+     * - Reversed time
+     * - Total weighted tardiness - Profit
      */
+    using GlobalCost = std::tuple<Time, Weight>;
 
     struct SequenceData
     {
@@ -79,10 +78,6 @@ public:
 
     virtual ~LocalScheme() { }
 
-    /*
-     * Initial solutions.
-     */
-
     inline SequenceData empty_sequence_data() const
     {
         SequenceData sequence_data;
@@ -91,10 +86,6 @@ public:
         return sequence_data;
     }
 
-    /*
-     * Solution properties.
-     */
-
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
         return {
@@ -102,10 +93,6 @@ public:
             sequence_data.total_weighted_tardiness_full - sequence_data.profit,
         };
     }
-
-    /*
-     * Methods required by sequencing::LocalScheme.
-     */
 
     inline JobPos number_of_elements() const { return instance_.number_of_jobs() - 2; }
 
@@ -164,10 +151,6 @@ public:
     }
 
 private:
-
-    /*
-     * Private attributes.
-     */
 
     const Instance& instance_;
     Parameters parameters_;

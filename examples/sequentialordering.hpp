@@ -1,5 +1,3 @@
-#pragma once
-
 /**
  * Sequential Ordering Problem.
  *
@@ -8,6 +6,7 @@
  *
  */
 
+#pragma once
 
 #include "localsearchsolver/common.hpp"
 #include "localsearchsolver/sequencing.hpp"
@@ -30,12 +29,13 @@ public:
     using ElementId = sequencing::ElementId;
     using ElementPos = sequencing::ElementPos;
 
-    /** Global cost: <Number of vertices, Number of precedence violations, Total distance>; */
-    using GlobalCost = std::tuple<ElementPos, ElementPos, Distance>;
-
-    /*
-     * SequenceDatas.
+    /**
+     * Global cost:
+     * - Number of vertices
+     * - Number of precedence violations
+     * - Total distance
      */
+    using GlobalCost = std::tuple<ElementPos, ElementPos, Distance>;
 
     struct SequenceData
     {
@@ -45,10 +45,6 @@ public:
         ElementPos number_of_precedence_violations = 0;
         std::vector<uint8_t> contains;
     };
-
-    /*
-     * Constructors and destructor.
-     */
 
     struct Parameters
     {
@@ -77,10 +73,6 @@ public:
 
     virtual ~LocalScheme() { }
 
-    /*
-     * Initial sequence_datas.
-     */
-
     inline SequenceData empty_sequence_data(sequencing::SequenceId) const
     {
         SequenceData sequence_data;
@@ -88,10 +80,6 @@ public:
                 instance_.number_of_vertices(), 0);
         return sequence_data;
     }
-
-    /*
-     * SequenceData properties.
-     */
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
@@ -110,10 +98,6 @@ public:
             value,
         };
     }
-
-    /*
-     * Methods required by sequencing::LocalScheme.
-     */
 
     inline ElementPos number_of_elements() const { return instance_.number_of_vertices(); }
 
@@ -150,10 +134,6 @@ public:
     }
 
 private:
-
-    /*
-     * Private attributes.
-     */
 
     const Instance& instance_;
     Parameters parameters_;

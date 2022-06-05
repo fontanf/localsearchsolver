@@ -1,5 +1,3 @@
-#pragma once
-
 /**
  * Permutation flow shop scheduling problem, Total completion_time.
  *
@@ -7,6 +5,8 @@
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/permutationflowshopschedulingtct.hpp
  *
  */
+
+#pragma once
 
 #include "localsearchsolver/common.hpp"
 #include "localsearchsolver/sequencing.hpp"
@@ -29,12 +29,12 @@ public:
     using ElementId = sequencing::ElementId;
     using ElementPos = sequencing::ElementPos;
 
-    /** Global cost: <Number of jobs, Total completion time>; */
-    using GlobalCost = std::tuple<ElementPos, Time>;
-
-    /*
-     * SequenceDatas.
+    /**
+     * Global cost:
+     * - Number of jobs
+     * - Total completion time
      */
+    using GlobalCost = std::tuple<ElementPos, Time>;
 
     struct SequenceData
     {
@@ -42,10 +42,6 @@ public:
         std::vector<Time> times;
         Time total_completion_time = 0;
     };
-
-    /*
-     * Constructors and destructor.
-     */
 
     struct Parameters
     {
@@ -74,20 +70,12 @@ public:
 
     virtual ~LocalScheme() { }
 
-    /*
-     * Initial sequence_datas.
-     */
-
     inline SequenceData empty_sequence_data(sequencing::SequenceId) const
     {
         SequenceData sequence_data;
         sequence_data.times = std::vector<Time>(instance_.number_of_machines(), 0);
         return sequence_data;
     }
-
-    /*
-     * SequenceData properties.
-     */
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
@@ -96,10 +84,6 @@ public:
             sequence_data.total_completion_time,
         };
     }
-
-    /*
-     * Methods required by sequencing::LocalScheme.
-     */
 
     inline ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
@@ -136,10 +120,6 @@ public:
     }
 
 private:
-
-    /*
-     * Private attributes.
-     */
 
     const Instance& instance_;
     Parameters parameters_;

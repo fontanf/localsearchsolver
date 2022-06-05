@@ -30,12 +30,13 @@ public:
     using ElementPos = sequencing::ElementPos;
     using Mode = sequencing::Mode;
 
-    /** Global cost: <Number of jobs, Overcapacity, Total weighted tardiness>; */
-    using GlobalCost = std::tuple<JobPos, Size, Weight>;
-
-    /*
-     * SequenceDatas.
+    /**
+     * Global cost:
+     * - Number of jobs
+     * - Overcapacity
+     * - Total weighted tardiness
      */
+    using GlobalCost = std::tuple<JobPos, Size, Weight>;
 
     struct SequenceData
     {
@@ -48,10 +49,6 @@ public:
         Size overcapacity = 0;
         Weight total_weighted_tardiness = 0;
     };
-
-    /*
-     * Constructors and destructor.
-     */
 
     struct Parameters
     {
@@ -87,10 +84,6 @@ public:
 
     virtual ~LocalScheme() { }
 
-    /*
-     * SequenceData properties.
-     */
-
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
         return {
@@ -109,14 +102,7 @@ public:
         };
     }
 
-    /*
-     * Methods required by sequencing::LocalScheme.
-     */
-
-    inline ElementPos number_of_elements() const
-    {
-        return instance_.number_of_jobs();
-    }
+    inline ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
     inline Mode number_of_modes(ElementId) const
     {
@@ -190,10 +176,6 @@ public:
     }
 
 private:
-
-    /*
-     * Private attributes.
-     */
 
     const Instance& instance_;
     Parameters parameters_;

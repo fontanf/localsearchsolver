@@ -30,12 +30,12 @@ public:
     using ElementPos = sequencing::ElementPos;
     using Mode = sequencing::Mode;
 
-    /** Global cost: <Number of locations, Total duration>; */
-    using GlobalCost = std::tuple<ElementPos, Time>;
-
-    /*
-     * SequenceDatas.
+    /**
+     * Global cost:
+     * - Number of locations
+     * - Total duration
      */
+    using GlobalCost = std::tuple<ElementPos, Time>;
 
     struct SequenceData
     {
@@ -45,10 +45,6 @@ public:
         Time current_trip_duration = 0;
         Time time_full = 0;
     };
-
-    /*
-     * Constructors and destructor.
-     */
 
     struct Parameters
     {
@@ -84,10 +80,6 @@ public:
 
     virtual ~LocalScheme() { }
 
-    /*
-     * SequenceData properties.
-     */
-
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
         return {
@@ -103,10 +95,6 @@ public:
             value,
         };
     }
-
-    /*
-     * Methods required by sequencing::LocalScheme.
-     */
 
     inline ElementPos number_of_elements() const
     {
@@ -157,10 +145,6 @@ public:
     }
 
 private:
-
-    /*
-     * Private attributes.
-     */
 
     const Instance& instance_;
     Parameters parameters_;

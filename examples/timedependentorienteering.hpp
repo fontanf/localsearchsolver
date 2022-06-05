@@ -1,5 +1,3 @@
-#pragma once
-
 /**
  * Time-dependent orienteering problem.
  *
@@ -8,6 +6,7 @@
  *
  */
 
+#pragma once
 
 #include "localsearchsolver/common.hpp"
 #include "localsearchsolver/sequencing.hpp"
@@ -27,12 +26,13 @@ class LocalScheme
 
 public:
 
-    /** Global cost: <Overtime, Profit, Total time>; */
-    using GlobalCost = std::tuple<Time, Profit, Time>;
-
-    /*
-     * SequenceDatas.
+    /**
+     * Global cost:
+     * - Overtime
+     * - Profit
+     * - Total time
      */
+    using GlobalCost = std::tuple<Time, Profit, Time>;
 
     struct SequenceData
     {
@@ -41,10 +41,6 @@ public:
         Time time_full = 0;
         Profit profit = 0;
     };
-
-    /*
-     * Constructors and destructor.
-     */
 
     struct Parameters
     {
@@ -75,10 +71,6 @@ public:
 
     virtual ~LocalScheme() { }
 
-    /*
-     * SequenceData properties.
-     */
-
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
         return {
@@ -87,10 +79,6 @@ public:
             sequence_data.time_full,
         };
     }
-
-    /*
-     * Methods required by sequencing::LocalScheme.
-     */
 
     inline LocationPos number_of_elements() const { return instance_.number_of_locations() - 2; }
 
@@ -120,10 +108,6 @@ public:
     }
 
 private:
-
-    /*
-     * Private attributes.
-     */
 
     const Instance& instance_;
     Parameters parameters_;
