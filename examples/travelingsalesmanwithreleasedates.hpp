@@ -1,13 +1,12 @@
-#pragma once
-
 /**
- * Sequential Ordering Problem.
+ * Traveling salesman problem with release dates.
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/travelingsalesmanwithreleasedates.hpp
  *
  */
 
+#pragma once
 
 #include "localsearchsolver/common.hpp"
 #include "localsearchsolver/sequencing.hpp"

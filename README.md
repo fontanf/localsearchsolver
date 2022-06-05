@@ -159,6 +159,8 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/flowshopsc
 
 [Traveling salesman problem with release dates](examples/travelingsalesmanwithreleasedates.hpp)
 
+[Single machine batch scheduling problem, Total weighted tardiness](examples/batchschedulingtotalweightedtardiness.hpp)
+
 ## Other examples
 
 Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orproblems)
