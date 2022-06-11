@@ -4,29 +4,6 @@
 using namespace localsearchsolver;
 using namespace orderacceptanceandscheduling;
 
-inline LocalScheme::Parameters read_local_scheme_args(
-        const std::vector<char*> argv)
-{
-    LocalScheme::Parameters parameters;
-    boost::program_options::options_description desc("Allowed options");
-    desc.add_options()
-        ("shift-block-maximum-length,", boost::program_options::value<JobPos>(&parameters.sequencing_parameters.shift_block_maximum_length), "")
-        ("swap-block-maximum-length,", boost::program_options::value<JobPos>(&parameters.sequencing_parameters.swap_block_maximum_length), "")
-        ("double-bridge-number-of-pertubrations", boost::program_options::value<JobPos>(&parameters.sequencing_parameters.double_bridge_number_of_perturbations), "")
-        ("ruin-and-recreate-number-of-pertubrations", boost::program_options::value<JobPos>(&parameters.sequencing_parameters.ruin_and_recreate_number_of_perturbations), "")
-        ("ruin-and-recreate-number-of-elements-removed", boost::program_options::value<JobPos>(&parameters.sequencing_parameters.ruin_and_recreate_number_of_elements_removed), "")
-        ;
-    boost::program_options::variables_map vm;
-    boost::program_options::store(boost::program_options::parse_command_line((Counter)argv.size(), argv.data(), desc), vm);
-    try {
-        boost::program_options::notify(vm);
-    } catch (const boost::program_options::required_option& e) {
-        std::cout << desc << std::endl;;
-        throw "";
-    }
-    return parameters;
-}
-
 int main(int argc, char *argv[])
 {
     MainArgs main_args;
@@ -39,9 +16,9 @@ int main(int argc, char *argv[])
         std::cout << instance << std::endl;
 
     // Create local scheme.
-    auto parameters_local_scheme_0 = read_local_scheme_args(main_args.local_scheme_argv);
-    LocalScheme local_scheme_0(instance, parameters_local_scheme_0);
-    sequencing::LocalScheme<LocalScheme> local_scheme(local_scheme_0, parameters_local_scheme_0.sequencing_parameters);
+    SequencingScheme sequencing_scheme(instance);
+    auto sequencing_parameters = read_sequencing_args<SequencingScheme>(main_args.sequencing_argv);
+    sequencing::LocalScheme<SequencingScheme> local_scheme(sequencing_scheme, sequencing_parameters);
 
     // Run algorithm.
     auto solution_pool =

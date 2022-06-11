@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "localsearchsolver/common.hpp"
 #include "localsearchsolver/sequencing.hpp"
 
 #include "orproblems/distributedpfsstct.hpp"
@@ -21,7 +20,7 @@ namespace distributedpfsstct
 
 using namespace orproblems::distributedpfsstct;
 
-class LocalScheme
+class SequencingScheme
 {
 
 public:
@@ -41,38 +40,34 @@ public:
         Time total_completion_time = 0;
     };
 
-    struct Parameters
+    static sequencing::Parameters sequencing_parameters()
     {
-        Parameters()
-        {
-            sequencing_parameters.shift_block_maximum_length = 3;
-            sequencing_parameters.swap_block_maximum_length = 2;
-            sequencing_parameters.reverse = true;
-            sequencing_parameters.shift_reverse_block_maximum_length = 2;
+        sequencing::Parameters parameters;
 
-            sequencing_parameters.inter_shift_block_maximum_length = 3;
-            sequencing_parameters.inter_swap_block_maximum_length = 2;
-            sequencing_parameters.inter_two_opt = true;
-            sequencing_parameters.inter_shift_reverse_block_maximum_length = 2;
+        parameters.shift_block_maximum_length = 3;
+        parameters.swap_block_maximum_length = 2;
+        parameters.reverse = true;
+        parameters.shift_reverse_block_maximum_length = 2;
 
-            sequencing_parameters.double_bridge_number_of_perturbations = 0;
-            sequencing_parameters.ruin_and_recreate_number_of_perturbations = 4;
-            sequencing_parameters.ruin_and_recreate_number_of_elements_removed = 4;
-        }
+        parameters.inter_shift_block_maximum_length = 3;
+        parameters.inter_swap_block_maximum_length = 2;
+        parameters.inter_two_opt = true;
+        parameters.inter_shift_reverse_block_maximum_length = 2;
 
-        sequencing::Parameters sequencing_parameters;
-    };
+        parameters.ruin_and_recreate_number_of_perturbations = 4;
+        parameters.ruin_and_recreate_number_of_elements_removed = 4;
 
-    LocalScheme(
-            const Instance& instance,
-            Parameters parameters):
-        instance_(instance),
-        parameters_(parameters) { }
+        return parameters;
+    }
 
-    LocalScheme(const LocalScheme& local_scheme):
-        LocalScheme(local_scheme.instance_, local_scheme.parameters_) { }
+    SequencingScheme(
+            const Instance& instance):
+        instance_(instance) { }
 
-    virtual ~LocalScheme() { }
+    SequencingScheme(const SequencingScheme& sequencing_scheme):
+        SequencingScheme(sequencing_scheme.instance_) { }
+
+    virtual ~SequencingScheme() { }
 
     inline SequenceData empty_sequence_data(sequencing::SequenceId) const
     {
@@ -124,7 +119,6 @@ public:
 private:
 
     const Instance& instance_;
-    Parameters parameters_;
 
 };
 

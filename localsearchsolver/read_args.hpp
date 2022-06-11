@@ -4,6 +4,7 @@
 #include "localsearchsolver/iterated_local_search.hpp"
 #include "localsearchsolver/best_first_local_search.hpp"
 #include "localsearchsolver/genetic_local_search.hpp"
+#include "localsearchsolver/sequencing.hpp"
 
 #include <boost/program_options.hpp>
 
@@ -107,6 +108,9 @@ struct MainArgs
     std::string local_scheme = "local_scheme";
     std::vector<std::string> local_scheme_args;
     std::vector<char*> local_scheme_argv;
+    std::string sequencing = "sequencing";
+    std::vector<std::string> sequencing_args;
+    std::vector<char*> sequencing_argv;
     optimizationtools::Info info = optimizationtools::Info();
     int print_instance = 1;
     int print_solution = 1;
@@ -131,6 +135,7 @@ MainArgs read_args(int argc, char *argv[], MainArgs& main_args)
         ("format,f", boost::program_options::value<std::string>(&main_args.format), "set input file format (default: orlibrary)")
         ("algorithm,a", boost::program_options::value<std::string>(&main_args.algorithm), "set algorithm")
         ("local-scheme,s", boost::program_options::value<std::string>(&main_args.local_scheme), "set localscheme parameters")
+        ("sequencing,", boost::program_options::value<std::string>(&main_args.sequencing), "set sequencing parameters")
         ("initial-solutions,", boost::program_options::value<std::vector<Counter>>(&main_args.initial_solution_ids)->multitoken(), "")
         ("time-limit,t", boost::program_options::value<double>(&time_limit), "Time limit in seconds\n  ex: 3600")
         ("goal,g", boost::program_options::value<double>(&main_args.goal), "set goal")
@@ -163,6 +168,10 @@ MainArgs read_args(int argc, char *argv[], MainArgs& main_args)
     for (std::string& s: main_args.local_scheme_args)
         main_args.local_scheme_argv.push_back(const_cast<char*>(s.c_str()));
 
+    main_args.sequencing_args = boost::program_options::split_unix(main_args.sequencing);
+    for (std::string& s: main_args.sequencing_args)
+        main_args.sequencing_argv.push_back(const_cast<char*>(s.c_str()));
+
     main_args.info = optimizationtools::Info()
         .set_verbose(vm.count("verbose"))
         .set_time_limit(time_limit)
@@ -174,6 +183,35 @@ MainArgs read_args(int argc, char *argv[], MainArgs& main_args)
         ;
 
     return main_args;
+}
+
+template <typename SequencingScheme>
+inline sequencing::Parameters read_sequencing_args(
+        const std::vector<char*> argv)
+{
+    sequencing::Parameters parameters = SequencingScheme::sequencing_parameters();
+    boost::program_options::options_description desc("Allowed options");
+    desc.add_options()
+        ("shift-block-maximum-length,", boost::program_options::value<sequencing::ElementPos>(&parameters.shift_block_maximum_length), "")
+        ("swap-block-maximum-length,", boost::program_options::value<sequencing::ElementPos>(&parameters.swap_block_maximum_length), "")
+        ("reverse,", boost::program_options::value<bool>(&parameters.reverse), "")
+        ("shift-reverse-block-maximum-length,", boost::program_options::value<sequencing::ElementPos>(&(parameters.shift_reverse_block_maximum_length)), "")
+        ("double-bridge-number-of-perturbations,", boost::program_options::value<sequencing::ElementPos>(&parameters.double_bridge_number_of_perturbations), "")
+        ("ruin-and-recreate-number-of-perturbations,", boost::program_options::value<sequencing::ElementPos>(&parameters.ruin_and_recreate_number_of_perturbations), "")
+        ("ruin-and-recreate-number-of-elements-removed,", boost::program_options::value<sequencing::ElementPos>(&parameters.ruin_and_recreate_number_of_elements_removed), "")
+        ("crossover-ox-weight,", boost::program_options::value<double>(&parameters.crossover_ox_weight), "")
+        ("crossover-sjox-weight,", boost::program_options::value<double>(&parameters.crossover_sjox_weight), "")
+        ("crossover-sbox-weight,", boost::program_options::value<double>(&parameters.crossover_sbox_weight), "")
+        ;
+    boost::program_options::variables_map vm;
+    boost::program_options::store(boost::program_options::parse_command_line((Counter)argv.size(), argv.data(), desc), vm);
+    try {
+        boost::program_options::notify(vm);
+    } catch (const boost::program_options::required_option& e) {
+        std::cout << desc << std::endl;;
+        throw "";
+    }
+    return parameters;
 }
 
 template <typename LocalScheme>

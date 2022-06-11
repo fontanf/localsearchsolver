@@ -484,8 +484,9 @@ inline GeneticLocalSearchOutput<LocalScheme> genetic_local_search(
         << "Maximum number of iterations:    " << parameters.maximum_number_of_iterations << std::endl
         << "Seed:                            " << parameters.seed << std::endl
         << "Maximum size of the pool:        " << parameters.maximum_size_of_the_solution_pool << std::endl
-        << "Time limit:                      " << parameters.info.time_limit << std::endl
-        << std::endl;
+        << "Time limit:                      " << parameters.info.time_limit << std::endl;
+    print_local_scheme_parameters(local_scheme, parameters.info);
+    parameters.info.os() << std::endl;
 
     GeneticLocalSearchOutput<LocalScheme> output(
             local_scheme,
@@ -505,6 +506,7 @@ inline GeneticLocalSearchOutput<LocalScheme> genetic_local_search(
     output.solution_pool.display_end(parameters.info);
     parameters.info.os() << "Number of iterations:       " << output.number_of_iterations << std::endl;
     parameters.info.add_to_json("Algorithm", "NumberOfIterations", output.number_of_iterations);
+    print_local_scheme_statistics(local_scheme, parameters.info);
     return output;
 }
 

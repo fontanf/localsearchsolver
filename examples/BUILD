@@ -270,6 +270,67 @@ cc_binary(
 
 
 cc_library(
+        name = "travelingrepairman",
+        hdrs = ["travelingrepairman.hpp"],
+        deps = [
+                "//localsearchsolver:localsearchsolver",
+                "@orproblems//orproblems:travelingrepairman",
+        ],
+        visibility = ["//visibility:public"],
+)
+
+cc_binary(
+        name = "travelingrepairman_main",
+        srcs = ["travelingrepairman_main.cpp"],
+        deps = [
+                ":travelingrepairman",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
+
+cc_library(
+        name = "vehicleroutingwithtimewindows",
+        hdrs = ["vehicleroutingwithtimewindows.hpp"],
+        deps = [
+                "//localsearchsolver:localsearchsolver",
+                "@orproblems//orproblems:vehicleroutingwithtimewindows",
+        ],
+        visibility = ["//visibility:public"],
+)
+
+cc_binary(
+        name = "vehicleroutingwithtimewindows_main",
+        srcs = ["vehicleroutingwithtimewindows_main.cpp"],
+        deps = [
+                ":vehicleroutingwithtimewindows",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
+cc_binary(
+        name = "vehicleroutingwithtimewindows_dimacs_main",
+        srcs = ["vehicleroutingwithtimewindows_dimacs_main.cpp"],
+        deps = [
+                ":vehicleroutingwithtimewindows",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
+
+cc_library(
         name = "travelingsalesmanwithreleasedates",
         hdrs = ["travelingsalesmanwithreleasedates.hpp"],
         deps = [

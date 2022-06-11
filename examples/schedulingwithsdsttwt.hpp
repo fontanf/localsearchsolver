@@ -9,7 +9,6 @@
 
 #pragma once
 
-#include "localsearchsolver/common.hpp"
 #include "localsearchsolver/sequencing.hpp"
 
 #include "orproblems/schedulingwithsdsttwt.hpp"
@@ -22,7 +21,7 @@ namespace schedulingwithsdsttwt
 
 using namespace orproblems::schedulingwithsdsttwt;
 
-class LocalScheme
+class SequencingScheme
 {
 
 public:
@@ -42,32 +41,27 @@ public:
         Weight total_weighted_tardiness = 0;
     };
 
-    struct Parameters
+    static sequencing::Parameters sequencing_parameters()
     {
-        Parameters()
-        {
-            sequencing_parameters.shift_block_maximum_length = 13;
-            sequencing_parameters.swap_block_maximum_length = 3;
-            sequencing_parameters.shuffle_neighborhood_order = true;
+        sequencing::Parameters parameters;
 
-            sequencing_parameters.double_bridge_number_of_perturbations = 0;
-            sequencing_parameters.ruin_and_recreate_number_of_perturbations = 10;
-            sequencing_parameters.ruin_and_recreate_number_of_elements_removed = 2;
-        }
+        parameters.shift_block_maximum_length = 13;
+        parameters.swap_block_maximum_length = 3;
 
-        sequencing::Parameters sequencing_parameters;
-    };
+        parameters.ruin_and_recreate_number_of_perturbations = 10;
+        parameters.ruin_and_recreate_number_of_elements_removed = 2;
 
-    LocalScheme(
-            const Instance& instance,
-            Parameters parameters):
-        instance_(instance),
-        parameters_(parameters) { }
+        return parameters;
+    }
 
-    LocalScheme(const LocalScheme& local_scheme):
-        LocalScheme(local_scheme.instance_, local_scheme.parameters_) { }
+    SequencingScheme(
+            const Instance& instance):
+        instance_(instance) { }
 
-    virtual ~LocalScheme() { }
+    SequencingScheme(const SequencingScheme& sequencing_scheme):
+        SequencingScheme(sequencing_scheme.instance_) { }
+
+    virtual ~SequencingScheme() { }
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
@@ -119,7 +113,6 @@ public:
 private:
 
     const Instance& instance_;
-    Parameters parameters_;
 
 };
 

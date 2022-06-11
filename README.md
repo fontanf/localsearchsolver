@@ -33,7 +33,12 @@ Implemented algorithms:
 
 ## Sequencing module
 
-A specific implementation is also available for sequencing problems. The neighborhoods, crossovers and perturbations are already implemented. It is only required to provide an `append(sequence_data, j)` method to use them:
+A specific implementation is also available for sequencing problems. The neighborhoods, perturbations and crossovers are already implemented. It is only required to provide a `void append(SequenceData&, ElementId) const` method to use them.
+
+Following the framework described in "A unified solution framework for multi-attribute vehicle routing problems" (Vidal et al., 2014) [DOI](https://doi.org/10.1016/j.ejor.2013.09.045) , more efficient neighborhood explorations can be obtained by providing either a `void concatenate(SequenceData&, const SequenceData&) const` method or a `GlobalCost global_cost_concatenate(SequenceData&, const SequenceData&) const` method (when it is possible).
+
+In case the `GlobalCost global_cost_concatenate(SequenceData&, const SequenceData&) const` method is provided, the `Swap` and `Reverse` neighborhoods won't take much avantage of it. Therefore, it might be better to disable these neighborhoods, in particular when optimizing a single sequence.
+
 * Local search neighborhoods:
   * Intra:
     * Shift a block of `k` consecutive elements
@@ -58,6 +63,8 @@ A specific implementation is also available for sequencing problems. The neighbo
   * OX crossover (single sequence only)
   * SJOX crossover (single sequence only)
   * SBOX crossover (single sequence only)
+  * SREX1
+  * SREX2
 
 ### Examples
 
@@ -160,6 +167,15 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/flowshopsc
 [Traveling salesman problem with release dates](examples/travelingsalesmanwithreleasedates.hpp)
 
 [Single machine batch scheduling problem, Total weighted tardiness](examples/batchschedulingtotalweightedtardiness.hpp)
+
+#### Single sequence, `void concatenate(SequenceData&, const SequenceData&) const`
+
+[Traveling Repairman Problem](examples/travelingrepairman.hpp)
+
+#### Multiple sequences, `void concatenate(SequenceData&, const SequenceData&) const`
+
+[Vehicle routing problem with time windows](examples/vehicleroutingwithtimewindows.hpp)
+
 
 ## Other examples
 

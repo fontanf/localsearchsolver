@@ -9,7 +9,6 @@
 
 #pragma once
 
-#include "localsearchsolver/common.hpp"
 #include "localsearchsolver/sequencing.hpp"
 
 #include "orproblems/orderacceptanceandscheduling.hpp"
@@ -22,7 +21,7 @@ namespace orderacceptanceandscheduling
 
 using namespace orproblems::orderacceptanceandscheduling;
 
-class LocalScheme
+class SequencingScheme
 {
 
 public:
@@ -45,38 +44,29 @@ public:
         Profit profit = 0;
     };
 
-    /*
-     * Constructors and destructor.
-     */
-
-    struct Parameters
+    static sequencing::Parameters sequencing_parameters()
     {
-        Parameters()
-        {
-            sequencing_parameters.shift_block_maximum_length = 7;
-            sequencing_parameters.swap_block_maximum_length = 5;
-            sequencing_parameters.reverse = true;
-            sequencing_parameters.shift_reverse_block_maximum_length = 6;
-            sequencing_parameters.add_remove = true;
+        sequencing::Parameters parameters;
 
-            sequencing_parameters.double_bridge_number_of_perturbations = 0;
-            sequencing_parameters.ruin_and_recreate_number_of_perturbations = 0;
-            sequencing_parameters.force_add = true;
-        }
+        parameters.shift_block_maximum_length = 7;
+        parameters.swap_block_maximum_length = 5;
+        parameters.reverse = true;
+        parameters.shift_reverse_block_maximum_length = 6;
+        parameters.add_remove = true;
 
-        sequencing::Parameters sequencing_parameters;
-    };
+        parameters.force_add = true;
 
-    LocalScheme(
-            const Instance& instance,
-            Parameters parameters):
-        instance_(instance),
-        parameters_(parameters) { }
+        return parameters;
+    }
 
-    LocalScheme(const LocalScheme& local_scheme):
-        LocalScheme(local_scheme.instance_, local_scheme.parameters_) { }
+    SequencingScheme(
+            const Instance& instance):
+        instance_(instance) { }
 
-    virtual ~LocalScheme() { }
+    SequencingScheme(const SequencingScheme& sequencing_scheme):
+        SequencingScheme(sequencing_scheme.instance_) { }
+
+    virtual ~SequencingScheme() { }
 
     inline SequenceData empty_sequence_data() const
     {
@@ -153,7 +143,6 @@ public:
 private:
 
     const Instance& instance_;
-    Parameters parameters_;
 
 };
 

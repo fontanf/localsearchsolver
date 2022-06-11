@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "localsearchsolver/common.hpp"
 #include "localsearchsolver/sequencing.hpp"
 
 #include "orproblems/sequentialordering.hpp"
@@ -21,7 +20,7 @@ namespace sequentialordering
 
 using namespace orproblems::sequentialordering;
 
-class LocalScheme
+class SequencingScheme
 {
 
 public:
@@ -43,32 +42,28 @@ public:
         std::vector<uint8_t> contains;
     };
 
-    struct Parameters
+    static sequencing::Parameters sequencing_parameters()
     {
-        Parameters()
-        {
-            sequencing_parameters.shift_block_maximum_length = 8;
-            sequencing_parameters.swap_block_maximum_length = 2;
-            sequencing_parameters.reverse = true;
-            sequencing_parameters.shift_reverse_block_maximum_length = 3;
-            sequencing_parameters.shuffle_neighborhood_order = true;
-            sequencing_parameters.double_bridge_number_of_perturbations = 0;
-            sequencing_parameters.ruin_and_recreate_number_of_perturbations = 10;
-        }
+        sequencing::Parameters parameters;
 
-        sequencing::Parameters sequencing_parameters;
-    };
+        parameters.shift_block_maximum_length = 8;
+        parameters.swap_block_maximum_length = 2;
+        parameters.reverse = true;
+        parameters.shift_reverse_block_maximum_length = 3;
 
-    LocalScheme(
-            const Instance& instance,
-            Parameters parameters):
-        instance_(instance),
-        parameters_(parameters) { }
+        parameters.ruin_and_recreate_number_of_perturbations = 10;
 
-    LocalScheme(const LocalScheme& local_scheme):
-        LocalScheme(local_scheme.instance_, local_scheme.parameters_) { }
+        return parameters;
+    }
 
-    virtual ~LocalScheme() { }
+    SequencingScheme(
+            const Instance& instance):
+        instance_(instance) { }
+
+    SequencingScheme(const SequencingScheme& sequencing_scheme):
+        SequencingScheme(sequencing_scheme.instance_) { }
+
+    virtual ~SequencingScheme() { }
 
     inline SequenceData empty_sequence_data(sequencing::SequenceId) const
     {
@@ -133,7 +128,6 @@ public:
 private:
 
     const Instance& instance_;
-    Parameters parameters_;
 
 };
 

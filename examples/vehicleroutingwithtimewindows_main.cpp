@@ -1,13 +1,14 @@
-#include "examples/schedulingwithsdsttwt.hpp"
+#include "examples/vehicleroutingwithtimewindows.hpp"
 #include "localsearchsolver/read_args.hpp"
 
 using namespace localsearchsolver;
-using namespace schedulingwithsdsttwt;
+using namespace vehicleroutingwithtimewindows;
 
 int main(int argc, char *argv[])
 {
     MainArgs main_args;
     main_args.algorithm = "best_first_local_search";
+    main_args.initial_solution_ids = {2};
     read_args(argc, argv, main_args);
     auto& os = main_args.info.os();
 
@@ -37,12 +38,12 @@ int main(int argc, char *argv[])
         run_genetic_local_search(main_args, local_scheme, main_args.info);
 
     // Write solution.
-    local_scheme.write(solution_pool.best(), main_args.info.output->certificate_path);
-    if (main_args.print_solution) {
-        std::cout << std::endl
+    local_scheme.write(solution_pool.best(), main_args.info.output->certificate_path, 1);
+    if (main_args.print_solution > 0) {
+        os << std::endl
             << "Solution" << std::endl
             << "--------" << std::endl;
-        local_scheme.print(std::cout, solution_pool.best());
+        local_scheme.print(os, solution_pool.best());
     }
 
     // Run checker.

@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "localsearchsolver/common.hpp"
 #include "localsearchsolver/sequencing.hpp"
 
 #include "orproblems/permutationflowshopschedulingtct.hpp"
@@ -21,7 +20,7 @@ namespace permutationflowshopschedulingtct
 
 using namespace orproblems::permutationflowshopschedulingtct;
 
-class LocalScheme
+class SequencingScheme
 {
 
 public:
@@ -40,32 +39,29 @@ public:
         Time total_completion_time = 0;
     };
 
-    struct Parameters
+    static sequencing::Parameters sequencing_parameters()
     {
-        Parameters()
-        {
-            sequencing_parameters.shift_block_maximum_length = 2;
-            sequencing_parameters.swap_block_maximum_length = 1;
-            sequencing_parameters.reverse = false;
-            sequencing_parameters.shift_reverse_block_maximum_length = 0;
-            sequencing_parameters.double_bridge_number_of_perturbations = 0;
-            sequencing_parameters.ruin_and_recreate_number_of_perturbations = 4;
-            sequencing_parameters.ruin_and_recreate_number_of_elements_removed = 4;
-        }
+        sequencing::Parameters parameters;
 
-        sequencing::Parameters sequencing_parameters;
-    };
+        parameters.shift_block_maximum_length = 2;
+        parameters.swap_block_maximum_length = 1;
+        parameters.reverse = false;
+        parameters.shift_reverse_block_maximum_length = 0;
 
-    LocalScheme(
-            const Instance& instance,
-            Parameters parameters):
-        instance_(instance),
-        parameters_(parameters) { }
+        parameters.ruin_and_recreate_number_of_perturbations = 4;
+        parameters.ruin_and_recreate_number_of_elements_removed = 4;
 
-    LocalScheme(const LocalScheme& local_scheme):
-        LocalScheme(local_scheme.instance_, local_scheme.parameters_) { }
+        return parameters;
+    }
 
-    virtual ~LocalScheme() { }
+    SequencingScheme(
+            const Instance& instance):
+        instance_(instance) { }
+
+    SequencingScheme(const SequencingScheme& sequencing_scheme):
+        SequencingScheme(sequencing_scheme.instance_) { }
+
+    virtual ~SequencingScheme() { }
 
     inline SequenceData empty_sequence_data(sequencing::SequenceId) const
     {
@@ -119,7 +115,6 @@ public:
 private:
 
     const Instance& instance_;
-    Parameters parameters_;
 
 };
 

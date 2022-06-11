@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "localsearchsolver/common.hpp"
 #include "localsearchsolver/sequencing.hpp"
 
 #include "orproblems/batchschedulingtotalweightedtardiness.hpp"
@@ -21,7 +20,7 @@ namespace batchschedulingtotalweightedtardiness
 
 using namespace orproblems::batchschedulingtotalweightedtardiness;
 
-class LocalScheme
+class SequencingScheme
 {
 
 public:
@@ -46,39 +45,33 @@ public:
         Weight total_weighted_tardiness = 0;
     };
 
-    struct Parameters
+    static sequencing::Parameters sequencing_parameters()
     {
-        Parameters()
-        {
-            sequencing_parameters.shuffle_neighborhood_order = true;
+        sequencing::Parameters parameters;
 
-            sequencing_parameters.shift_block_maximum_length = 8;
-            sequencing_parameters.swap_block_maximum_length = 4;
-            sequencing_parameters.reverse = true;
-            sequencing_parameters.shift_reverse_block_maximum_length = 4;
+        parameters.shift_block_maximum_length = 8;
+        parameters.swap_block_maximum_length = 4;
+        parameters.reverse = true;
+        parameters.shift_reverse_block_maximum_length = 4;
 
-            sequencing_parameters.shift_change_mode = true;
-            sequencing_parameters.mode_swap = true;
-            sequencing_parameters.swap_with_modes = true;
+        parameters.shift_change_mode = true;
+        parameters.mode_swap = true;
+        parameters.swap_with_modes = true;
 
-            sequencing_parameters.double_bridge_number_of_perturbations = 0;
-            sequencing_parameters.ruin_and_recreate_number_of_perturbations = 10;
-            sequencing_parameters.ruin_and_recreate_number_of_elements_removed = 4;
-        }
+        parameters.ruin_and_recreate_number_of_perturbations = 10;
+        parameters.ruin_and_recreate_number_of_elements_removed = 4;
 
-        sequencing::Parameters sequencing_parameters;
-    };
+        return parameters;
+    }
 
-    LocalScheme(
-            const Instance& instance,
-            Parameters parameters):
-        instance_(instance),
-        parameters_(parameters) { }
+    SequencingScheme(
+            const Instance& instance):
+        instance_(instance) { }
 
-    LocalScheme(const LocalScheme& local_scheme):
-        LocalScheme(local_scheme.instance_, local_scheme.parameters_) { }
+    SequencingScheme(const SequencingScheme& sequencing_scheme):
+        SequencingScheme(sequencing_scheme.instance_) { }
 
-    virtual ~LocalScheme() { }
+    virtual ~SequencingScheme() { }
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
@@ -174,7 +167,6 @@ public:
 private:
 
     const Instance& instance_;
-    Parameters parameters_;
 
 };
 
