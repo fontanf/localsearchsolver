@@ -51,7 +51,10 @@ In case the `GlobalCost global_cost_concatenate(SequenceData&, const SequenceDat
     * Swap a block of `k1` consecutive elements from a sequence with another block of `k2` consecutive elements from another sequence
     * Shift and reverse a block of `k` consecutive elements from one sequence to another
     * Swap the sequences of two elements `j1` and `j2` and try to place them at promising positions in their new sequences (swap\*)
-  * Remove an element from the solution / Add an element into the solution
+  * Sub-sequences:
+    * Add an element into the solution
+    * Remove an element from the solution
+    * Replace an element from the solution by an element outside of the solution
   * Modes:
     * Shift an element `j` in the same sequence and change its mode
     * Swap the mode of element `j1` with the mode of another element `j2` from the same sequence

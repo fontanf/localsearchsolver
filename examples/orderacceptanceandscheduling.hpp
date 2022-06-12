@@ -53,6 +53,7 @@ public:
         parameters.reverse = true;
         parameters.shift_reverse_block_maximum_length = 6;
         parameters.add_remove = true;
+        parameters.replace = true;
 
         parameters.force_add = true;
 

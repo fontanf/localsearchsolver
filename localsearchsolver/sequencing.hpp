@@ -37,6 +37,7 @@ enum class Neighborhoods
 
     Add,
     Remove,
+    Replace,
 
     InterTwoOpt,
     InterShift,
@@ -68,6 +69,8 @@ std::string neighborhood2string(
     case Neighborhoods::Remove:
         return "Remove";
     case Neighborhoods::InterTwoOpt:
+        return "Replace";
+    case Neighborhoods::Replace:
         return "Inter-two-opt";
     case Neighborhoods::InterShift:
         return std::to_string(k1) + "-inter-shift";
@@ -119,6 +122,7 @@ struct Parameters
      */
 
     bool add_remove = false;
+    bool replace = false;
 
     /*
      * Neighborhoods - Modes.
@@ -334,6 +338,7 @@ public:
 
         neighborhoods_[int(Neighborhoods::Add)] = {{{Neighborhood()}}};
         neighborhoods_[int(Neighborhoods::Remove)] = {{{Neighborhood()}}};
+        neighborhoods_[int(Neighborhoods::Replace)] = {{{Neighborhood()}}};
 
         neighborhoods_[int(Neighborhoods::InterTwoOpt)] = {{{Neighborhood()}}};
         neighborhoods_[int(Neighborhoods::InterShift)]
@@ -1307,20 +1312,22 @@ public:
                         Neighborhoods::Swap, block_size_1, block_size_2});
             }
         }
-
         if (parameters_.reverse)
             neighborhoods.push_back({Neighborhoods::Reverse, 0, 0});
-
         for (ElementPos block_size = 2;
                 block_size <= parameters_.shift_reverse_block_maximum_length;
                 ++block_size) {
             neighborhoods.push_back({
                     Neighborhoods::ShiftReverse, block_size, 0});
         }
+
         if (parameters_.add_remove) {
             neighborhoods.push_back({Neighborhoods::Add, 0, 0});
             neighborhoods.push_back({Neighborhoods::Remove, 0, 0});
         }
+        if (parameters_.replace)
+            neighborhoods.push_back({Neighborhoods::Replace, 0, 0});
+
         if (m > 1) {
             if (parameters_.inter_two_opt)
                 neighborhoods.push_back({Neighborhoods::InterTwoOpt, 0, 0});
@@ -1352,12 +1359,14 @@ public:
                 neighborhoods.push_back({Neighborhoods::InterSwapStar, 0, 0});
         }
 
-        if (parameters_.shift_change_mode)
-            neighborhoods.push_back({Neighborhoods::ShiftChangeMode, 0, 0});
-        if (parameters_.mode_swap)
-            neighborhoods.push_back({Neighborhoods::ModeSwap, 0, 0});
-        if (parameters_.swap_with_modes)
-            neighborhoods.push_back({Neighborhoods::SwapWithModes, 0, 0});
+        if (maximum_number_of_modes_ > 1) {
+            if (parameters_.shift_change_mode)
+                neighborhoods.push_back({Neighborhoods::ShiftChangeMode, 0, 0});
+            if (parameters_.mode_swap)
+                neighborhoods.push_back({Neighborhoods::ModeSwap, 0, 0});
+            if (parameters_.swap_with_modes)
+                neighborhoods.push_back({Neighborhoods::SwapWithModes, 0, 0});
+        }
 
         for (int a = 0; a < (int)neighborhoods_.size(); ++a) {
             for (int k1 = 0; k1 < (int)neighborhoods_[a].size(); ++k1) {
@@ -1399,8 +1408,13 @@ public:
                 Neighborhoods type = std::get<0>(neighborhood_id);
                 ElementPos k1 = std::get<1>(neighborhood_id);
                 ElementPos k2 = std::get<2>(neighborhood_id);
-                //std::cout << neighborhood2string(type, k1, k2) << std::endl;
                 Neighborhood& neighborhood = neighborhoods_[(int)type][k1][k2];
+
+                //std::cout << neighborhood2string(type, k1, k2) << std::endl;
+                //for (SequenceId i = 0; i < m; ++i)
+                //    std::cout << " " << neighborhood.modified_sequences[i];
+                //std::cout << std::endl;
+
                 // Remove moves which have changed from improving_moves.
                 for (auto it = neighborhood.improving_moves.begin();
                         it != neighborhood.improving_moves.end();) {
@@ -1431,6 +1445,9 @@ public:
                     break;
                 case Neighborhoods::Remove:
                     explore_remove(solution, perturbation);
+                    break;
+                case Neighborhoods::Replace:
+                    explore_replace(solution, perturbation);
                     break;
                 case Neighborhoods::ShiftChangeMode:
                     explore_shift_change_mode(solution);
@@ -2572,6 +2589,52 @@ private:
         }
     }
 
+    inline void explore_replace(
+            const Solution& solution,
+            const Move& perturbation)
+    {
+        SequenceId m = number_of_sequences();
+        ElementPos n = sequencing_scheme_.number_of_elements();
+        Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::Add)][0][0];
+
+        for (SequenceId i = 0; i < m; ++i) {
+            if (!neighborhood.modified_sequences[i])
+                continue;
+            const auto& sequence = solution.sequences[i];
+            SequencePos seq_size = sequence.elements.size();
+            GlobalCost gci = global_cost(solution.sequences[i]);
+
+            // Loop through all new positions.
+            for (ElementPos pos = 0; pos < seq_size; ++pos) {
+
+                if (perturbation.type == Perturbations::ForceAdd
+                        && sequence.elements[pos].j == perturbation.force_add_j)
+                    continue;
+
+                for (ElementId j = 0; j < n; ++j) {
+                    if (modes_cur_[j] != -1)
+                        continue;
+
+                    for (Mode mode = 0; mode < number_of_modes(j); ++mode) {
+                        SequenceData sequence_data = sequence_datas_cur_[i][pos];
+                        append(sequence_data, {j, mode});
+                        GlobalCost gci_tmp = global_cost_concatenate(sequence_data, false, SubSequence(sequence, pos + 1, seq_size - 1), gci);
+                        if (!(gci_tmp >= gci)) {
+                            Move0 move;
+                            move.type = Neighborhoods::Replace;
+                            move.i1 = i;
+                            move.j = j;
+                            move.mode = mode;
+                            move.pos_1 = pos;
+                            move.global_cost = gci_tmp - gci;
+                            neighborhood.improving_moves.push_back(move);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     inline void explore_inter_shift(
             const Solution& solution,
             ElementPos block_size,
@@ -3447,6 +3510,20 @@ private:
                 append(sequence_tmp, elements[p]);
             }
             break;
+        } case Neighborhoods::Replace: {
+            for (SequenceId i = 0; i < m; ++i)
+                if (i != move.i1)
+                    solution_tmp_.sequences[i] = solution.sequences[i];
+            const auto& elements = solution.sequences[move.i1].elements;
+            SequencePos seq_size = elements.size();
+            Sequence& sequence_tmp = solution_tmp_.sequences[move.i1];
+            sequence_tmp = empty_sequence(move.i1);
+            for (ElementPos p = 0; p < move.pos_1; ++p)
+                append(sequence_tmp, elements[p]);
+            append(sequence_tmp, {move.j, move.mode});
+            for (ElementPos p = move.pos_1 + 1; p < seq_size; ++p)
+                append(sequence_tmp, elements[p]);
+            break;
         } case Neighborhoods::InterTwoOpt: {
             for (SequenceId i = 0; i < m; ++i)
                 if (i != move.i1 && i != move.i2)
@@ -3730,7 +3807,7 @@ private:
     Mode maximum_number_of_modes_ = 1;
     /** Structure storing neighborhood related information. */
     std::vector<std::vector<std::vector<Neighborhood>>> neighborhoods_
-        = std::vector<std::vector<std::vector<Neighborhood>>>(15);
+        = std::vector<std::vector<std::vector<Neighborhood>>>(16);
     Counter number_of_crossover_calls = 0;
     double crossover_time = 0.0;
     Counter number_of_local_search_calls = 0;
