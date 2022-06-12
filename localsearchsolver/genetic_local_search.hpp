@@ -340,7 +340,9 @@ inline void genetic_local_search_worker(
         GeneticLocalSearchData<LocalScheme>& data,
         Counter thread_id)
 {
-    LocalScheme local_scheme(data.local_scheme);
+    LocalScheme local_scheme_tmp(data.local_scheme);
+    LocalScheme& local_scheme = (data.parameters.number_of_threads == 1)?
+        data.local_scheme: local_scheme_tmp;
     std::mt19937_64 generator(data.parameters.seed + thread_id);
     Counter number_of_initial_solutions
         = (Counter)data.parameters.initial_solution_ids.size()
@@ -494,12 +496,13 @@ inline GeneticLocalSearchOutput<LocalScheme> genetic_local_search(
     output.solution_pool.display_init(parameters.info);
     std::vector<std::thread> threads;
     GeneticLocalSearchData<LocalScheme> data(local_scheme, parameters, output);
-    for (Counter thread_id = 0; thread_id < parameters.number_of_threads; ++thread_id) {
+    for (Counter thread_id = 1; thread_id < parameters.number_of_threads; ++thread_id) {
         threads.push_back(std::thread(
                     genetic_local_search_worker<LocalScheme>,
                     std::ref(data),
                     thread_id));
     }
+    genetic_local_search_worker<LocalScheme>(data, 0);
     for (Counter thread_id = 0; thread_id < (Counter)threads.size(); ++thread_id)
         threads[thread_id].join();
 

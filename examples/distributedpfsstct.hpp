@@ -44,18 +44,19 @@ public:
     {
         sequencing::Parameters parameters;
 
-        parameters.shift_block_maximum_length = 3;
-        parameters.swap_block_maximum_length = 2;
+        parameters.shift_block_maximum_length = 8;
+        parameters.swap_block_maximum_length = 4;
         parameters.reverse = true;
-        parameters.shift_reverse_block_maximum_length = 2;
+        parameters.shift_reverse_block_maximum_length = 4;
 
-        parameters.inter_shift_block_maximum_length = 3;
-        parameters.inter_swap_block_maximum_length = 2;
+        parameters.inter_shift_block_maximum_length = 1;
+        parameters.inter_swap_block_maximum_length = 1;
         parameters.inter_two_opt = true;
-        parameters.inter_shift_reverse_block_maximum_length = 2;
 
         parameters.ruin_and_recreate_number_of_perturbations = 4;
         parameters.ruin_and_recreate_number_of_elements_removed = 4;
+
+        parameters.crossover_srex1_weight = 1;
 
         return parameters;
     }

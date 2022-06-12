@@ -42,6 +42,7 @@ enum class Neighborhoods
     InterShift,
     InterSwap,
     InterShiftReverse,
+    InterSwapStar,
 
     ShiftChangeMode,
     ModeSwap,
@@ -74,6 +75,8 @@ std::string neighborhood2string(
         return "(" + std::to_string(k1) + "," + std::to_string(k2) + ")" + "-inter-swap";
     case Neighborhoods::InterShiftReverse:
         return std::to_string(k1) + "-inter-shift-reverse";
+    case Neighborhoods::InterSwapStar:
+        return "Inter-swap-star";
     case Neighborhoods::ShiftChangeMode:
         return "Shift-change-mode";
     case Neighborhoods::ModeSwap:
@@ -109,6 +112,7 @@ struct Parameters
     ElementPos inter_shift_block_maximum_length = 0;
     ElementPos inter_swap_block_maximum_length = 0;
     ElementPos inter_shift_reverse_block_maximum_length = 0;
+    bool inter_swap_star = false;
 
     /*
      * Neighborhoods - Sub-sequence.
@@ -201,6 +205,8 @@ public:
         ElementId j = -1;
         ElementPos pos_1 = -1;
         ElementPos pos_2 = -1;
+        ElementPos pos_3 = -1;
+        ElementPos pos_4 = -1;
         Mode mode = -1;
 
         GlobalCost global_cost = worst<GlobalCost>();
@@ -214,6 +220,7 @@ public:
         std::vector<bool> modified_sequences;
         Counter number_of_explorations = 0;
         Counter number_of_successes = 0;
+        double time = 0.0;
     };
 
 
@@ -345,6 +352,7 @@ public:
             = std::vector<std::vector<Neighborhood>>(
                     parameters_.inter_shift_reverse_block_maximum_length + 1,
                     {{Neighborhood()}});
+        neighborhoods_[int(Neighborhoods::InterSwapStar)] = {{{Neighborhood()}}};
 
         neighborhoods_[int(Neighborhoods::ShiftChangeMode)] = {{{Neighborhood()}}};
         neighborhoods_[int(Neighborhoods::ModeSwap)] = {{{Neighborhood()}}};
@@ -528,7 +536,8 @@ public:
             Counter initial_solution_id,
             std::mt19937_64& generator)
     {
-        return initial_solution(
+        auto begin = std::chrono::steady_clock::now();
+        Solution solution = initial_solution(
                 initial_solution_id,
                 generator,
                 std::integral_constant<
@@ -537,6 +546,11 @@ public:
                     Solution(
                         Counter,
                         std::mt19937_64&)>::value>());
+        auto end = std::chrono::steady_clock::now();
+        auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
+        initial_solution_time += time_span.count();
+        number_of_initial_solution_calls++;
+        return solution;
     }
 
     /*
@@ -548,6 +562,7 @@ public:
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
     {
+        auto begin = std::chrono::steady_clock::now();
         std::discrete_distribution<Counter> d_crossover({
                 parameters_.crossover_ox_weight,
                 parameters_.crossover_sjox_weight,
@@ -556,21 +571,33 @@ public:
                 parameters_.crossover_srex2_weight,
                 });
         Counter x = d_crossover(generator);
+        Solution solution;
         switch (x) {
         case 0: {
-            return crossover_ox(solution_parent_1, solution_parent_2, generator);
+            solution = crossover_ox(solution_parent_1, solution_parent_2, generator);
+            break;
         } case 1: {
-            return crossover_sjox(solution_parent_1, solution_parent_2, generator);
+            solution = crossover_sjox(solution_parent_1, solution_parent_2, generator);
+            break;
         } case 2: {
-            return crossover_sbox(solution_parent_1, solution_parent_2, generator);
+            solution = crossover_sbox(solution_parent_1, solution_parent_2, generator);
+            break;
         } case 3: {
-            return crossover_srex1(solution_parent_1, solution_parent_2, generator);
+            solution = crossover_srex1(solution_parent_1, solution_parent_2, generator);
+            break;
         } case 4: {
-            return crossover_srex2(solution_parent_1, solution_parent_2, generator);
+            solution = crossover_srex2(solution_parent_1, solution_parent_2, generator);
+            break;
         } default: {
-            return crossover_ox(solution_parent_1, solution_parent_2, generator);
+            solution = crossover_ox(solution_parent_1, solution_parent_2, generator);
+            break;
         }
         }
+        auto end = std::chrono::steady_clock::now();
+        auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
+        crossover_time += time_span.count();
+        number_of_crossover_calls++;
+        return solution;
     }
 
     /**
@@ -1259,16 +1286,16 @@ public:
         //print(std::cout, solution);
         //std::cout << to_string(global_cost(solution)) << std::endl;
 
+        auto local_search_begin = std::chrono::steady_clock::now();
         SequencePos m = number_of_sequences();
         //ElementPos n = sequencing_scheme_.number_of_elements();
 
         // Get neighborhoods.
-        std::vector<std::tuple<Neighborhoods, ElementPos, ElementPos>> neighborhoods_intra;
-        std::vector<std::tuple<Neighborhoods, ElementPos, ElementPos>> neighborhoods_inter;
+        std::vector<std::tuple<Neighborhoods, ElementPos, ElementPos>> neighborhoods;
         for (ElementPos block_size = 1;
                 block_size <= parameters_.shift_block_maximum_length;
                 ++block_size) {
-            neighborhoods_intra.push_back({Neighborhoods::Shift, block_size, 0});
+            neighborhoods.push_back({Neighborhoods::Shift, block_size, 0});
         }
         for (ElementPos block_size_1 = 1;
                 block_size_1 <= parameters_.swap_block_maximum_length;
@@ -1276,31 +1303,31 @@ public:
             for (ElementPos block_size_2 = 1;
                     block_size_2 <= block_size_1;
                     ++block_size_2) {
-                neighborhoods_intra.push_back({
+                neighborhoods.push_back({
                         Neighborhoods::Swap, block_size_1, block_size_2});
             }
         }
 
         if (parameters_.reverse)
-            neighborhoods_intra.push_back({Neighborhoods::Reverse, 0, 0});
+            neighborhoods.push_back({Neighborhoods::Reverse, 0, 0});
 
         for (ElementPos block_size = 2;
                 block_size <= parameters_.shift_reverse_block_maximum_length;
                 ++block_size) {
-            neighborhoods_intra.push_back({
+            neighborhoods.push_back({
                     Neighborhoods::ShiftReverse, block_size, 0});
         }
         if (parameters_.add_remove) {
-            neighborhoods_intra.push_back({Neighborhoods::Add, 0, 0});
-            neighborhoods_intra.push_back({Neighborhoods::Remove, 0, 0});
+            neighborhoods.push_back({Neighborhoods::Add, 0, 0});
+            neighborhoods.push_back({Neighborhoods::Remove, 0, 0});
         }
         if (m > 1) {
             if (parameters_.inter_two_opt)
-                neighborhoods_inter.push_back({Neighborhoods::InterTwoOpt, 0, 0});
+                neighborhoods.push_back({Neighborhoods::InterTwoOpt, 0, 0});
             for (ElementPos block_size = 1;
                     block_size <= parameters_.inter_shift_block_maximum_length;
                     ++block_size) {
-                neighborhoods_inter.push_back({
+                neighborhoods.push_back({
                         Neighborhoods::InterShift, block_size, 0});
             }
             for (ElementPos block_size_1 = 1;
@@ -1309,7 +1336,7 @@ public:
                 for (ElementPos block_size_2 = 1;
                         block_size_2 <= block_size_1;
                         ++block_size_2) {
-                    neighborhoods_inter.push_back({
+                    neighborhoods.push_back({
                             Neighborhoods::InterSwap,
                             block_size_1,
                             block_size_2});
@@ -1318,17 +1345,19 @@ public:
             for (ElementPos block_size = 2;
                     block_size <= parameters_.inter_shift_reverse_block_maximum_length;
                     ++block_size) {
-                neighborhoods_inter.push_back({
+                neighborhoods.push_back({
                         Neighborhoods::InterShiftReverse, block_size, 0});
             }
+            if (parameters_.inter_swap_star)
+                neighborhoods.push_back({Neighborhoods::InterSwapStar, 0, 0});
         }
 
         if (parameters_.shift_change_mode)
-            neighborhoods_intra.push_back({Neighborhoods::ShiftChangeMode, 0, 0});
+            neighborhoods.push_back({Neighborhoods::ShiftChangeMode, 0, 0});
         if (parameters_.mode_swap)
-            neighborhoods_intra.push_back({Neighborhoods::ModeSwap, 0, 0});
+            neighborhoods.push_back({Neighborhoods::ModeSwap, 0, 0});
         if (parameters_.swap_with_modes)
-            neighborhoods_intra.push_back({Neighborhoods::SwapWithModes, 0, 0});
+            neighborhoods.push_back({Neighborhoods::SwapWithModes, 0, 0});
 
         for (int a = 0; a < (int)neighborhoods_.size(); ++a) {
             for (int k1 = 0; k1 < (int)neighborhoods_[a].size(); ++k1) {
@@ -1361,17 +1390,12 @@ public:
             for (SequenceId i = 0; i < m; ++i)
                 gcis[i] = global_cost(solution.sequences[i]);
 
-            //if (parameters_.shuffle_neighborhood_order) {
-            //    std::shuffle(neighborhoods_intra.begin(), neighborhoods_intra.end(), generator);
-            //    std::shuffle(neighborhoods_inter.begin(), neighborhoods_inter.end(), generator);
-            //}
-            auto neighborhoods = neighborhoods_intra;
-            neighborhoods.insert(neighborhoods.end(), neighborhoods_inter.begin(), neighborhoods_inter.end() );
             std::shuffle(neighborhoods.begin(), neighborhoods.end(), generator);
 
             bool improved = false;
             // Loop through neighborhoods.
             for (auto neighborhood_id: neighborhoods) {
+                auto begin = std::chrono::steady_clock::now();
                 Neighborhoods type = std::get<0>(neighborhood_id);
                 ElementPos k1 = std::get<1>(neighborhood_id);
                 ElementPos k2 = std::get<2>(neighborhood_id);
@@ -1428,6 +1452,9 @@ public:
                     break;
                 case Neighborhoods::InterShiftReverse:
                     explore_inter_shift(solution, k1, true);
+                    break;
+                case Neighborhoods::InterSwapStar:
+                    explore_inter_swap_star(solution);
                     break;
                 }
 
@@ -1493,15 +1520,25 @@ public:
                             }
                         }
                     }
-
-                    break;
                 }
+                auto end = std::chrono::steady_clock::now();
+                auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
+                neighborhood.time += time_span.count();
+
+                if (improved)
+                    break;
             }
+
             if (!improved)
                 break;
         }
+
         //print(std::cout, solution);
         //std::cout << to_string(global_cost(solution)) << std::endl;
+        auto local_search_end = std::chrono::steady_clock::now();
+        auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(local_search_end - local_search_begin);
+        local_search_time += time_span.count();
+        number_of_local_search_calls++;
     }
 
     /*
@@ -1591,7 +1628,8 @@ public:
                 << "        Block maximum length:                  " << parameters_.inter_swap_block_maximum_length << std::endl
                 << "    Inter-two-opt:                             " << parameters_.inter_two_opt << std::endl
                 << "    Inter-shift-reverse" << std::endl
-                << "        Block maximum length:                  " << parameters_.inter_shift_reverse_block_maximum_length << std::endl;
+                << "        Block maximum length:                  " << parameters_.inter_shift_reverse_block_maximum_length << std::endl
+                << "    Inter-swap-star:                           " << parameters_.inter_swap_star << std::endl;
         }
         if (maximum_number_of_modes_ > 1) {
             info.os()
@@ -1619,6 +1657,29 @@ public:
     void print_statistics(
             optimizationtools::Info& info) const
     {
+        info.os() << "General" << std::endl;
+        info.os()
+            << "    "
+            << std::left << std::setw(28) << "Initial solution:"
+            << number_of_initial_solution_calls
+            << " / " << initial_solution_time << "s"
+            << " / " << initial_solution_time / number_of_initial_solution_calls << "s"
+            << std::endl;
+        info.os()
+            << "    "
+            << std::left << std::setw(28) << "Crossover time:"
+            << number_of_crossover_calls
+            << " / " << crossover_time << "s"
+            << " / " << crossover_time / number_of_crossover_calls << "s"
+            << std::endl;
+        info.os()
+            << "    "
+            << std::left << std::setw(28) << "Local search time:"
+            << number_of_local_search_calls
+            << " / " << local_search_time << "s"
+            << " / " << local_search_time / number_of_local_search_calls << "s"
+            << std::endl;
+        info.os() << "Neighborhoods" << std::endl;
         for (int a = 0; a < (int)neighborhoods_.size(); ++a) {
             for (int k1 = 0; k1 < (int)neighborhoods_[a].size(); ++k1) {
                 for (int k2 = 0; k2 < (int)neighborhoods_[a][k1].size(); ++k2) {
@@ -1627,10 +1688,12 @@ public:
                     if (neighborhood.number_of_explorations == 0)
                         continue;
                     info.os()
+                        << "    "
                         << std::left << std::setw(28) << s
                         << neighborhood.number_of_explorations
                         << " / " << neighborhood.number_of_successes
                         << " / " << (double)neighborhood.number_of_successes / neighborhood.number_of_explorations * 100 << "%"
+                        << " / " << neighborhood.time << "s"
                         << std::endl;
                     info.add_to_json(
                             "Algorithm",
@@ -2715,6 +2778,234 @@ private:
         }
     }
 
+    /**
+     * 'added_element_pos' is the position in the original sequence.
+     */
+    inline GlobalCost compute_global_cost(
+            const Sequence& sequence,
+            ElementPos removed_element_pos,
+            ElementPos added_element_pos,
+            SequenceElement se,
+            const GlobalCost& cutoff,
+            const GlobalCost* gci1 = nullptr)
+    {
+        SequencePos seq_size = sequence.elements.size();
+        //std::cout << "compute_global_cost"
+        //    << " seq_size " << seq_size
+        //    << " r " << removed_element_pos
+        //    << " a " << added_element_pos
+        //    << " j " << se.j
+        //    << std::endl;
+        if (removed_element_pos < added_element_pos) {
+            SequenceData sequence_data = sequence_datas_cur_[sequence.i][removed_element_pos];
+            bool ok = concatenate(sequence_data, (removed_element_pos == 0), SubSequence(sequence, removed_element_pos + 1, added_element_pos - 1), cutoff, gci1);
+            if (!ok)
+                return worst<GlobalCost>();
+            append(sequence_data, se);
+            return global_cost_concatenate(sequence_data, false, SubSequence(sequence, added_element_pos, seq_size - 1), cutoff, gci1);
+        } else {
+            SequenceData sequence_data = sequence_datas_cur_[sequence.i][added_element_pos];
+            append(sequence_data, se);
+            bool ok = concatenate(sequence_data, false, SubSequence(sequence, added_element_pos, removed_element_pos - 1), cutoff, gci1);
+            if (!ok)
+                return worst<GlobalCost>();
+            return global_cost_concatenate(sequence_data, false, SubSequence(sequence, removed_element_pos + 1, seq_size - 1), cutoff, gci1);
+        }
+    }
+
+    inline void explore_inter_swap_star(
+            const Solution& solution)
+    {
+        SequenceId m = number_of_sequences();
+        Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::InterSwapStar)][0][0];
+
+        for (SequenceId i1 = 0; i1 < m; ++i1) {
+            const auto& sequence_1 = solution.sequences[i1];
+            SequencePos seq_1_size = sequence_1.elements.size();
+
+            for (SequenceId i2 = i1 + 1; i2 < m; ++i2) {
+                if (!neighborhood.modified_sequences[i1]
+                        && !neighborhood.modified_sequences[i2])
+                    continue;
+
+                const auto& sequence_2 = solution.sequences[i2];
+                SequencePos seq_2_size = sequence_2.elements.size();
+
+                // Calcul the 3 best position of the elements from the first
+                // sequence into the second sequence.
+                std::vector<std::vector<ElementPos>> best_positions_1(seq_1_size);
+                for (ElementPos pos_1 = 0; pos_1 <= seq_1_size - 1; ++pos_1) {
+                    ElementPos pos_best_1 = -1;
+                    ElementPos pos_best_2 = -1;
+                    ElementPos pos_best_3 = -1;
+                    GlobalCost gc_best_1 = worst<GlobalCost>();
+                    GlobalCost gc_best_2 = worst<GlobalCost>();
+                    GlobalCost gc_best_3 = worst<GlobalCost>();
+                    for (ElementPos pos_2 = 0; pos_2 <= seq_2_size; ++pos_2) {
+                        SequenceData sequence_data = sequence_datas_cur_[i2][pos_2];
+                        append(sequence_data, sequence_1.elements[pos_1]);
+                        GlobalCost gci2_tmp = global_cost_concatenate(sequence_data, false, SubSequence(sequence_2, pos_2, seq_2_size - 1), worst<GlobalCost>());
+                        if (pos_best_1 == -1 || !(gci2_tmp >= gc_best_1)) {
+                            pos_best_3 = pos_best_2;
+                            pos_best_2 = pos_best_1;
+                            pos_best_1 = pos_2;
+                            gc_best_3 = gc_best_2;
+                            gc_best_2 = gc_best_1;
+                            gc_best_1 = gci2_tmp;
+                        } else if (pos_best_2 == -1 || !(gci2_tmp >= gc_best_2)) {
+                            pos_best_3 = pos_best_2;
+                            pos_best_2 = pos_2;
+                            gc_best_3 = gc_best_2;
+                            gc_best_2 = gci2_tmp;
+                        } else if (pos_best_3 == -1 || !(gci2_tmp >= gc_best_3)) {
+                            pos_best_3 = pos_2;
+                            gc_best_3 = gci2_tmp;
+                        }
+                    }
+                    //std::cout << "pos_1 " << pos_1
+                    //    << " pos_best_1 " << pos_best_1
+                    //    << " gc_best_1 " << to_string(gc_best_1)
+                    //    << " pos_best_2 " << pos_best_2
+                    //    << " gc_best_2 " << to_string(gc_best_2)
+                    //    << " pos_best_3 " << pos_best_3
+                    //    << " gc_best_3 " << to_string(gc_best_3)
+                    //    << std::endl;
+                    best_positions_1[pos_1] = {pos_best_1, pos_best_2, pos_best_3};
+                }
+
+                // Calcul the 3 best position of the elements from the second
+                // sequence into the first sequence.
+                std::vector<std::vector<ElementPos>> best_positions_2(seq_2_size);
+                for (ElementPos pos_2 = 0; pos_2 <= seq_2_size - 1; ++pos_2) {
+                    ElementPos pos_best_1 = -1;
+                    ElementPos pos_best_2 = -1;
+                    ElementPos pos_best_3 = -1;
+                    GlobalCost gc_best_1 = worst<GlobalCost>();
+                    GlobalCost gc_best_2 = worst<GlobalCost>();
+                    GlobalCost gc_best_3 = worst<GlobalCost>();
+                    for (ElementPos pos_1 = 0; pos_1 <= seq_1_size; ++pos_1) {
+                        SequenceData sequence_data = sequence_datas_cur_[i1][pos_1];
+                        append(sequence_data, sequence_2.elements[pos_2]);
+                        GlobalCost gci1_tmp = global_cost_concatenate(sequence_data, false, SubSequence(sequence_1, pos_1, seq_1_size - 1), worst<GlobalCost>());
+                        if (pos_best_1 == -1 || !(gci1_tmp >= gc_best_1)) {
+                            pos_best_3 = pos_best_2;
+                            pos_best_2 = pos_best_1;
+                            pos_best_1 = pos_1;
+                            gc_best_3 = gc_best_2;
+                            gc_best_2 = gc_best_1;
+                            gc_best_1 = gci1_tmp;
+                        } else if (pos_best_2 == -1 || !(gci1_tmp >= gc_best_2)) {
+                            pos_best_3 = pos_best_2;
+                            pos_best_2 = pos_1;
+                            gc_best_3 = gc_best_2;
+                            gc_best_2 = gci1_tmp;
+                        } else if (pos_best_3 == -1 || !(gci1_tmp >= gc_best_3)) {
+                            pos_best_3 = pos_1;
+                            gc_best_3 = gci1_tmp;
+                        }
+                    }
+                    //std::cout << "pos_2 " << pos_2
+                    //    << " pos_best_1 " << pos_best_1
+                    //    << " gc_best_1 " << to_string(gc_best_1)
+                    //    << " pos_best_2 " << pos_best_2
+                    //    << " gc_best_2 " << to_string(gc_best_2)
+                    //    << " pos_best_3 " << pos_best_3
+                    //    << " gc_best_3 " << to_string(gc_best_3)
+                    //    << std::endl;
+                    best_positions_2[pos_2] = {pos_best_1, pos_best_2, pos_best_3};
+                }
+
+                GlobalCost gci = global_cost_merge(
+                        global_cost(solution.sequences[i1]),
+                        global_cost(solution.sequences[i2]));
+
+                for (ElementPos pos_1 = 0; pos_1 <= seq_1_size - 1; ++pos_1) {
+
+                    for (ElementPos pos_2 = 0; pos_2 <= seq_2_size - 1; ++pos_2) {
+
+                        //std::cout
+                        //    << "i1 " << i1
+                        //    << " i2 " << i2
+                        //    << " seq_1_size " << seq_1_size
+                        //    << " seq_2_size " << seq_2_size
+                        //    << " pos_1 " << pos_1
+                        //    << " pos_2 " << pos_2
+                        //    << std::endl;
+
+                        // Find pos_1_new.
+                        ElementPos pos_1_new = -1;
+                        GlobalCost gci2_tmp = worst<GlobalCost>();
+                        for (int a = 0; a < 4; ++a) {
+                            ElementPos p = (a < 3)? best_positions_1[pos_1][a]: pos_2;
+                            if (p != -1) {
+                                GlobalCost gci2 = compute_global_cost(
+                                        sequence_2,
+                                        pos_2,
+                                        p,
+                                        sequence_1.elements[pos_1],
+                                        gci);
+                                //std::cout << "p " << p
+                                //    << " gc " << to_string(gci2)
+                                //    << std::endl;
+                                if (!(gci2 >= gci2_tmp)) {
+                                    gci2_tmp = gci2;
+                                    pos_1_new = p;
+                                }
+                            }
+                        }
+                        if (pos_1_new == -1)
+                            continue;
+
+                        // Find pos_2_new.
+                        ElementPos pos_2_new = -1;
+                        GlobalCost gci1_tmp = worst<GlobalCost>();
+                        for (int a = 0; a < 4; ++a) {
+                            ElementPos p = (a < 3)? best_positions_2[pos_2][a]: pos_1;
+                            if (p != -1) {
+                                GlobalCost gci1 = compute_global_cost(
+                                        sequence_1,
+                                        pos_1,
+                                        p,
+                                        sequence_2.elements[pos_2],
+                                        gci,
+                                        &gci2_tmp);
+                                //std::cout << "p " << p
+                                //    << " gc " << to_string(gci1)
+                                //    << std::endl;
+                                if (!(gci1 >= gci1_tmp)) {
+                                    gci1_tmp = gci1;
+                                    pos_2_new = p;
+                                }
+                            }
+                        }
+                        if (pos_2_new == -1)
+                            continue;
+
+                        //std::cout << "pos_1 " << pos_2
+                        //    << " pos_2 " << pos_2
+                        //    << " pos_1_new " << pos_1_new
+                        //    << " pos_2_new " << pos_2_new
+                        //    << std::endl;
+
+                        GlobalCost gci_tmp = global_cost_merge(gci1_tmp, gci2_tmp);
+                        if (!(gci_tmp >= gci)) {
+                            Move0 move;
+                            move.type = Neighborhoods::InterSwapStar;
+                            move.i1 = i1;
+                            move.i2 = i2;
+                            move.pos_1 = pos_1;
+                            move.pos_2 = pos_1_new;
+                            move.pos_3 = pos_2;
+                            move.pos_4 = pos_2_new;
+                            move.global_cost = gci_tmp - gci;
+                            neighborhood.improving_moves.push_back(move);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     inline void explore_shift_change_mode(
             const Solution& solution)
     {
@@ -3322,6 +3613,65 @@ private:
                 append(sequence_tmp, se);
             }
             break;
+        } case Neighborhoods::InterSwapStar: {
+            //std::cout << "i1 " << move.i1
+            //    << " i2 " << move.i2
+            //    << " pos_1_old " << move.pos_1
+            //    << " pos_2_old " << move.pos_3
+            //    << " pos_1_new " << move.pos_2
+            //    << " pos_2_new " << move.pos_4
+            //    << " gc " << to_string(move.global_cost)
+            //    << std::endl;
+            for (SequenceId i = 0; i < m; ++i)
+                if (i != move.i1 && i != move.i2)
+                    solution_tmp_.sequences[i] = solution.sequences[i];
+            const auto& elements_1 = solution.sequences[move.i1].elements;
+            const auto& elements_2 = solution.sequences[move.i2].elements;
+            SequencePos seq_1_size = elements_1.size();
+            SequencePos seq_2_size = elements_2.size();
+            Sequence& sequence_tmp_1 = solution_tmp_.sequences[move.i1];
+            Sequence& sequence_tmp_2 = solution_tmp_.sequences[move.i2];
+            sequence_tmp_1 = empty_sequence(move.i1);
+            ElementPos pos_1_old = move.pos_1;
+            ElementPos pos_1_new = move.pos_2;
+            ElementPos pos_2_old = move.pos_3;
+            ElementPos pos_2_new = move.pos_4;
+            if (pos_1_old < pos_2_new) {
+                for (ElementPos p = 0; p < pos_1_old; ++p)
+                    append(sequence_tmp_1, elements_1[p]);
+                for (ElementPos p = pos_1_old + 1; p < pos_2_new; ++p)
+                    append(sequence_tmp_1, elements_1[p]);
+                append(sequence_tmp_1, elements_2[pos_2_old]);
+                for (ElementPos p = pos_2_new; p < seq_1_size; ++p)
+                    append(sequence_tmp_1, elements_1[p]);
+            } else {
+                for (ElementPos p = 0; p < pos_2_new; ++p)
+                    append(sequence_tmp_1, elements_1[p]);
+                append(sequence_tmp_1, elements_2[pos_2_old]);
+                for (ElementPos p = pos_2_new; p < pos_1_old; ++p)
+                    append(sequence_tmp_1, elements_1[p]);
+                for (ElementPos p = pos_1_old + 1; p < seq_1_size; ++p)
+                    append(sequence_tmp_1, elements_1[p]);
+            }
+            sequence_tmp_2 = empty_sequence(move.i2);
+            if (pos_2_old < pos_1_new) {
+                for (ElementPos p = 0; p < pos_2_old; ++p)
+                    append(sequence_tmp_2, elements_2[p]);
+                for (ElementPos p = pos_2_old + 1; p < pos_1_new; ++p)
+                    append(sequence_tmp_2, elements_2[p]);
+                append(sequence_tmp_2, elements_1[pos_1_old]);
+                for (ElementPos p = pos_1_new; p < seq_2_size; ++p)
+                    append(sequence_tmp_2, elements_2[p]);
+            } else {
+                for (ElementPos p = 0; p < pos_1_new; ++p)
+                    append(sequence_tmp_2, elements_2[p]);
+                append(sequence_tmp_2, elements_1[pos_1_old]);
+                for (ElementPos p = pos_1_new; p < pos_2_old; ++p)
+                    append(sequence_tmp_2, elements_2[p]);
+                for (ElementPos p = pos_2_old + 1; p < seq_2_size; ++p)
+                    append(sequence_tmp_2, elements_2[p]);
+            }
+            break;
         }
         }
 
@@ -3380,7 +3730,13 @@ private:
     Mode maximum_number_of_modes_ = 1;
     /** Structure storing neighborhood related information. */
     std::vector<std::vector<std::vector<Neighborhood>>> neighborhoods_
-        = std::vector<std::vector<std::vector<Neighborhood>>>(14);
+        = std::vector<std::vector<std::vector<Neighborhood>>>(15);
+    Counter number_of_crossover_calls = 0;
+    double crossover_time = 0.0;
+    Counter number_of_local_search_calls = 0;
+    double local_search_time = 0.0;
+    Counter number_of_initial_solution_calls = 0;
+    double initial_solution_time = 0.0;
 
     /*
      * Temporary structures.

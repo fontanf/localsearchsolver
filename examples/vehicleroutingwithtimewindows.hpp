@@ -58,10 +58,11 @@ public:
         parameters.reverse = true;
         parameters.shift_reverse_block_maximum_length = 2;
 
-        parameters.inter_shift_block_maximum_length = 2;
+        parameters.inter_shift_block_maximum_length = 1;
         parameters.inter_swap_block_maximum_length = 1;
         parameters.inter_two_opt = true;
         parameters.inter_shift_reverse_block_maximum_length = 0;
+        parameters.inter_swap_star = true;
 
         parameters.ruin_and_recreate_number_of_perturbations = 10;
         parameters.ruin_and_recreate_number_of_elements_removed = 10;
@@ -82,6 +83,8 @@ public:
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
+        if (sequence_data.number_of_locations == 0)
+            return {0, 0, 0, 0};
         SequenceData sd;
         append(sd, -1);
         concatenate(sd, sequence_data);
@@ -90,10 +93,7 @@ public:
             -sequence_data.number_of_locations,
             sd.reversed_time,
             std::max((Demand)0, sequence_data.demand - instance_.capacity()),
-            (sequence_data.number_of_locations == 0)? 0:
-                sequence_data.total_travel_time
-                + instance_.travel_time(0, sequence_data.j_first + 1)
-                + instance_.travel_time(sequence_data.j_last + 1, 0),
+            sd.total_travel_time,
         };
     }
 
