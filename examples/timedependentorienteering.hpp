@@ -66,6 +66,8 @@ public:
 
     virtual ~SequencingScheme() { }
 
+    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_locations() - 2; }
+
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
         return {
@@ -74,8 +76,6 @@ public:
             sequence_data.time_full,
         };
     }
-
-    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_locations() - 2; }
 
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {

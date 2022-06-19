@@ -294,6 +294,43 @@ cc_binary(
 
 
 cc_library(
+        name = "capacitatedvehiclerouting",
+        hdrs = ["capacitatedvehiclerouting.hpp"],
+        deps = [
+                "//localsearchsolver:localsearchsolver",
+                "@orproblems//orproblems:capacitatedvehiclerouting",
+        ],
+        visibility = ["//visibility:public"],
+)
+
+cc_binary(
+        name = "capacitatedvehiclerouting_main",
+        srcs = ["capacitatedvehiclerouting_main.cpp"],
+        deps = [
+                ":capacitatedvehiclerouting",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
+cc_binary(
+        name = "capacitatedvehiclerouting_dimacs_main",
+        srcs = ["capacitatedvehiclerouting_dimacs_main.cpp"],
+        deps = [
+                ":capacitatedvehiclerouting",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
+
+cc_library(
         name = "vehicleroutingwithtimewindows",
         hdrs = ["vehicleroutingwithtimewindows.hpp"],
         deps = [

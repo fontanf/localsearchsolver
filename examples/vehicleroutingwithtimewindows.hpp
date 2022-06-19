@@ -58,11 +58,10 @@ public:
         parameters.reverse = true;
         parameters.shift_reverse_block_maximum_length = 2;
 
-        parameters.inter_shift_block_maximum_length = 1;
-        parameters.inter_swap_block_maximum_length = 1;
+        parameters.inter_shift_block_maximum_length = 2;
+        parameters.inter_swap_block_maximum_length = 2;
         parameters.inter_two_opt = true;
-        parameters.inter_shift_reverse_block_maximum_length = 0;
-        parameters.inter_swap_star = true;
+        //parameters.inter_swap_star = true;
 
         parameters.ruin_and_recreate_number_of_perturbations = 10;
         parameters.ruin_and_recreate_number_of_elements_removed = 10;
@@ -81,14 +80,26 @@ public:
 
     virtual ~SequencingScheme() { }
 
+    inline sequencing::SequencePos number_of_sequences() const { return instance_.number_of_vehicles(); }
+
+    inline sequencing::ElementPos number_of_elements() const
+    {
+        // -1 since we don't schedule the depot.
+        return instance_.number_of_locations() - 1;
+    }
+
+    inline double distance(sequencing::ElementId j1, sequencing::ElementId j2) const
+    {
+        return instance_.travel_time(j1 + 1, j2 + 1);
+    }
+
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
         if (sequence_data.number_of_locations == 0)
             return {0, 0, 0, 0};
-        SequenceData sd;
-        append(sd, -1);
+        SequenceData sd = sequence_data_init(-1);
         concatenate(sd, sequence_data);
-        append(sd, -1);
+        concatenate(sd, sequence_data_init(-1));
         return {
             -sequence_data.number_of_locations,
             sd.reversed_time,
@@ -107,14 +118,6 @@ public:
         };
     }
 
-    inline sequencing::SequencePos number_of_sequences() const { return instance_.number_of_vehicles(); }
-
-    inline sequencing::ElementPos number_of_elements() const
-    {
-        // -1 since we don't schedule the depot.
-        return instance_.number_of_locations() - 1;
-    }
-
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {
         return {
@@ -126,46 +129,25 @@ public:
         };
     }
 
-    inline void append(
-            SequenceData& sequence_data,
-            sequencing::ElementId j) const
+    inline SequenceData sequence_data_init(LocationId j) const
     {
-        Time rj = instance_.location(j + 1).release_date;
-        Time dj = instance_.location(j + 1).deadline;
-        Time tj = instance_.location(j + 1).service_time;
-        if (sequence_data.number_of_locations == 0) {
-            // Uppdate j_first.
-            sequence_data.j_first = j;
-            // Update time windows.
-            sequence_data.duration = tj;
-            sequence_data.earliest_start = rj;
-            sequence_data.latest_start = dj;
-        } else {
-            Time tij = instance_.travel_time(sequence_data.j_last + 1, j + 1);
-            // Update time windows.
-            Time delta = sequence_data.duration - sequence_data.reversed_time + tij;
-            Time delta_wt = std::max(rj - delta - sequence_data.latest_start, (Time)0);
-            Time delta_tw = std::max(sequence_data.earliest_start + delta - dj, (Time)0);
-            sequence_data.duration += tj + tij + delta_wt;
-            sequence_data.earliest_start = std::max(
-                    rj - delta,
-                    sequence_data.earliest_start) - delta_wt;
-            sequence_data.latest_start = std::min(
-                    dj - delta,
-                    sequence_data.latest_start) + delta_tw;
-            sequence_data.reversed_time += delta_tw;
-            // Update total_travel_time.
-            sequence_data.total_travel_time += tij;
-        }
+        SequenceData sequence_data;
+        // Uppdate j_first.
+        sequence_data.j_first = j;
+        // Update time windows.
+        sequence_data.duration = instance_.location(j + 1).service_time;
+        sequence_data.earliest_start = instance_.location(j + 1).release_date;
+        sequence_data.latest_start = instance_.location(j + 1).deadline;
         // Update demand.
         sequence_data.demand += instance_.location(j + 1).demand;
         // Update j_last.
         sequence_data.j_last = j;
         // Update number_of_locations.
-        sequence_data.number_of_locations++;
+        sequence_data.number_of_locations = 1;
+        return sequence_data;
     }
 
-    bool concatenate(
+    inline bool concatenate(
             SequenceData& sequence_data,
             const SequenceData& sequence_data_2) const
     {

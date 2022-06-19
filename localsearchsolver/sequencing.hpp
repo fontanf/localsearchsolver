@@ -40,6 +40,7 @@ enum class Neighborhoods
     Replace,
 
     InterTwoOpt,
+    InterTwoOptReverse,
     InterShift,
     InterSwap,
     InterShiftReverse,
@@ -68,10 +69,12 @@ std::string neighborhood2string(
         return "Add";
     case Neighborhoods::Remove:
         return "Remove";
-    case Neighborhoods::InterTwoOpt:
-        return "Replace";
     case Neighborhoods::Replace:
+        return "Replace";
+    case Neighborhoods::InterTwoOpt:
         return "Inter-two-opt";
+    case Neighborhoods::InterTwoOptReverse:
+        return "Inter-two-opt-reverse";
     case Neighborhoods::InterShift:
         return std::to_string(k1) + "-inter-shift";
     case Neighborhoods::InterSwap:
@@ -112,6 +115,7 @@ struct Parameters
      */
 
     bool inter_two_opt = false;
+    bool inter_two_opt_reverse = false;
     ElementPos inter_shift_block_maximum_length = 0;
     ElementPos inter_swap_block_maximum_length = 0;
     ElementPos inter_shift_reverse_block_maximum_length = 0;
@@ -162,6 +166,13 @@ public:
 
     using SequenceData = typename SequencingScheme::SequenceData;
 
+    struct SolutionElement
+    {
+        SequenceId i = -1;
+        ElementPos pos = -1;
+        Mode mode = -1;
+    };
+
     struct SequenceElement
     {
         ElementId j;
@@ -187,15 +198,23 @@ public:
                 ElementPos pos_1,
                 ElementPos pos_2,
                 bool reverse = false):
-            sequence(sequence),
+            sequence(&sequence),
             pos_1(pos_1),
             pos_2(pos_2),
             reverse(reverse) { }
 
-        const Sequence& sequence;
-        ElementPos pos_1;
-        ElementPos pos_2;
-        bool reverse;
+        SubSequence(
+                ElementId j,
+                Mode mode):
+            j(j),
+            mode(mode) { }
+
+        const Sequence* sequence = nullptr;
+        ElementPos pos_1 = -1;
+        ElementPos pos_2 = -1;
+        bool reverse = false;
+        ElementId j = -1;
+        Mode mode = -1;
     };
 
     struct Move0
@@ -309,12 +328,18 @@ public:
         ElementPos n = sequencing_scheme_.number_of_elements();
 
         // Initialize temporary structures.
-        sequence_datas_cur_ = std::vector<std::vector<SequenceData>>(
-                m, std::vector<SequenceData>(n + 1));
         sequence_datas_cur_2_ = std::vector<std::vector<std::vector<SequenceData>>>(m);
-        modes_cur_ = std::vector<Mode>(n);
+        global_costs_cur_ = std::vector<GlobalCost>(m);
+        if (m > 1)
+            partial_global_costs_cur_1_ = std::vector<GlobalCost>(m);
+        if (m > 2)
+            partial_global_costs_cur_2_ = std::vector<std::vector<GlobalCost>>(
+                    m, std::vector<GlobalCost>(m));
+        elements_cur_ = std::vector<SolutionElement>(n);
         solution_cur_ = empty_solution();
         solution_tmp_ = empty_solution();
+
+        compute_closest_neighbors();
 
         // Initialize neighborhoods_.
 
@@ -341,6 +366,7 @@ public:
         neighborhoods_[int(Neighborhoods::Replace)] = {{{Neighborhood()}}};
 
         neighborhoods_[int(Neighborhoods::InterTwoOpt)] = {{{Neighborhood()}}};
+        neighborhoods_[int(Neighborhoods::InterTwoOptReverse)] = {{{Neighborhood()}}};
         neighborhoods_[int(Neighborhoods::InterShift)]
             = std::vector<std::vector<Neighborhood>>(
                     parameters_.inter_shift_block_maximum_length + 1,
@@ -397,6 +423,87 @@ public:
     /*
      * Initial solution.
      */
+
+    Solution split(
+            const std::vector<SequenceElement>& elements,
+            std::mt19937_64& generator)
+    {
+        SequencePos m = number_of_sequences();
+        ElementPos n = sequencing_scheme_.number_of_elements();
+        ElementPos seq_size = elements.size();
+
+        if (m == 1) {
+            Solution solution = empty_solution();
+            for (ElementPos pos = 0; pos < seq_size; ++pos)
+                append(solution.sequences[0], elements[pos]);
+        }
+
+        //for (ElementPos pos = 0; pos < seq_size; ++pos)
+        //    std::cout << " " << elements[pos].j;
+        //std::cout << std::endl;
+
+        std::uniform_int_distribution<SequenceId> d_i(0, m - 1);
+        SequenceId i = d_i(generator);
+
+        // Compute edge costs.
+        std::vector<std::vector<GlobalCost>> edges(n + 1);
+        for (ElementPos pos = 0; pos <= n; ++pos)
+            edges[pos] = std::vector<GlobalCost>(pos);
+        for (ElementPos pos_1 = 0; pos_1 < seq_size; ++pos_1) {
+            SequenceData sequence_data = empty_sequence_data(i);
+            for (ElementPos pos_2 = pos_1 + 1; pos_2 <= seq_size; ++pos_2) {
+                append(sequence_data, elements[pos_2 - 1]);
+                edges[pos_2][pos_1] = sequencing_scheme_.global_cost(sequence_data);
+            }
+        }
+
+        // Run Bellman algorithm.
+        std::vector<std::vector<ElementPos>> prev(
+                m + 1, std::vector<ElementPos>(n + 1, -1));
+        std::vector<std::vector<GlobalCost>> distance(
+                m + 1, std::vector<GlobalCost>(n + 1, worst<GlobalCost>()));
+        for (SequenceId i = 0; i < m; ++i) {
+            for (ElementPos pos_1 = 0; pos_1 < seq_size; ++pos_1) {
+                for (ElementPos pos_2 = pos_1 + 1; pos_2 <= seq_size; ++pos_2) {
+                    if (distance[i + 1][pos_2] > distance[i][pos_1] + edges[pos_2][pos_1]) {
+                        distance[i + 1][pos_2] = distance[i][pos_1] + edges[pos_2][pos_1];
+                        prev[i + 1][pos_2] = pos_1;
+                    }
+                }
+            }
+            //ElementPos pos = seq_size;
+            //SequenceId i_cur = i + 1;
+            //while (pos > 0) {
+            //    pos = prev[i_cur][pos];
+            //    i_cur--;
+            //    std::cout << " " << pos;
+            //}
+            //std::cout << std::endl;
+        }
+
+        // Retrieve solution.
+        //std::cout << "Retrieve solution" << std::endl;
+        ElementPos pos = seq_size;
+        ElementPos pos_prev = seq_size;
+        Solution solution = empty_solution();
+        for (SequenceId i_cur = 0; pos != 0; ++i_cur) {
+            //std::cout << "i_cur " << i_cur
+            //    << " / " << m
+            //    << " pos " << pos
+            //    << " pos_prev " << pos_prev
+            //    << " prev " << prev[m - i_cur][pos]
+            //    << std::endl;
+            pos_prev = pos;
+            pos = prev[m - i_cur][pos];
+            for (ElementPos p = pos; p < pos_prev; ++p)
+                append(solution.sequences[i_cur], elements[p]);
+        }
+        compute_global_cost(solution);
+
+        //print(std::cout, solution);
+
+        return solution;
+    }
 
     template<typename, typename T>
     struct HasInitialSolutionMethod
@@ -508,6 +615,17 @@ public:
                 }
             }
             return solution;
+        } case 4: {
+            // Random sequence splitted.
+            std::vector<SequenceElement> elements(n);
+            for (ElementId j = 0; j < n; ++j) {
+                std::uniform_int_distribution<SequenceId> d_mode(0, number_of_modes(j) - 1);
+                Mode mode = d_mode(generator);
+                elements[j] = {j, mode};
+            }
+            std::shuffle(elements.begin(), elements.end(), generator);
+            Solution solution = split(elements, generator);
+            return solution;
         } default: {
             // Random permutation.
             std::vector<ElementId> elements(n);
@@ -541,6 +659,7 @@ public:
             Counter initial_solution_id,
             std::mt19937_64& generator)
     {
+        //std::cout << "initial_solution " << initial_solution_id << std::endl;
         auto begin = std::chrono::steady_clock::now();
         Solution solution = initial_solution(
                 initial_solution_id,
@@ -555,6 +674,7 @@ public:
         auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
         initial_solution_time += time_span.count();
         number_of_initial_solution_calls++;
+        //std::cout << to_string(solution.global_cost) << std::endl;
         return solution;
     }
 
@@ -598,6 +718,28 @@ public:
             break;
         }
         }
+
+        SequenceId m = number_of_sequences();
+        solution.modified_sequences = std::vector<bool>(m, true);
+        for (SequenceId i1 = 0; i1 < m; ++i1) {
+            for (SequenceId i2 = 0; i2 < m; ++i2) {
+                if (solution.sequences[i1].elements
+                        == solution_parent_1.sequences[i2].elements
+                        && sequencing_scheme_.global_cost(solution.sequences[i1].data)
+                        == sequencing_scheme_.global_cost(solution_parent_1.sequences[i2].data)) {
+                    solution.modified_sequences[i1] = false;
+                    break;
+                }
+                if (solution.sequences[i1].elements
+                        == solution_parent_2.sequences[i2].elements
+                        && sequencing_scheme_.global_cost(solution.sequences[i1].data)
+                        == sequencing_scheme_.global_cost(solution_parent_2.sequences[i2].data)) {
+                    solution.modified_sequences[i1] = false;
+                    break;
+                }
+            }
+        }
+
         auto end = std::chrono::steady_clock::now();
         auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
         crossover_time += time_span.count();
@@ -625,11 +767,22 @@ public:
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
     {
-        Solution solution = empty_solution();
+        SequenceId m = number_of_sequences();
 
-        const auto& elements_parent_1 = solution_parent_1.sequences[0].elements;
-        const auto& elements_parent_2 = solution_parent_2.sequences[0].elements;
-        Sequence& sequence = solution.sequences[0];
+        std::vector<SequenceElement> elements_parent_1;
+        for (SequenceId i = 0; i < m; ++i) {
+            elements_parent_1.insert(
+                    elements_parent_1.begin(),
+                    solution_parent_1.sequences[i].elements.begin(),
+                    solution_parent_1.sequences[i].elements.end());
+        }
+        std::vector<SequenceElement> elements_parent_2;
+        for (SequenceId i = 0; i < m; ++i) {
+            elements_parent_2.insert(
+                    elements_parent_2.begin(),
+                    solution_parent_2.sequences[i].elements.begin(),
+                    solution_parent_2.sequences[i].elements.end());
+        }
 
         ElementPos seq_1_size = elements_parent_1.size();
 
@@ -646,21 +799,22 @@ public:
             in_substring[j] = true;
         }
 
+        std::vector<SequenceElement> elements;
+
         for (ElementPos pos = 0; pos < seq_1_size; ++pos) {
-            if ((ElementPos)sequence.elements.size() == pos_1)
+            if ((ElementPos)elements.size() == pos_1)
                 for (ElementPos p = pos_1; p < pos_2; ++p)
-                    append(sequence, elements_parent_1[p]);
+                    elements.push_back(elements_parent_1[p]);
             ElementId j = elements_parent_2[pos].j;
             if (in_substring[j])
                 continue;
-            append(sequence, elements_parent_2[pos]);
+            elements.push_back(elements_parent_2[pos]);
         }
-        if ((ElementPos)sequence.elements.size() == pos_1)
+        if ((ElementPos)elements.size() == pos_1)
             for (ElementPos p = pos_1; p < pos_2; ++p)
-                append(sequence, elements_parent_1[p]);
+                elements.push_back(elements_parent_1[p]);
 
-        compute_global_cost(solution);
-        return solution;
+        return split(elements, generator);
     }
 
     /**
@@ -677,14 +831,27 @@ public:
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
     {
-        Solution solution = empty_solution();
+        SequenceId m = number_of_sequences();
 
-        const auto& elements_parent_1 = solution_parent_1.sequences[0].elements;
-        const auto& elements_parent_2 = solution_parent_2.sequences[0].elements;
-        Sequence& sequence = solution.sequences[0];
+        std::vector<SequenceElement> elements_parent_1;
+        for (SequenceId i = 0; i < m; ++i) {
+            elements_parent_1.insert(
+                    elements_parent_1.begin(),
+                    solution_parent_1.sequences[i].elements.begin(),
+                    solution_parent_1.sequences[i].elements.end());
+        }
+        std::vector<SequenceElement> elements_parent_2;
+        for (SequenceId i = 0; i < m; ++i) {
+            elements_parent_2.insert(
+                    elements_parent_2.begin(),
+                    solution_parent_2.sequences[i].elements.begin(),
+                    solution_parent_2.sequences[i].elements.end());
+        }
 
         ElementPos seq_1_size = elements_parent_1.size();
         std::vector<ElementPos> positions(seq_1_size, -1);
+
+        std::vector<SequenceElement> elements;
 
         // Add elements from parent_1 up to a given cut point.
         std::uniform_int_distribution<ElementPos> d_point(1, seq_1_size);
@@ -692,21 +859,21 @@ public:
         for (ElementPos pos = 0; pos < pos_0; ++pos) {
             ElementId j = elements_parent_1[pos].j;
             positions[j] = pos;
-            append(sequence, elements_parent_1[pos]);
+            elements.push_back(elements_parent_1[pos]);
         }
 
         // Add elements from parent_2 keeping the relative order.
         for (ElementPos pos = 0; pos < seq_1_size; ++pos) {
             // Add elements which have the same positions in both parents.
             for (;;) {
-                ElementPos p = sequence.elements.size();
+                ElementPos p = elements.size();
                 if (p == seq_1_size)
                     break;
                 ElementId j1 = elements_parent_1[p].j;
                 ElementId j2 = elements_parent_2[p].j;
                 if (j1 == j2) {
                     positions[j1] = p;
-                    append(sequence, elements_parent_1[p]);
+                    elements.push_back(elements_parent_1[p]);
                     continue;
                 }
                 break;
@@ -714,12 +881,11 @@ public:
             ElementId j = elements_parent_2[pos].j;
             if (positions[j] != -1)
                 continue;
-            positions[j] = sequence.elements.size();
-            append(sequence, elements_parent_2[pos]);
+            positions[j] = elements.size();
+            elements.push_back(elements_parent_2[pos]);
         }
 
-        compute_global_cost(solution);
-        return solution;
+        return split(elements, generator);
     }
 
     /**
@@ -736,14 +902,27 @@ public:
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
     {
-        Solution solution = empty_solution();
+        SequenceId m = number_of_sequences();
 
-        const auto& elements_parent_1 = solution_parent_1.sequences[0].elements;
-        const auto& elements_parent_2 = solution_parent_2.sequences[0].elements;
-        Sequence& sequence = solution.sequences[0];
+        std::vector<SequenceElement> elements_parent_1;
+        for (SequenceId i = 0; i < m; ++i) {
+            elements_parent_1.insert(
+                    elements_parent_1.begin(),
+                    solution_parent_1.sequences[i].elements.begin(),
+                    solution_parent_1.sequences[i].elements.end());
+        }
+        std::vector<SequenceElement> elements_parent_2;
+        for (SequenceId i = 0; i < m; ++i) {
+            elements_parent_2.insert(
+                    elements_parent_2.begin(),
+                    solution_parent_2.sequences[i].elements.begin(),
+                    solution_parent_2.sequences[i].elements.end());
+        }
 
         ElementPos seq_1_size = elements_parent_1.size();
         std::vector<ElementPos> positions(seq_1_size, -1);
+
+        std::vector<SequenceElement> elements;
 
         // Add elements from parent_1 up to a given cut point.
         std::uniform_int_distribution<ElementPos> d_point(1, seq_1_size);
@@ -751,14 +930,14 @@ public:
         for (ElementPos pos = 0; pos < pos_0; ++pos) {
             ElementId j = elements_parent_1[pos].j;
             positions[j] = pos;
-            append(sequence, elements_parent_1[pos]);
+            elements.push_back(elements_parent_1[pos]);
         }
 
         // Add elements from parent_2 keeping the relative order.
         for (ElementPos pos = 0; pos < seq_1_size; ++pos) {
             // Add elements which have the same positions in both parents.
             for (;;) {
-                ElementPos p = sequence.elements.size();
+                ElementPos p = elements.size();
                 if (p == seq_1_size)
                     break;
                 ElementId j1 = elements_parent_1[p].j;
@@ -768,7 +947,7 @@ public:
                     ElementId j2_next = elements_parent_2[p + 1].j;
                     if (j1 == j2 && j1_next == j2_next) {
                         positions[j1] = p;
-                        append(sequence, elements_parent_1[p + 1]);
+                        elements.push_back(elements_parent_1[p + 1]);
                         continue;
                     }
                 }
@@ -777,7 +956,7 @@ public:
                     ElementId j2_prev = elements_parent_2[p - 1].j;
                     if (j1 == j2 && j1_prev == j2_prev) {
                         positions[j1] = p;
-                        append(sequence, elements_parent_1[p - 1]);
+                        elements.push_back(elements_parent_1[p - 1]);
                         continue;
                     }
                 }
@@ -786,12 +965,11 @@ public:
             ElementId j = elements_parent_2[pos].j;
             if (positions[j] != -1)
                 continue;
-            positions[j] = sequence.elements.size();
-            append(sequence, elements_parent_2[pos]);
+            positions[j] = elements.size();
+            elements.push_back(elements_parent_2[pos]);
         }
 
-        compute_global_cost(solution);
-        return solution;
+        return split(elements, generator);
     }
 
     inline Solution crossover_srex1(
@@ -966,16 +1144,6 @@ public:
     inline GlobalCost global_cost(const Solution& solution) const
     {
         return solution.global_cost;
-    }
-
-    inline GlobalCost global_cost(const SequenceData& sequence_data) const
-    {
-        return sequencing_scheme_.global_cost(sequence_data);
-    }
-
-    inline GlobalCost global_cost(const Sequence& sequence) const
-    {
-        return sequencing_scheme_.global_cost(sequence.data);
     }
 
     inline GlobalCost bound(const SequenceData& sequence_data) const
@@ -1179,6 +1347,8 @@ public:
             break;
 
         } case Perturbations::RuinAndRecreate: {
+            //std::cout << "RuinAndRecreate" << std::endl;
+            //std::cout << to_string(solution.global_cost) << std::endl;
             ElementId n = sequencing_scheme_.number_of_elements();
             std::vector<SequenceId> sequences(n, -1);
             std::vector<Mode> modes(n, -1);
@@ -1219,8 +1389,10 @@ public:
                 }
             }
             // Add back removed elements.
+            compute_global_cost(solution_cur_);
             compute_temporary_structures(solution_cur_);
             for (ElementId j: elts) {
+                //std::cout << to_string(solution_cur_.global_cost) << std::endl;
                 ElementId j_prec_old = -1;
                 if (positions[j] > 0) {
                     const auto& elements = solution.sequences[sequences[j]].elements;
@@ -1232,6 +1404,7 @@ public:
                         sequences[j],
                         j_prec_old,
                         modes[j]);
+                //std::cout << "improving_moves.size() " << improving_moves.size() << std::endl;
                 if (!improving_moves.empty()) {
                     std::shuffle(
                             improving_moves.begin(),
@@ -1248,6 +1421,7 @@ public:
                 }
             }
             solution = solution_cur_;
+            //std::cout << to_string(solution.global_cost) << std::endl;
             break;
 
         } case Perturbations::ForceAdd: {
@@ -1285,6 +1459,7 @@ public:
             std::mt19937_64& generator,
             const Move& perturbation = Move())
     {
+        //std::cout << "local_search" << std::endl;
         //if (tabu.j != -1)
         //    std::cout << "j " << tabu.j << " j_prev " << tabu.j_prev
         //        << std::endl;
@@ -1331,6 +1506,8 @@ public:
         if (m > 1) {
             if (parameters_.inter_two_opt)
                 neighborhoods.push_back({Neighborhoods::InterTwoOpt, 0, 0});
+            if (parameters_.inter_two_opt_reverse)
+                neighborhoods.push_back({Neighborhoods::InterTwoOptReverse, 0, 0});
             for (ElementPos block_size = 1;
                     block_size <= parameters_.inter_shift_block_maximum_length;
                     ++block_size) {
@@ -1395,9 +1572,7 @@ public:
             //    << std::endl;
             //print(std::cout, solution);
 
-            std::vector<GlobalCost> gcis(m);
-            for (SequenceId i = 0; i < m; ++i)
-                gcis[i] = global_cost(solution.sequences[i]);
+            GlobalCost gc_old = global_cost(solution);
 
             std::shuffle(neighborhoods.begin(), neighborhoods.end(), generator);
 
@@ -1461,6 +1636,9 @@ public:
                 case Neighborhoods::InterTwoOpt:
                     explore_inter_two_opt(solution);
                     break;
+                case Neighborhoods::InterTwoOptReverse:
+                    explore_inter_two_opt_reverse(solution);
+                    break;
                 case Neighborhoods::InterShift:
                     explore_inter_shift(solution, k1);
                     break;
@@ -1498,15 +1676,7 @@ public:
                     apply_move(solution, move_best);
                     compute_temporary_structures(solution, move_best.i1, move_best.i2);
                     // Check new current solution cost.
-                    GlobalCost gci = (move_best.i2 == -1)?
-                        gcis[move_best.i1]:
-                        global_cost_merge(gcis[move_best.i1], gcis[move_best.i2]);
-                    GlobalCost gci_new = (move_best.i2 == -1)?
-                        global_cost(solution.sequences[move_best.i1]):
-                        global_cost_merge(
-                                global_cost(solution.sequences[move_best.i1]),
-                                global_cost(solution.sequences[move_best.i2]));
-                    if (gci_new - gci != move_best.global_cost) {
+                    if (global_cost(solution) - gc_old != move_best.global_cost) {
                         //std::cout
                         //    << "k1 " << move_best.k1
                         //    << " k2 " << move_best.k2
@@ -1519,11 +1689,11 @@ public:
                                 neighborhood2string(type, k1, k2)
                                 + ", costs do not match:\n"
                                 + "* Old cost: "
-                                + to_string(gci) + "\n"
+                                + to_string(gc_old) + "\n"
                                 + "* Move cost: "
                                 + to_string(move_best.global_cost) + "\n"
                                 + "* New cost: "
-                                + to_string(gci_new) + "\n");
+                                + to_string(global_cost(solution)) + "\n");
                     }
 
                     // Update modified sequences.
@@ -1576,7 +1746,7 @@ public:
                 }
             }
             os << std::endl;
-            os << "    Cost: " << to_string(global_cost(solution.sequences[i])) << std::endl;
+            os << "    Cost: " << to_string(sequencing_scheme_.global_cost(solution.sequences[i].data)) << std::endl;
         }
         os << "Total cost: " << to_string(solution.global_cost) << std::endl;
         return os;
@@ -1636,7 +1806,8 @@ public:
             << "    Reverse:                                   " << parameters_.reverse << std::endl
             << "    Shift-reverse" << std::endl
             << "        Block maximum length:                  " << parameters_.shift_reverse_block_maximum_length << std::endl
-            << "    Add/Remove:                                " << parameters_.add_remove << std::endl;
+            << "    Add/Remove:                                " << parameters_.add_remove << std::endl
+            << "    Replace:                                   " << parameters_.replace << std::endl;
         if (m > 1) {
             info.os()
                 << "    Inter-shift" << std::endl
@@ -1644,6 +1815,7 @@ public:
                 << "    Inter-swap" << std::endl
                 << "        Block maximum length:                  " << parameters_.inter_swap_block_maximum_length << std::endl
                 << "    Inter-two-opt:                             " << parameters_.inter_two_opt << std::endl
+                << "    Inter-two-opt-reverse:                     " << parameters_.inter_two_opt_reverse << std::endl
                 << "    Inter-shift-reverse" << std::endl
                 << "        Block maximum length:                  " << parameters_.inter_shift_reverse_block_maximum_length << std::endl
                 << "    Inter-swap-star:                           " << parameters_.inter_swap_star << std::endl;
@@ -1695,6 +1867,13 @@ public:
             << number_of_local_search_calls
             << " / " << local_search_time << "s"
             << " / " << local_search_time / number_of_local_search_calls << "s"
+            << std::endl;
+        info.os()
+            << "    "
+            << std::left << std::setw(28) << "Apply search time:"
+            << number_of_apply_move_calls
+            << " / " << apply_move_time << "s"
+            << " / " << apply_move_time / number_of_apply_move_calls << "s"
             << std::endl;
         info.os() << "Neighborhoods" << std::endl;
         for (int a = 0; a < (int)neighborhoods_.size(); ++a) {
@@ -1868,9 +2047,51 @@ private:
 
     };
 
+    template<typename, typename T>
+    struct HasSequenceDataInitMethod
+    {
+        static_assert(
+                std::integral_constant<T, false>::value,
+                "Second template parameter needs to be of function type.");
+    };
+
+    template<typename C, typename Ret, typename... Args>
+    struct HasSequenceDataInitMethod<C, Ret(Args...)>
+    {
+
+    private:
+
+        template<typename T>
+        static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().sequence_data_init(std::declval<Args>()...)), Ret>::type;
+
+        template<typename>
+        static constexpr std::false_type check(...);
+
+        typedef decltype(check<C>(0)) type;
+
+    public:
+
+        static constexpr bool value = type::value;
+
+    };
+
     void append(
             SequenceData& sequence_data,
             SequenceElement se,
+            std::true_type,
+            std::false_type,
+            std::false_type,
+            std::false_type) const
+    {
+        sequencing_scheme_.append(sequence_data, se.j, se.mode);;
+    }
+
+    void append(
+            SequenceData& sequence_data,
+            SequenceElement se,
+            std::false_type,
+            std::true_type,
+            std::false_type,
             std::false_type) const
     {
         sequencing_scheme_.append(sequence_data, se.j);;
@@ -1879,9 +2100,33 @@ private:
     void append(
             SequenceData& sequence_data,
             SequenceElement se,
+            std::false_type,
+            std::false_type,
+            std::true_type,
+            std::false_type) const
+    {
+        if (sequence_data.number_of_locations == 0) {
+            sequence_data = sequencing_scheme_.sequence_data_init(se.j, se.mode);
+        } else {
+            sequencing_scheme_.concatenate(sequence_data, sequencing_scheme_.sequence_data_init(se.j, se.mode));
+        }
+    }
+
+    void append(
+            SequenceData& sequence_data,
+            SequenceElement se,
+            std::false_type,
+            std::false_type,
+            std::false_type,
             std::true_type) const
     {
-        sequencing_scheme_.append(sequence_data, se.j, se.mode);;
+        if (sequence_data.number_of_locations == 0) {
+            sequence_data = sequencing_scheme_.sequence_data_init(se.j);
+        } else {
+            sequencing_scheme_.concatenate(
+                    sequence_data,
+                    sequencing_scheme_.sequence_data_init(se.j));
+        }
     }
 
     void append(
@@ -1893,7 +2138,16 @@ private:
                 se,
                 std::integral_constant<
                     bool,
-                    HasAppendMethod<SequencingScheme, void(SequenceData&, ElementId, Mode)>::value>());
+                    HasAppendMethod<SequencingScheme, void(SequenceData&, ElementId, Mode)>::value>(),
+                std::integral_constant<
+                    bool,
+                    HasAppendMethod<SequencingScheme, void(SequenceData&, ElementId)>::value>(),
+                std::integral_constant<
+                    bool,
+                    HasSequenceDataInitMethod<SequencingScheme, SequenceData(ElementId, Mode)>::value>(),
+                std::integral_constant<
+                    bool,
+                    HasSequenceDataInitMethod<SequencingScheme, SequenceData(ElementId)>::value>());
     }
 
     /*
@@ -2059,121 +2313,334 @@ private:
 
     };
 
-    bool concatenate(
-            SequenceData& sequence_data,
-            const SubSequence& sub_sequence,
-            const GlobalCost& cutoff,
-            const GlobalCost* gci1,
+    inline const SequenceData& get_sequence_data(const SubSequence& sub_sequence) const
+    {
+        return (!sub_sequence.reverse)?
+            sequence_datas_cur_2_[sub_sequence.sequence->i][sub_sequence.pos_1][sub_sequence.pos_2]:
+            sequence_datas_cur_2_[sub_sequence.sequence->i][sub_sequence.pos_2][sub_sequence.pos_1];
+    }
+
+    inline GlobalCost global_cost_concatenate_1(
+            const SubSequence* sub_sequences,
+            ElementPos size,
+            const GlobalCost* gci,
             std::false_type) const
     {
-        if (gci1 == nullptr) {
-            if (!sub_sequence.reverse) {
-                auto it = sub_sequence.sequence.elements.begin() + sub_sequence.pos_1;
-                auto it_end = sub_sequence.sequence.elements.begin() + sub_sequence.pos_2;
-                for (;; ++it) {
-                    // Add next element to sequence_data.
-                    append(sequence_data, *it);
-                    // Check early termination.
-                    if (bound(sequence_data) >= cutoff)
-                        return false;
-                    // End condition.
-                    if (it == it_end)
-                        return true;
+        SequenceData sequence_data;
+        ElementPos p = 0;
+        for (;;) {
+            if (sub_sequences[p].sequence != nullptr) {
+                if (sub_sequences[p].pos_1 <= sub_sequences[p].pos_2) {
+                    sequence_data = (!sub_sequences[p].reverse)?
+                        sequence_datas_cur_2_[sub_sequences[p].sequence->i][sub_sequences[p].pos_1][sub_sequences[p].pos_2]:
+                        sequence_datas_cur_2_[sub_sequences[p].sequence->i][sub_sequences[p].pos_2][sub_sequences[p].pos_1];
+                    break;
                 }
             } else {
-                auto it = sub_sequence.sequence.elements.begin() + sub_sequence.pos_2;
-                auto it_end = sub_sequence.sequence.elements.begin() + sub_sequence.pos_1;
-                for (;; --it) {
-                    // Add next element to sequence_data.
-                    append(sequence_data, *it);
-                    // Check early termination.
-                    if (bound(sequence_data) >= cutoff)
-                        return false;
-                    // End condition.
-                    if (it == it_end)
-                        return true;
-                }
+                sequence_data = empty_sequence_data(sub_sequences[0].sequence->i);
+                append(sequence_data, {sub_sequences[p].j, sub_sequences[p].mode});
+                break;
             }
-        } else {
-            if (!sub_sequence.reverse) {
-                auto it = sub_sequence.sequence.elements.begin() + sub_sequence.pos_1;
-                auto it_end = sub_sequence.sequence.elements.begin() + sub_sequence.pos_2;
-                for (;; ++it) {
-                    // Add next element to sequence_data.
-                    append(sequence_data, *it);
-                    // Check early termination.
-                    if (global_cost_merge(*gci1, bound(sequence_data)) >= cutoff)
-                        return false;
-                    // End condition.
-                    if (it == it_end)
-                        return true;
+            p++;
+            if (p == size) {
+                sequence_data = empty_sequence_data(sub_sequences[0].sequence->i);
+                return (gci == nullptr)?
+                    sequencing_scheme_.global_cost(sequence_data):
+                    global_cost_merge(sequencing_scheme_.global_cost(sequence_data), *gci);
+            }
+        }
+        p++;
+        for (; p < size; ++p) {
+            if (sub_sequences[p].sequence != nullptr) {
+                if (sub_sequences[p].pos_1 > sub_sequences[p].pos_2)
+                    continue;
+                if (!sub_sequences[p].reverse) {
+                    auto it = sub_sequences[p].sequence->elements.begin() + sub_sequences[p].pos_1;
+                    const auto it_end = sub_sequences[p].sequence->elements.begin() + sub_sequences[p].pos_2;
+                    for (;; ++it) {
+                        // Add next element to sequence_data.
+                        append(sequence_data, *it);
+                        // End condition.
+                        if (it == it_end)
+                            break;
+                    }
+                } else {
+                    auto it = sub_sequences[p].sequence->elements.begin() + sub_sequences[p].pos_2;
+                    const auto it_end = sub_sequences[p].sequence->elements.begin() + sub_sequences[p].pos_1;
+                    for (;; --it) {
+                        // Add next element to sequence_data.
+                        append(sequence_data, *it);
+                        // End condition.
+                        if (it == it_end)
+                            break;
+                    }
                 }
             } else {
-                auto it = sub_sequence.sequence.elements.begin() + sub_sequence.pos_2;
-                auto it_end = sub_sequence.sequence.elements.begin() + sub_sequence.pos_1;
-                for (;; --it) {
-                    // Add next element to sequence_data.
-                    append(sequence_data, *it);
-                    // Check early termination.
-                    if (global_cost_merge(*gci1, bound(sequence_data)) >= cutoff)
-                        return false;
-                    // End condition.
-                    if (it == it_end)
-                        return true;
+                append(sequence_data, {sub_sequences[p].j, sub_sequences[p].mode});
+            }
+        }
+        return (gci == nullptr)?
+            sequencing_scheme_.global_cost(sequence_data):
+            global_cost_merge(sequencing_scheme_.global_cost(sequence_data), *gci);
+    }
+
+    inline std::pair<bool, GlobalCost> global_cost_concatenate_1(
+            const SubSequence* sub_sequences,
+            ElementPos size,
+            GlobalCost cutoff,
+            const GlobalCost* gci,
+            std::false_type) const
+    {
+        //std::cout << "global_cost_concatenate_1"
+        //    << " size " << size
+        //    << " gci " << gci
+        //    << std::endl;
+        SequenceData sequence_data;
+        ElementPos p = 0;
+        for (;;) {
+            if (sub_sequences[p].sequence != nullptr) {
+                if (sub_sequences[p].pos_1 <= sub_sequences[p].pos_2) {
+                    sequence_data = (!sub_sequences[p].reverse)?
+                        sequence_datas_cur_2_[sub_sequences[p].sequence->i][sub_sequences[p].pos_1][sub_sequences[p].pos_2]:
+                        sequence_datas_cur_2_[sub_sequences[p].sequence->i][sub_sequences[p].pos_2][sub_sequences[p].pos_1];
+                    break;
+                }
+            } else {
+                sequence_data = empty_sequence_data(sub_sequences[0].sequence->i);
+                append(sequence_data, {sub_sequences[p].j, sub_sequences[p].mode});
+                break;
+            }
+            p++;
+            if (p == size) {
+                sequence_data = empty_sequence_data(sub_sequences[0].sequence->i);
+                return {true, (gci == nullptr)?
+                    sequencing_scheme_.global_cost(sequence_data):
+                    global_cost_merge(sequencing_scheme_.global_cost(sequence_data), *gci)};
+            }
+        }
+        p++;
+        for (; p < size; ++p) {
+            if (sub_sequences[p].sequence != nullptr) {
+                //std::cout << "p " << p
+                //    << " seq " << sub_sequences[p].sequence
+                //    << " size " << sub_sequences[p].sequence->elements.size()
+                //    << " i " << sub_sequences[p].sequence->i
+                //    << " pos_1 " << sub_sequences[p].pos_1
+                //    << " pos_2 " << sub_sequences[p].pos_2
+                //    << " rev " << sub_sequences[p].reverse
+                //    << std::endl;
+                if (sub_sequences[p].pos_1 > sub_sequences[p].pos_2)
+                    continue;
+                if (!sub_sequences[p].reverse) {
+                    auto it = sub_sequences[p].sequence->elements.begin() + sub_sequences[p].pos_1;
+                    const auto it_end = sub_sequences[p].sequence->elements.begin() + sub_sequences[p].pos_2;
+                    for (;; ++it) {
+                        // Add next element to sequence_data.
+                        append(sequence_data, *it);
+                        //std::cout << "j " << it->j
+                        //    << " gc " << to_string(global_cost(sequence_data))
+                        //    << " bnd " << to_string(bound(sequence_data))
+                        //    << " cutoff " << to_string(cutoff)
+                        //    << std::endl;
+                        // Check early termination.
+                        if (gci == nullptr) {
+                            if (bound(sequence_data) >= cutoff)
+                                return {false, GlobalCost()};
+                        } else {
+                            if (global_cost_merge(*gci, bound(sequence_data)) >= cutoff)
+                                return {false, GlobalCost()};
+                        }
+                        // End condition.
+                        if (it == it_end)
+                            break;
+                    }
+                } else {
+                    auto it = sub_sequences[p].sequence->elements.begin() + sub_sequences[p].pos_2;
+                    const auto it_end = sub_sequences[p].sequence->elements.begin() + sub_sequences[p].pos_1;
+                    for (;; --it) {
+                        // Add next element to sequence_data.
+                        append(sequence_data, *it);
+                        //std::cout << "j " << it->j
+                        //    << " gc " << to_string(global_cost(sequence_data))
+                        //    << " bnd " << to_string(bound(sequence_data))
+                        //    << std::endl;
+                        // Check early termination.
+                        if (gci == nullptr) {
+                            if (bound(sequence_data) >= cutoff)
+                                return {false, GlobalCost()};
+                        } else {
+                            if (global_cost_merge(*gci, bound(sequence_data)) >= cutoff)
+                                return {false, GlobalCost()};
+                        }
+                        // End condition.
+                        if (it == it_end)
+                            break;
+                    }
+                }
+            } else {
+                append(sequence_data, {sub_sequences[p].j, sub_sequences[p].mode});
+                //std::cout << "j " << sub_sequences[p].j
+                //    << " gc " << to_string(global_cost(sequence_data))
+                //    << " bnd " << to_string(bound(sequence_data))
+                //    << std::endl;
+                // Check early termination.
+                if (gci == nullptr) {
+                    if (bound(sequence_data) >= cutoff)
+                        return {false, GlobalCost()};
+                } else {
+                    if (global_cost_merge(*gci, bound(sequence_data)) >= cutoff)
+                        return {false, GlobalCost()};
                 }
             }
         }
+        return {true, (gci == nullptr)?
+            sequencing_scheme_.global_cost(sequence_data):
+            global_cost_merge(sequencing_scheme_.global_cost(sequence_data), *gci)};
     }
 
-    bool concatenate(
-            SequenceData& sequence_data,
-            const SubSequence& sub_sequence,
-            const GlobalCost&,
-            const GlobalCost*,
+    inline GlobalCost global_cost_concatenate_1(
+            const SubSequence* sub_sequences,
+            ElementPos size,
+            const GlobalCost* gci,
             std::true_type) const
     {
-        const SequenceData& sequence_data_2 = (!sub_sequence.reverse)?
-            sequence_datas_cur_2_[sub_sequence.sequence.i][sub_sequence.pos_1][sub_sequence.pos_2]:
-            sequence_datas_cur_2_[sub_sequence.sequence.i][sub_sequence.pos_2][sub_sequence.pos_1];
-        return sequencing_scheme_.concatenate(
-                sequence_data,
-                sequence_data_2);
+        SequenceData sequence_data;
+        ElementPos p = 0;
+        for (;;) {
+            if (sub_sequences[p].sequence != nullptr) {
+                if (sub_sequences[p].pos_1 <= sub_sequences[p].pos_2) {
+                    sequence_data = (!sub_sequences[p].reverse)?
+                        sequence_datas_cur_2_[sub_sequences[p].sequence->i][sub_sequences[p].pos_1][sub_sequences[p].pos_2]:
+                        sequence_datas_cur_2_[sub_sequences[p].sequence->i][sub_sequences[p].pos_2][sub_sequences[p].pos_1];
+                    break;
+                }
+            } else {
+                sequence_data = empty_sequence_data(sub_sequences[0].sequence->i);
+                append(sequence_data, {sub_sequences[p].j, sub_sequences[p].mode});
+                break;
+            }
+            p++;
+            if (p == size) {
+                sequence_data = empty_sequence_data(sub_sequences[0].sequence->i);
+                return (gci == nullptr)?
+                    sequencing_scheme_.global_cost(sequence_data):
+                    global_cost_merge(sequencing_scheme_.global_cost(sequence_data), *gci);
+            }
+        }
+        p++;
+        for (; p < size; ++p) {
+            if (sub_sequences[p].sequence != nullptr) {
+                if (sub_sequences[p].pos_1 <= sub_sequences[p].pos_2)
+                    sequencing_scheme_.concatenate(sequence_data, get_sequence_data(sub_sequences[p]));
+            } else {
+                append(sequence_data, {sub_sequences[p].j, sub_sequences[p].mode});
+            }
+        }
+        return (gci == nullptr)?
+            sequencing_scheme_.global_cost(sequence_data):
+            global_cost_merge(sequencing_scheme_.global_cost(sequence_data), *gci);
     }
 
-    bool concatenate(
-            SequenceData& sequence_data,
-            bool sequence_empty,
-            const SubSequence& sub_sequence,
-            const GlobalCost& cutoff,
-            const GlobalCost* gci1 = nullptr) const
+    inline std::pair<bool, GlobalCost> global_cost_concatenate_1(
+            const SubSequence* sub_sequences,
+            ElementPos size,
+            GlobalCost,
+            const GlobalCost* gci,
+            std::true_type) const
     {
-        if (sub_sequence.pos_1 > sub_sequence.pos_2)
-            return true;
-        if (sequence_empty) {
-            const SequenceData& sequence_data_2 = (!sub_sequence.reverse)?
-                sequence_datas_cur_2_[sub_sequence.sequence.i][sub_sequence.pos_1][sub_sequence.pos_2]:
-                sequence_datas_cur_2_[sub_sequence.sequence.i][sub_sequence.pos_2][sub_sequence.pos_1];
-            sequence_data = sequence_data_2;
-            return true;
+        //std::cout << "global_cost_concatenate_1"
+        //    << " size " << size
+        //    << " gci " << gci
+        //    << std::endl;
+        SequenceData sequence_data;
+        ElementPos p = 0;
+        for (;;) {
+            if (sub_sequences[p].sequence != nullptr) {
+                if (sub_sequences[p].pos_1 <= sub_sequences[p].pos_2) {
+                    sequence_data = (!sub_sequences[p].reverse)?
+                        sequence_datas_cur_2_[sub_sequences[p].sequence->i][sub_sequences[p].pos_1][sub_sequences[p].pos_2]:
+                        sequence_datas_cur_2_[sub_sequences[p].sequence->i][sub_sequences[p].pos_2][sub_sequences[p].pos_1];
+                    break;
+                }
+            } else {
+                sequence_data = empty_sequence_data(sub_sequences[0].sequence->i);
+                append(sequence_data, {sub_sequences[p].j, sub_sequences[p].mode});
+                break;
+            }
+            p++;
+            if (p == size) {
+                sequence_data = empty_sequence_data(sub_sequences[0].sequence->i);
+                return {true, (gci == nullptr)?
+                    sequencing_scheme_.global_cost(sequence_data):
+                    global_cost_merge(sequencing_scheme_.global_cost(sequence_data), *gci)};
+            }
         }
-        return concatenate(
-                sequence_data,
-                sub_sequence,
-                cutoff,
-                gci1,
+        p++;
+        for (; p < size; ++p) {
+            if (sub_sequences[p].sequence != nullptr) {
+                if (sub_sequences[p].pos_1 <= sub_sequences[p].pos_2)
+                    sequencing_scheme_.concatenate(sequence_data, get_sequence_data(sub_sequences[p]));
+            } else {
+                append(sequence_data, {sub_sequences[p].j, sub_sequences[p].mode});
+            }
+        }
+        return {true, (gci == nullptr)?
+            sequencing_scheme_.global_cost(sequence_data):
+            global_cost_merge(sequencing_scheme_.global_cost(sequence_data), *gci)};
+    }
+
+    inline GlobalCost global_cost_concatenate_1(
+            const SubSequence* sub_sequences,
+            ElementPos size,
+            const GlobalCost* gci) const
+    {
+        return global_cost_concatenate_1(
+                sub_sequences,
+                size,
+                gci,
                 std::integral_constant<
                     bool,
                     HasConcatenateMethod<SequencingScheme, bool(SequenceData&, const SequenceData&)>::value>());
     }
 
+    inline std::pair<bool, GlobalCost> global_cost_concatenate_1(
+            const SubSequence* sub_sequences,
+            ElementPos size,
+            GlobalCost cutoff,
+            GlobalCost* gci) const
+    {
+        return global_cost_concatenate_1(
+                sub_sequences,
+                size,
+                cutoff,
+                gci,
+                std::integral_constant<
+                    bool,
+                    HasConcatenateMethod<SequencingScheme, bool(SequenceData&, const SequenceData&)>::value>());
+    }
+
+    inline std::pair<bool, GlobalCost> global_cost_concatenate_2(
+            const SubSequence* sub_sequences_1,
+            ElementPos size_1,
+            const SubSequence* sub_sequences_2,
+            ElementPos size_2,
+            GlobalCost cutoff,
+            GlobalCost* gci) const
+    {
+        auto bgc = global_cost_concatenate_1(
+                sub_sequences_1, size_1, cutoff, gci);
+        if (!bgc.first)
+            return bgc;
+        return global_cost_concatenate_1(
+                sub_sequences_2, size_2, cutoff, &bgc.second);
+    }
+
     /*
-     * GlobalCost global_cost_concatenate(
-     *         SequenceData&,
-     *         const SequenceData&)
+     * void compute_closest_neighbors()
      */
 
     template<typename, typename T>
-    struct HasGlobalCostConcatenateMethod
+    struct HasDistanceMethod
     {
         static_assert(
                 std::integral_constant<T, false>::value,
@@ -2181,13 +2648,13 @@ private:
     };
 
     template<typename C, typename Ret, typename... Args>
-    struct HasGlobalCostConcatenateMethod<C, Ret(Args...)>
+    struct HasDistanceMethod<C, Ret(Args...)>
     {
 
     private:
 
         template<typename T>
-        static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().global_cost_concatenate(std::declval<Args>()...)), Ret>::type;
+        static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().distance(std::declval<Args>()...)), Ret>::type;
 
         template<typename>
         static constexpr std::false_type check(...);
@@ -2200,57 +2667,57 @@ private:
 
     };
 
-    GlobalCost global_cost_concatenate(
-            SequenceData& sequence_data,
-            const SubSequence& sub_sequence,
-            const GlobalCost& cutoff,
-            const GlobalCost* gci1,
-            std::false_type) const
+    void compute_closest_neighbors(
+            std::false_type)
     {
-        bool ok = concatenate(sequence_data, false, sub_sequence, cutoff, gci1);
-        if (!ok)
-            return worst<GlobalCost>();
-        return global_cost(sequence_data);
+        ElementPos n = sequencing_scheme_.number_of_elements();
+        neighbors_ = std::vector<ElementId>(n);
+        std::iota(neighbors_.begin(), neighbors_.end(), 0);
     }
 
-    GlobalCost global_cost_concatenate(
-            SequenceData& sequence_data,
-            const SubSequence& sub_sequence,
-            const GlobalCost&,
-            const GlobalCost*,
-            std::true_type) const
+    void compute_closest_neighbors(
+            std::true_type)
     {
-        const SequenceData& sequence_data_2 = (!sub_sequence.reverse)?
-            sequence_datas_cur_2_[sub_sequence.sequence.i][sub_sequence.pos_1][sub_sequence.pos_2]:
-            sequence_datas_cur_2_[sub_sequence.sequence.i][sub_sequence.pos_2][sub_sequence.pos_1];
-        return sequencing_scheme_.global_cost_concatenate(
-                sequence_data,
-                sequence_data_2);
-    }
+        ElementPos n = sequencing_scheme_.number_of_elements();
+        closest_neighbors_ = std::vector<std::vector<ElementId>>(n);
+        std::vector<ElementId> neighbors(n);
+        std::iota(neighbors.begin(), neighbors.end(), 0);
+        for (ElementId j = 0; j < n; ++j) {
+            std::nth_element(
+                    neighbors.begin(),
+                    neighbors.begin() + neighborhood_size_,
+                    neighbors.end(),
+                    [this, j](ElementId j1, ElementId j2) -> bool
+                    {
+                        return sequencing_scheme_.distance(j, j1)
+                            < sequencing_scheme_.distance(j, j2);
+                    });
+            closest_neighbors_[j].insert(
+                    closest_neighbors_[j].begin(),
+                    neighbors.begin(),
+                    neighbors.begin() + neighborhood_size_);
 
-    GlobalCost global_cost_concatenate(
-            SequenceData& sequence_data,
-            bool sequence_empty,
-            const SubSequence& sub_sequence,
-            const GlobalCost& cutoff,
-            const GlobalCost* gci1 = nullptr)
-    {
-        if (sub_sequence.pos_1 > sub_sequence.pos_2)
-            return global_cost(sequence_data);
-        if (sequence_empty) {
-            const SequenceData& sequence_data_2 = (!sub_sequence.reverse)?
-                sequence_datas_cur_2_[sub_sequence.sequence.i][sub_sequence.pos_1][sub_sequence.pos_2]:
-                sequence_datas_cur_2_[sub_sequence.sequence.i][sub_sequence.pos_2][sub_sequence.pos_1];
-            return global_cost(sequence_data_2);
+            //std::cout << "Closest neighbors of " << j << ":";
+            //for (ElementId j2: closest_neighbors_[j])
+            //    std::cout << " " << j2 << "," << sequencing_scheme_.distance(j, j2);
+            //std::cout << std::endl;
+            //std::cout << "Other neighbors of " << j << ":";
+            //for (auto it = neighbors.begin() + 100; it != neighbors.end(); ++it)
+            //    std::cout << " " << *it << "," << sequencing_scheme_.distance(j, *it);
         }
-        return global_cost_concatenate(
-                sequence_data,
-                sub_sequence,
-                cutoff,
-                gci1,
-                std::integral_constant<
+    }
+
+    void compute_closest_neighbors()
+    {
+        ElementPos n = sequencing_scheme_.number_of_elements();
+        if (n <= neighborhood_size_) {
+            compute_closest_neighbors(std::false_type{});
+        } else {
+            compute_closest_neighbors(
+                    std::integral_constant<
                     bool,
-                    HasGlobalCostConcatenateMethod<SequencingScheme, GlobalCost(SequenceData&, const SequenceData&)>::value>());
+                    HasDistanceMethod<SequencingScheme, double(ElementId, ElementId)>::value>());
+        }
     }
 
     /**
@@ -2266,21 +2733,19 @@ private:
             SequenceId i2 = -2)
     {
         SequencePos m = number_of_sequences();
-        // Update modes_cur_.
-        std::fill(modes_cur_.begin(), modes_cur_.end(), -1);
+        // Update global_costs_cur_.
         for (SequenceId i = 0; i < m; ++i)
-            for (const auto& se: solution.sequences[i].elements)
-                modes_cur_[se.j] = se.mode;
-        // Update sequence_datas_cur_.
+            global_costs_cur_[i] = sequencing_scheme_.global_cost(solution.sequences[i].data);
+        // Update elements_cur_.
+        std::fill(elements_cur_.begin(), elements_cur_.end(), SolutionElement());
         for (SequenceId i = 0; i < m; ++i) {
-            if (i1 != -1 && i != i1 && i != i2)
-                continue;
             const auto& elements = solution.sequences[i].elements;
-            ElementPos seq_size = (ElementPos)elements.size();
-            sequence_datas_cur_[i][0] = empty_sequence_data(i);
+            ElementPos seq_size = elements.size();
             for (ElementPos pos = 0; pos < seq_size; ++pos) {
-                sequence_datas_cur_[i][pos + 1] = sequence_datas_cur_[i][pos];
-                append(sequence_datas_cur_[i][pos + 1], elements[pos]);
+                ElementId j = elements[pos].j;
+                elements_cur_[j].i = i;
+                elements_cur_[j].pos = pos;
+                elements_cur_[j].mode = elements[pos].mode;
             }
         }
         // Update sequence_datas_cur_2_.
@@ -2307,6 +2772,25 @@ private:
                 }
             }
         }
+        // Update partial_global_costs_1_.
+        if (m > 1) {
+            for (SequenceId i = 0; i < m; ++i) {
+                partial_global_costs_cur_1_[i]
+                    = compute_partial_global_cost_1(i);
+            }
+        }
+        // Update partial_global_costs_2_.
+        // TODO optimize.
+        if (m > 2) {
+            for (SequenceId i1 = 0; i1 < m; ++i1) {
+                for (SequenceId i2 = i1 + 1; i2 < m; ++i2) {
+                    partial_global_costs_cur_2_[i1][i2]
+                        = compute_partial_global_cost_2(i1, i2);
+                    partial_global_costs_cur_2_[i2][i1]
+                        = partial_global_costs_cur_2_[i1][i2];
+                }
+            }
+        }
     }
 
     /**
@@ -2315,11 +2799,69 @@ private:
     inline void compute_global_cost(
             Solution& solution) const
     {
-        solution.global_cost = global_cost(solution.sequences[0]);
+        solution.global_cost = sequencing_scheme_.global_cost(solution.sequences[0].data);
         for (SequenceId i = 1; i < number_of_sequences(); ++i) {
             solution.global_cost = global_cost_merge(
                     solution.global_cost,
-                    global_cost(solution.sequences[i]));
+                    sequencing_scheme_.global_cost(solution.sequences[i].data));
+        }
+    }
+
+    /**
+     * Compute and return the global cost of a solution without sequence
+     * 'i_out'.
+     */
+    inline GlobalCost compute_partial_global_cost_1(
+            SequenceId i_out) const
+    {
+        if (number_of_sequences() == 1)
+            return GlobalCost();
+        if (i_out != 0) {
+            GlobalCost gc = global_costs_cur_[0];
+            for (SequenceId i = 1; i < number_of_sequences(); ++i)
+                if (i != i_out)
+                    gc = global_cost_merge(gc, global_costs_cur_[i]);
+            return gc;
+        } else {
+            GlobalCost gc = global_costs_cur_[1];
+            for (SequenceId i = 2; i < number_of_sequences(); ++i)
+                gc = global_cost_merge(gc, global_costs_cur_[i]);
+            return gc;
+        }
+    }
+
+    /**
+     * Compute and return the global cost of a solution without sequences
+     * 'i_out_1' and 'i_out_2'.
+     */
+    inline GlobalCost compute_partial_global_cost_2(
+            SequenceId i_out_1,
+            SequenceId i_out_2) const
+    {
+        if (number_of_sequences() == 1) {
+            throw std::logic_error(
+                    "'compute_global_cost(solution, i_out_1, i_out_2)'"
+                    " requires at least 2 sequences.");
+        }
+        if (number_of_sequences() == 2)
+            return GlobalCost();
+        if (i_out_1 != 0 && i_out_2 != 0) {
+            GlobalCost gc = global_costs_cur_[0];
+            for (SequenceId i = 1; i < number_of_sequences(); ++i)
+                if (i != i_out_1 && i != i_out_2)
+                    gc = global_cost_merge(gc, global_costs_cur_[i]);
+            return gc;
+        } else if (i_out_1 != 1 && i_out_2 != 1) {
+            GlobalCost gc = global_costs_cur_[1];
+            for (SequenceId i = 2; i < number_of_sequences(); ++i)
+                if (i != i_out_1 && i != i_out_2)
+                    gc = global_cost_merge(gc, global_costs_cur_[i]);
+            return gc;
+        } else {
+            GlobalCost gc = global_costs_cur_[2];
+            for (SequenceId i = 3; i < number_of_sequences(); ++i)
+                gc = global_cost_merge(gc, global_costs_cur_[i]);
+            return gc;
         }
     }
 
@@ -2333,6 +2875,7 @@ private:
             bool reverse = false)
     {
         SequenceId m = number_of_sequences();
+        GlobalCost gc = global_cost(solution);
         Neighborhood& neighborhood = (!reverse)?
             neighborhoods_[int(Neighborhoods::Shift)][block_size][0]:
             neighborhoods_[int(Neighborhoods::ShiftReverse)][block_size][0];
@@ -2342,12 +2885,8 @@ private:
                 continue;
             const auto& sequence = solution.sequences[i];
             SequencePos seq_size = sequence.elements.size();
-            GlobalCost gci = global_cost(solution.sequences[i]);
 
             for (ElementPos block_pos = 0; block_pos <= seq_size - block_size; ++block_pos) {
-                // Initialize sequence_data_cur.
-                SequenceData sequence_data_cur = empty_sequence_data(i);
-
                 // Loop through all new positions.
                 ElementPos pos_min = std::max(
                         (ElementPos)0,
@@ -2356,36 +2895,38 @@ private:
                         seq_size - block_size,
                         block_pos + parameters_.shift_maximum_distance);
                 for (ElementPos pos_new = pos_min; pos_new <= pos_max; ++pos_new) {
-                    ElementPos p0 = (pos_new < block_pos)? pos_new: pos_new + block_size;
-                    SequenceData sequence_data = sequence_data_cur;
-                    bool ok = concatenate(sequence_data, (pos_new == 0), SubSequence(sequence, block_pos, block_pos + block_size - 1, reverse), gci);
-                    if (ok)
-                        ok = concatenate(sequence_data, false, SubSequence(sequence, p0, block_pos - 1), gci);
-                    if (ok) {
-                        GlobalCost gci_tmp = global_cost_concatenate(sequence_data, false, SubSequence(sequence, std::max(p0, block_pos + block_size), seq_size - 1), gci);
-                        if (!(gci_tmp >= gci)) {
-                            Move0 move;
-                            move.type = (!reverse)?
-                                Neighborhoods::Shift:
-                                Neighborhoods::ShiftReverse;
-                            move.k1 = block_size;
-                            move.i1 = i;
-                            move.pos_1 = block_pos;
-                            move.pos_2 = pos_new;
-                            move.global_cost = gci_tmp - gci;
-                            neighborhood.improving_moves.push_back(move);
-                        }
+                    if (pos_new == block_pos)
+                        continue;
+                    std::pair<bool, GlobalCost> bgc_tmp;
+                    if (block_pos > pos_new) {
+                        SubSequence sub_sequences[] = {
+                            SubSequence(sequence, 0, pos_new - 1),
+                            SubSequence(sequence, block_pos, block_pos + block_size - 1, reverse),
+                            SubSequence(sequence, pos_new, block_pos - 1),
+                            SubSequence(sequence, block_pos + block_size, seq_size - 1)};
+                        bgc_tmp = global_cost_concatenate_1(
+                                sub_sequences, 4, gc, ((m > 1)? &partial_global_costs_cur_1_[i]: nullptr));
+                    } else {
+                        SubSequence sub_sequences[] = {
+                            SubSequence(sequence, 0, block_pos - 1),
+                            SubSequence(sequence, block_pos + block_size, pos_new + block_size - 1),
+                            SubSequence(sequence, block_pos, block_pos + block_size - 1, reverse),
+                            SubSequence(sequence, pos_new + block_size, seq_size - 1)};
+                        bgc_tmp = global_cost_concatenate_1(
+                                sub_sequences, 4, gc, ((m > 1)? &partial_global_costs_cur_1_[i]: nullptr));
                     }
-
-                    // Stop condition.
-                    if (pos_new == seq_size - block_size)
-                        break;
-
-                    // Add next element to sequence_data_cur.
-                    append(sequence_data_cur, sequence.elements[p0]);
-                    // Check early termination.
-                    if (bound(sequence_data_cur) >= gci)
-                        break;
+                    if (bgc_tmp.first && !(bgc_tmp.second >= gc)) {
+                        Move0 move;
+                        move.type = (!reverse)?
+                            Neighborhoods::Shift:
+                            Neighborhoods::ShiftReverse;
+                        move.k1 = block_size;
+                        move.i1 = i;
+                        move.pos_1 = block_pos;
+                        move.pos_2 = pos_new;
+                        move.global_cost = bgc_tmp.second - gc;
+                        neighborhood.improving_moves.push_back(move);
+                    }
                 }
             }
         }
@@ -2397,13 +2938,13 @@ private:
             Counter block_size_2)
     {
         SequenceId m = number_of_sequences();
+        GlobalCost gc = global_cost(solution);
         Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::Swap)][block_size_1][block_size_2];
         for (SequenceId i = 0; i < m; ++i) {
             if (!neighborhood.modified_sequences[i])
                 continue;
             const auto& sequence = solution.sequences[i];
             SequencePos seq_size = sequence.elements.size();
-            GlobalCost gci = global_cost(solution.sequences[i]);
 
             // Loop through all pairs.
             for (ElementPos pos = 0; pos < seq_size; ++pos) {
@@ -2414,19 +2955,18 @@ private:
                         seq_size - block_size_2,
                         pos + block_size_1 + parameters_.swap_maximum_distance);
                 for (ElementPos pos_2 = pos + block_size_1; pos_2 <= pos_2_max; ++pos_2) {
-                    bool ok = true;
-                    SequenceData sequence_data = sequence_datas_cur_[i][pos];
-                    ok = concatenate(sequence_data, (pos == 0), SubSequence(sequence, pos_2, pos_2 + block_size_2 - 1), gci);
-                    if (!ok)
-                        continue;
-                    ok = concatenate(sequence_data, false, SubSequence(sequence, pos_1 + block_size_1, pos_2 - 1), gci);
-                    if (!ok)
-                        continue;
-                    ok = concatenate(sequence_data, false, SubSequence(sequence, pos_1, pos_1 + block_size_1 - 1), gci);
-                    if (!ok)
-                        continue;
-                    GlobalCost gci_tmp = global_cost_concatenate(sequence_data, false, SubSequence(sequence, pos_2 + block_size_2, seq_size - 1), gci);
-                    if (!(gci_tmp >= gci)) {
+                    SubSequence sub_sequences[] = {
+                        SubSequence(sequence, 0, pos - 1),
+                        SubSequence(sequence, pos_2, pos_2 + block_size_2 - 1),
+                        SubSequence(sequence, pos_1 + block_size_1, pos_2 - 1),
+                        SubSequence(sequence, pos_1, pos_1 + block_size_1 - 1),
+                        SubSequence(sequence, pos_2 + block_size_2, seq_size - 1)};
+                    auto bgc_tmp = global_cost_concatenate_1(
+                            sub_sequences, 5, gc, ((m > 1)? &partial_global_costs_cur_1_[i]: nullptr));
+                    if (bgc_tmp.first && !(bgc_tmp.second >= gc)) {
+                        //std::cout << to_string(gc_tmp)
+                        //    << " " << to_string(gc)
+                        //    << std::endl;
                         Move0 move;
                         move.type = Neighborhoods::Swap;
                         move.k1 = block_size_1;
@@ -2434,7 +2974,7 @@ private:
                         move.i1 = i;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2;
-                        move.global_cost = gci_tmp - gci;
+                        move.global_cost = bgc_tmp.second - gc;
                         neighborhood.improving_moves.push_back(move);
                     }
                 }
@@ -2448,19 +2988,15 @@ private:
                         seq_size - block_size_1,
                         pos + block_size_2 + parameters_.swap_maximum_distance);
                 for (ElementPos pos_1 = pos + block_size_2; pos_1 <= pos_1_max; ++pos_1) {
-                    bool ok = true;
-                    SequenceData sequence_data = sequence_datas_cur_[i][pos];
-                    ok = concatenate(sequence_data, (pos == 0), SubSequence(sequence, pos_1, pos_1 + block_size_1 - 1), gci);
-                    if (!ok)
-                        continue;
-                    ok = concatenate(sequence_data, false, SubSequence(sequence, pos_2 + block_size_2, pos_1 - 1), gci);
-                    if (!ok)
-                        continue;
-                    ok = concatenate(sequence_data, false, SubSequence(sequence, pos_2, pos_2 + block_size_2 - 1), gci);
-                    if (!ok)
-                        continue;
-                    GlobalCost gci_tmp = global_cost_concatenate(sequence_data, false, SubSequence(sequence, pos_1 + block_size_1, seq_size - 1), gci);
-                    if (!(gci_tmp >= gci)) {
+                    SubSequence sub_sequences[] = {
+                        SubSequence(sequence, 0, pos - 1),
+                        SubSequence(sequence, pos_1, pos_1 + block_size_1 - 1),
+                        SubSequence(sequence, pos_2 + block_size_2, pos_1 - 1),
+                        SubSequence(sequence, pos_2, pos_2 + block_size_2 - 1),
+                        SubSequence(sequence, pos_1 + block_size_1, seq_size - 1)};
+                    auto bgc_tmp = global_cost_concatenate_1(
+                            sub_sequences, 5, gc, ((m > 1)? &partial_global_costs_cur_1_[i]: nullptr));
+                    if (bgc_tmp.first && !(bgc_tmp.second >= gc)) {
                         Move0 move;
                         move.type = Neighborhoods::Swap;
                         move.k1 = block_size_1;
@@ -2468,7 +3004,7 @@ private:
                         move.i1 = i;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2;
-                        move.global_cost = gci_tmp - gci;
+                        move.global_cost = bgc_tmp.second - gc;
                         neighborhood.improving_moves.push_back(move);
                     }
                 }
@@ -2480,13 +3016,13 @@ private:
             const Solution& solution)
     {
         SequenceId m = number_of_sequences();
+        GlobalCost gc = global_cost(solution);
         Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::Reverse)][0][0];
         for (SequenceId i = 0; i < m; ++i) {
             if (!neighborhood.modified_sequences[i])
                 continue;
             const auto& sequence = solution.sequences[i];
             SequencePos seq_size = sequence.elements.size();
-            GlobalCost gci = global_cost(solution.sequences[i]);
 
             // Loop through all pairs.
             for (ElementPos pos_1 = 0; pos_1 < seq_size; ++pos_1) {
@@ -2494,18 +3030,19 @@ private:
                         seq_size,
                         pos_1 + parameters_.reverse_maximum_length);
                 for (ElementPos pos_2 = pos_1 + 2; pos_2 < pos_max; ++pos_2) {
-                    SequenceData sequence_data = sequence_datas_cur_[i][pos_1];
-                    bool ok = concatenate(sequence_data, (pos_1 == 0), SubSequence(sequence, pos_1, pos_2, true), gci);
-                    if (!ok)
-                        continue;
-                    GlobalCost gci_tmp = global_cost_concatenate(sequence_data, false, SubSequence(sequence, pos_2 + 1, seq_size - 1), gci);
-                    if (!(gci_tmp >= gci)) {
+                    SubSequence sub_sequences[] = {
+                        SubSequence(sequence, 0, pos_1 - 1),
+                        SubSequence(sequence, pos_1, pos_2, true),
+                        SubSequence(sequence, pos_2 + 1, seq_size - 1)};
+                    auto bgc_tmp = global_cost_concatenate_1(
+                            sub_sequences, 3, gc, ((m > 1)? &partial_global_costs_cur_1_[i]: nullptr));
+                    if (bgc_tmp.first && !(bgc_tmp.second >= gc)) {
                         Move0 move;
                         move.type = Neighborhoods::Reverse;
                         move.i1 = i;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2;
-                        move.global_cost = gci_tmp - gci;
+                        move.global_cost = bgc_tmp.second - gc;
                         neighborhood.improving_moves.push_back(move);
                     }
                 }
@@ -2518,6 +3055,7 @@ private:
     {
         SequenceId m = number_of_sequences();
         ElementPos n = sequencing_scheme_.number_of_elements();
+        GlobalCost gc = global_cost(solution);
         Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::Add)][0][0];
 
         for (SequenceId i = 0; i < m; ++i) {
@@ -2525,27 +3063,29 @@ private:
                 continue;
             const auto& sequence = solution.sequences[i];
             SequencePos seq_size = sequence.elements.size();
-            GlobalCost gci = global_cost(solution.sequences[i]);
 
             // Loop through all new positions.
             for (ElementPos pos = 0; pos <= seq_size; ++pos) {
 
                 for (ElementId j = 0; j < n; ++j) {
-                    if (modes_cur_[j] != -1)
+                    if (elements_cur_[j].mode != -1)
                         continue;
 
                     for (Mode mode = 0; mode < number_of_modes(j); ++mode) {
-                        SequenceData sequence_data = sequence_datas_cur_[i][pos];
-                        append(sequence_data, {j, mode});
-                        GlobalCost gci_tmp = global_cost_concatenate(sequence_data, false, SubSequence(sequence, pos, seq_size - 1), gci);
-                        if (!(gci_tmp >= gci)) {
+                        SubSequence sub_sequences[] = {
+                            SubSequence(sequence, 0, pos - 1),
+                            SubSequence(j, mode),
+                            SubSequence(sequence, pos, seq_size - 1)};
+                        auto bgc_tmp = global_cost_concatenate_1(
+                                sub_sequences, 3, gc, ((m > 1)? &partial_global_costs_cur_1_[i]: nullptr));
+                        if (bgc_tmp.first && !(bgc_tmp.second >= gc)) {
                             Move0 move;
                             move.type = Neighborhoods::Add;
                             move.i1 = i;
                             move.j = j;
                             move.mode = mode;
                             move.pos_1 = pos;
-                            move.global_cost = gci_tmp - gci;
+                            move.global_cost = bgc_tmp.second - gc;
                             neighborhood.improving_moves.push_back(move);
                         }
                     }
@@ -2559,13 +3099,13 @@ private:
             const Move& perturbation)
     {
         SequenceId m = number_of_sequences();
+        GlobalCost gc = global_cost(solution);
         Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::Remove)][0][0];
         for (SequenceId i = 0; i < m; ++i) {
             if (!neighborhood.modified_sequences[i])
                 continue;
             const auto& sequence = solution.sequences[i];
             SequencePos seq_size = sequence.elements.size();
-            GlobalCost gci = global_cost(solution.sequences[i]);
 
             // Loop through all new positions.
             for (ElementPos pos = 0; pos < seq_size; ++pos) {
@@ -2575,14 +3115,17 @@ private:
                         && j == perturbation.force_add_j)
                     continue;
 
-                SequenceData sequence_data = sequence_datas_cur_[i][pos];
-                GlobalCost gci_tmp = global_cost_concatenate(sequence_data, (pos == 0), SubSequence(sequence, pos + 1, seq_size - 1), gci);
-                if (!(gci_tmp >= gci)) {
+                SubSequence sub_sequences[] = {
+                    SubSequence(sequence, 0, pos - 1),
+                    SubSequence(sequence, pos + 1, seq_size - 1)};
+                auto bgc_tmp = global_cost_concatenate_1(
+                        sub_sequences, 2, gc, ((m > 1)? &partial_global_costs_cur_1_[i]: nullptr));
+                if (bgc_tmp.first && !(bgc_tmp.second >= gc)) {
                     Move0 move;
                     move.type = Neighborhoods::Remove;
                     move.i1 = i;
                     move.pos_1 = pos;
-                    move.global_cost = gci_tmp - gci;
+                    move.global_cost = bgc_tmp.second - gc;
                     neighborhood.improving_moves.push_back(move);
                 }
             }
@@ -2595,6 +3138,7 @@ private:
     {
         SequenceId m = number_of_sequences();
         ElementPos n = sequencing_scheme_.number_of_elements();
+        GlobalCost gc = global_cost(solution);
         Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::Add)][0][0];
 
         for (SequenceId i = 0; i < m; ++i) {
@@ -2602,7 +3146,6 @@ private:
                 continue;
             const auto& sequence = solution.sequences[i];
             SequencePos seq_size = sequence.elements.size();
-            GlobalCost gci = global_cost(solution.sequences[i]);
 
             // Loop through all new positions.
             for (ElementPos pos = 0; pos < seq_size; ++pos) {
@@ -2612,21 +3155,24 @@ private:
                     continue;
 
                 for (ElementId j = 0; j < n; ++j) {
-                    if (modes_cur_[j] != -1)
+                    if (elements_cur_[j].mode != -1)
                         continue;
 
                     for (Mode mode = 0; mode < number_of_modes(j); ++mode) {
-                        SequenceData sequence_data = sequence_datas_cur_[i][pos];
-                        append(sequence_data, {j, mode});
-                        GlobalCost gci_tmp = global_cost_concatenate(sequence_data, false, SubSequence(sequence, pos + 1, seq_size - 1), gci);
-                        if (!(gci_tmp >= gci)) {
+                        SubSequence sub_sequences[] = {
+                            SubSequence(sequence, 0, pos - 1),
+                            SubSequence(j, mode),
+                            SubSequence(sequence, pos + 1, seq_size - 1)};
+                        auto bgc_tmp = global_cost_concatenate_1(
+                                sub_sequences, 3, gc, ((m > 1)? &partial_global_costs_cur_1_[i]: nullptr));
+                        if (bgc_tmp.first && !(bgc_tmp.second >= gc)) {
                             Move0 move;
                             move.type = Neighborhoods::Replace;
                             move.i1 = i;
                             move.j = j;
                             move.mode = mode;
                             move.pos_1 = pos;
-                            move.global_cost = gci_tmp - gci;
+                            move.global_cost = bgc_tmp.second - gc;
                             neighborhood.improving_moves.push_back(move);
                         }
                     }
@@ -2641,6 +3187,7 @@ private:
             bool reverse = false)
     {
         SequenceId m = number_of_sequences();
+        GlobalCost gc = global_cost(solution);
         Neighborhood& neighborhood = (!reverse)?
             neighborhoods_[int(Neighborhoods::InterShift)][block_size][0]:
             neighborhoods_[int(Neighborhoods::InterShiftReverse)][block_size][0];
@@ -2649,63 +3196,58 @@ private:
             const auto& sequence_1 = solution.sequences[i1];
             SequencePos seq_1_size = sequence_1.elements.size();
 
-            for (SequenceId i2 = 0; i2 < m; ++i2) {
-                if (!neighborhood.modified_sequences[i1]
-                        && !neighborhood.modified_sequences[i2])
+            for (ElementPos pos_1 = 0; pos_1 < seq_1_size; ++pos_1) {
+                if (pos_1 + block_size - 1 >= seq_1_size)
                     continue;
-                if (i1 == i2)
+                ElementId j1 = sequence_1.elements[pos_1].j;
+                const auto& neighbors = (closest_neighbors_.empty())? neighbors_: closest_neighbors_[j1];
+
+                SubSequence sub_sequences[] = {
+                    SubSequence(sequence_1, 0, pos_1 - 1),
+                    SubSequence(sequence_1, pos_1 + block_size, seq_1_size - 1)};
+                auto bgc1_tmp = global_cost_concatenate_1(
+                        sub_sequences, 2, gc, nullptr);
+                if (!bgc1_tmp.first)
                     continue;
 
-                const auto& sequence_2 = solution.sequences[i2];
-                SequencePos seq_2_size = sequence_2.elements.size();
-
-                GlobalCost gci = global_cost_merge(
-                        global_cost(solution.sequences[i1]),
-                        global_cost(solution.sequences[i2]));
-
-                for (ElementPos pos_1 = 0; pos_1 <= seq_1_size - block_size; ++pos_1) {
-                    // pos_1 is the start position of the block of element to shift.
-
-                    // Compute first sequence, i.e. the one from which the block iof
-                    // elements is removed.
-                    SequenceData sequence_data_1 = sequence_datas_cur_[i1][pos_1];
-                    GlobalCost gci1_tmp = global_cost_concatenate(sequence_data_1, (pos_1 == 0), SubSequence(sequence_1, pos_1 + block_size, seq_1_size - 1), gci);
-                    bool ok = !(gci1_tmp == worst<GlobalCost>());
-                    if (!ok)
+                for (ElementId j2: neighbors) {
+                    SequenceId i2 = elements_cur_[j2].i;
+                    ElementPos pos_2 = elements_cur_[j2].pos;
+                    if (j2 == j1)
+                        continue;
+                    if (i2 == -1)
+                        continue;
+                    if (!neighborhood.modified_sequences[i1]
+                            && !neighborhood.modified_sequences[i2])
+                        continue;
+                    if (i1 == i2)
                         continue;
 
-                    // Loop through all new positions.
-                    ElementPos pos_min = std::max(
-                            (ElementPos)0,
-                            pos_1 - parameters_.shift_maximum_distance);
-                    ElementPos pos_max = std::min(
-                            seq_2_size,
-                            pos_1 + parameters_.shift_maximum_distance);
-                    for (ElementPos pos_2 = pos_min; pos_2 <= pos_max; ++pos_2) {
-                        bool ok = true;
-                        SequenceData sequence_data_2 = sequence_datas_cur_[i2][pos_2];
-                        ok = concatenate(sequence_data_2, (pos_2 == 0), SubSequence(sequence_1, pos_1, pos_1 + block_size - 1, reverse), gci, &gci1_tmp);
-                        if (!ok)
-                            continue;
-                        GlobalCost gci2_tmp = global_cost_concatenate(sequence_data_2, false, SubSequence(sequence_2, pos_2, seq_2_size - 1), gci, &gci1_tmp);
-                        ok = !(gci2_tmp == worst<GlobalCost>());
-                        if (!ok)
-                            continue;
-                        GlobalCost gci_tmp = global_cost_merge(gci1_tmp, gci2_tmp);
-                        ok = !(gci2_tmp == worst<GlobalCost>());
-                        if (!(gci_tmp >= gci)) {
-                            Move0 move;
-                            move.type = (!reverse)?
-                                Neighborhoods::InterShift:
-                                Neighborhoods::InterShiftReverse;
-                            move.k1 = block_size;
-                            move.i1 = i1;
-                            move.i2 = i2;
-                            move.pos_1 = pos_1;
-                            move.pos_2 = pos_2;
-                            move.global_cost = gci_tmp - gci;
-                            neighborhood.improving_moves.push_back(move);
-                        }
+                    const auto& sequence_2 = solution.sequences[i2];
+                    SequencePos seq_2_size = sequence_2.elements.size();
+
+                    GlobalCost gci = (m == 2)? bgc1_tmp.second:
+                        global_cost_merge(
+                            bgc1_tmp.second,
+                            partial_global_costs_cur_2_[i1][i2]);
+                    SubSequence sub_sequences[] = {
+                        SubSequence(sequence_2, 0, pos_2 - 1),
+                        SubSequence(sequence_1, pos_1, pos_1 + block_size - 1, reverse),
+                        SubSequence(sequence_2, pos_2, seq_2_size - 1)};
+                    auto bgc_tmp = global_cost_concatenate_1(
+                            sub_sequences, 3, gc, &gci);
+                    if (bgc_tmp.first && !(bgc_tmp.second >= gc)) {
+                        Move0 move;
+                        move.type = (!reverse)?
+                            Neighborhoods::InterShift:
+                            Neighborhoods::InterShiftReverse;
+                        move.k1 = block_size;
+                        move.i1 = i1;
+                        move.i2 = i2;
+                        move.pos_1 = pos_1;
+                        move.pos_2 = pos_2;
+                        move.global_cost = bgc_tmp.second - gc;
+                        neighborhood.improving_moves.push_back(move);
                     }
                 }
             }
@@ -2716,52 +3258,110 @@ private:
             const Solution& solution)
     {
         SequenceId m = number_of_sequences();
+        GlobalCost gc = global_cost(solution);
         Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::InterTwoOpt)][0][0];
 
         for (SequenceId i1 = 0; i1 < m; ++i1) {
             const auto& sequence_1 = solution.sequences[i1];
             SequencePos seq_1_size = sequence_1.elements.size();
 
-            for (SequenceId i2 = 0; i2 < m; ++i2) {
-                if (!neighborhood.modified_sequences[i1]
-                        && !neighborhood.modified_sequences[i2])
-                    continue;
-                if (i1 == i2)
-                    continue;
+            for (ElementPos pos_1 = 0; pos_1 < seq_1_size; ++pos_1) {
+                ElementId j1 = sequence_1.elements[pos_1].j;
+                const auto& neighbors = (closest_neighbors_.empty())? neighbors_: closest_neighbors_[j1];
 
-                const auto& sequence_2 = solution.sequences[i2];
-                SequencePos seq_2_size = sequence_2.elements.size();
+                for (ElementId j2: neighbors) {
+                    SequenceId i2 = elements_cur_[j2].i;
+                    ElementPos pos_2 = elements_cur_[j2].pos;
+                    if (j2 == j1)
+                        continue;
+                    if (i2 == -1)
+                        continue;
+                    if (!neighborhood.modified_sequences[i1]
+                            && !neighborhood.modified_sequences[i2])
+                        continue;
+                    if (i1 == i2)
+                        continue;
+                    if (j1 > j2)
+                        continue;
 
-                GlobalCost gci = global_cost_merge(
-                        global_cost(solution.sequences[i1]),
-                        global_cost(solution.sequences[i2]));
+                    const auto& sequence_2 = solution.sequences[i2];
+                    SequencePos seq_2_size = sequence_2.elements.size();
 
-                for (ElementPos pos_1 = 0; pos_1 <= seq_1_size; ++pos_1) {
+                    SubSequence sub_sequences_1[] = {
+                        SubSequence(sequence_1, 0, pos_1),
+                        SubSequence(sequence_2, pos_2 + 1, seq_2_size - 1)};
+                    SubSequence sub_sequences_2[] = {
+                        SubSequence(sequence_2, 0, pos_2),
+                        SubSequence(sequence_1, pos_1 + 1, seq_1_size - 1)};
+                    auto bgc_tmp = global_cost_concatenate_2(
+                            sub_sequences_1, 2, sub_sequences_2, 2,
+                            gc, ((m > 1)? &partial_global_costs_cur_2_[i1][i2]: nullptr));
+                    if (bgc_tmp.first && !(bgc_tmp.second >= gc)) {
+                        Move0 move;
+                        move.type = Neighborhoods::InterTwoOpt;
+                        move.i1 = i1;
+                        move.i2 = i2;
+                        move.pos_1 = pos_1;
+                        move.pos_2 = pos_2;
+                        move.global_cost = bgc_tmp.second - gc;
+                        neighborhood.improving_moves.push_back(move);
+                    }
+                }
+            }
+        }
+    }
 
-                    for (ElementPos pos_2 = 0; pos_2 <= seq_2_size; ++pos_2) {
-                        bool ok = true;
-                        SequenceData sequence_data_1 = sequence_datas_cur_[i1][pos_1];
-                        SequenceData sequence_data_2 = sequence_datas_cur_[i2][pos_2];
-                        GlobalCost bnd_2 = bound(sequence_data_2);
-                        GlobalCost gci1_tmp = global_cost_concatenate(sequence_data_1, (pos_1 == 0), SubSequence(sequence_2, pos_2, seq_2_size - 1), gci, &bnd_2);
-                        ok = !(gci1_tmp == worst<GlobalCost>());
-                        if (!ok)
-                            continue;
-                        GlobalCost gci2_tmp = global_cost_concatenate(sequence_data_2, (pos_2 == 0), SubSequence(sequence_1, pos_1, seq_1_size - 1), gci, &gci1_tmp);
-                        ok = !(gci2_tmp == worst<GlobalCost>());
-                        if (!ok)
-                            continue;
-                        GlobalCost gci_tmp = global_cost_merge(gci1_tmp, gci2_tmp);
-                        if (!(gci_tmp >= gci)) {
-                            Move0 move;
-                            move.type = Neighborhoods::InterTwoOpt;
-                            move.i1 = i1;
-                            move.i2 = i2;
-                            move.pos_1 = pos_1;
-                            move.pos_2 = pos_2;
-                            move.global_cost = gci_tmp - gci;
-                            neighborhood.improving_moves.push_back(move);
-                        }
+    inline void explore_inter_two_opt_reverse(
+            const Solution& solution)
+    {
+        SequenceId m = number_of_sequences();
+        GlobalCost gc = global_cost(solution);
+        Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::InterTwoOptReverse)][0][0];
+
+        for (SequenceId i1 = 0; i1 < m; ++i1) {
+            const auto& sequence_1 = solution.sequences[i1];
+            SequencePos seq_1_size = sequence_1.elements.size();
+
+            for (ElementPos pos_1 = 0; pos_1 < seq_1_size; ++pos_1) {
+                ElementId j1 = sequence_1.elements[pos_1].j;
+                const auto& neighbors = (closest_neighbors_.empty())? neighbors_: closest_neighbors_[j1];
+
+                for (ElementId j2: neighbors) {
+                    SequenceId i2 = elements_cur_[j2].i;
+                    ElementPos pos_2 = elements_cur_[j2].pos;
+                    if (j2 == j1)
+                        continue;
+                    if (i2 == -1)
+                        continue;
+                    if (!neighborhood.modified_sequences[i1]
+                            && !neighborhood.modified_sequences[i2])
+                        continue;
+                    if (i1 == i2)
+                        continue;
+                    if (j1 > j2)
+                        continue;
+
+                    const auto& sequence_2 = solution.sequences[i2];
+                    SequencePos seq_2_size = sequence_2.elements.size();
+
+                    SubSequence sub_sequences_1[] = {
+                        SubSequence(sequence_1, 0, pos_1),
+                        SubSequence(sequence_2, 0, pos_2, true)};
+                    SubSequence sub_sequences_2[] = {
+                        SubSequence(sequence_1, pos_1 + 1, seq_1_size - 1, true),
+                        SubSequence(sequence_2, pos_2 + 1, seq_2_size - 1)};
+                    auto bgc_tmp = global_cost_concatenate_2(
+                            sub_sequences_1, 2, sub_sequences_2, 2,
+                            gc, ((m > 1)? &partial_global_costs_cur_2_[i1][i2]: nullptr));
+                    if (bgc_tmp.first && !(bgc_tmp.second >= gc)) {
+                        Move0 move;
+                        move.type = Neighborhoods::InterTwoOptReverse;
+                        move.i1 = i1;
+                        move.i2 = i2;
+                        move.pos_1 = pos_1;
+                        move.pos_2 = pos_2;
+                        move.global_cost = bgc_tmp.second - gc;
+                        neighborhood.improving_moves.push_back(move);
                     }
                 }
             }
@@ -2774,105 +3374,64 @@ private:
             ElementPos block_size_2)
     {
         SequenceId m = number_of_sequences();
+        GlobalCost gc = global_cost(solution);
         Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::InterSwap)][block_size_1][block_size_2];
 
         for (SequenceId i1 = 0; i1 < m; ++i1) {
             const auto& sequence_1 = solution.sequences[i1];
             SequencePos seq_1_size = sequence_1.elements.size();
 
-            for (SequenceId i2 = 0; i2 < m; ++i2) {
-                if (!neighborhood.modified_sequences[i1]
-                        && !neighborhood.modified_sequences[i2])
-                    continue;
-                if (i1 == i2)
-                    continue;
-                if (block_size_1 == block_size_2 && i2 > i1)
+            for (ElementPos pos_1 = 0; pos_1 < seq_1_size; ++pos_1) {
+                ElementId j1 = sequence_1.elements[pos_1].j;
+                const auto& neighbors = (closest_neighbors_.empty())? neighbors_: closest_neighbors_[j1];
+                if (pos_1 + block_size_1 - 1 >= seq_1_size)
                     continue;
 
-                const auto& sequence_2 = solution.sequences[i2];
-                SequencePos seq_2_size = sequence_2.elements.size();
+                for (ElementId j2: neighbors) {
+                    SequenceId i2 = elements_cur_[j2].i;
+                    ElementPos pos_2 = elements_cur_[j2].pos;
+                    if (j2 == j1)
+                        continue;
+                    if (i2 == -1)
+                        continue;
+                    if (!neighborhood.modified_sequences[i1]
+                            && !neighborhood.modified_sequences[i2])
+                        continue;
+                    if (i1 == i2)
+                        continue;
+                    if (block_size_1 == block_size_2 && j1 > j2)
+                        continue;
 
-                GlobalCost gci = global_cost_merge(
-                        global_cost(solution.sequences[i1]),
-                        global_cost(solution.sequences[i2]));
+                    const auto& sequence_2 = solution.sequences[i2];
+                    SequencePos seq_2_size = sequence_2.elements.size();
+                    if (pos_2 + block_size_2 - 1 >= seq_2_size)
+                        continue;
 
-                for (ElementPos pos_1 = 0; pos_1 <= seq_1_size - block_size_1; ++pos_1) {
-
-                    for (ElementPos pos_2 = 0; pos_2 <= seq_2_size - block_size_2; ++pos_2) {
-                        bool ok = true;
-                        SequenceData sequence_data_1 = sequence_datas_cur_[i1][pos_1];
-                        SequenceData sequence_data_2 = sequence_datas_cur_[i2][pos_2];
-                        GlobalCost bnd_2 = bound(sequence_data_2);
-
-                        ok = concatenate(sequence_data_1, (pos_1 == 0), SubSequence(sequence_2, pos_2, pos_2 + block_size_2 - 1), gci, &bnd_2);
-                        if (!ok)
-                            continue;
-
-                        GlobalCost gci1_tmp = global_cost_concatenate(sequence_data_1, false, SubSequence(sequence_1, pos_1 + block_size_1, seq_1_size - 1), gci, &bnd_2);
-                        ok = !(gci1_tmp == worst<GlobalCost>());
-                        if (!ok)
-                            continue;
-
-                        ok = concatenate(sequence_data_2, (pos_2 == 0), SubSequence(sequence_1, pos_1, pos_1 + block_size_1 - 1), gci, &gci1_tmp);
-                        if (!ok)
-                            continue;
-
-                        GlobalCost gci2_tmp = global_cost_concatenate(sequence_data_2, false, SubSequence(sequence_2, pos_2 + block_size_2, seq_2_size - 1), gci, &gci1_tmp);
-                        ok = !(gci2_tmp == worst<GlobalCost>());
-                        if (!ok)
-                            continue;
-
-                        GlobalCost gci_tmp = global_cost_merge(gci1_tmp, gci2_tmp);
-                        if (!(gci_tmp >= gci)) {
-                            Move0 move;
-                            move.type = Neighborhoods::InterSwap;
-                            move.k1 = block_size_1;
-                            move.k2 = block_size_2;
-                            move.i1 = i1;
-                            move.i2 = i2;
-                            move.pos_1 = pos_1;
-                            move.pos_2 = pos_2;
-                            move.global_cost = gci_tmp - gci;
-                            neighborhood.improving_moves.push_back(move);
-                        }
+                    SubSequence sub_sequences_1[] = {
+                        SubSequence(sequence_1, 0, pos_1 - 1),
+                        SubSequence(sequence_2, pos_2, pos_2 + block_size_2 - 1),
+                        SubSequence(sequence_1, pos_1 + block_size_1, seq_1_size - 1)};
+                    SubSequence sub_sequences_2[] = {
+                        SubSequence(sequence_2, 0, pos_2 - 1),
+                        SubSequence(sequence_1, pos_1, pos_1 + block_size_1 - 1),
+                        SubSequence(sequence_2, pos_2 + block_size_2, seq_2_size - 1)};
+                    auto bgc_tmp = global_cost_concatenate_2(
+                            sub_sequences_1, 3, sub_sequences_2, 3,
+                            gc, ((m > 1)? &partial_global_costs_cur_2_[i1][i2]: nullptr));
+                    if (bgc_tmp.first && !(bgc_tmp.second >= gc)) {
+                        Move0 move;
+                        move.type = Neighborhoods::InterSwap;
+                        move.k1 = block_size_1;
+                        move.k2 = block_size_2;
+                        move.i1 = i1;
+                        move.i2 = i2;
+                        move.pos_1 = pos_1;
+                        move.pos_2 = pos_2;
+                        move.global_cost = bgc_tmp.second - gc;
+                        neighborhood.improving_moves.push_back(move);
                     }
                 }
             }
-        }
-    }
-
-    /**
-     * 'added_element_pos' is the position in the original sequence.
-     */
-    inline GlobalCost compute_global_cost(
-            const Sequence& sequence,
-            ElementPos removed_element_pos,
-            ElementPos added_element_pos,
-            SequenceElement se,
-            const GlobalCost& cutoff,
-            const GlobalCost* gci1 = nullptr)
-    {
-        SequencePos seq_size = sequence.elements.size();
-        //std::cout << "compute_global_cost"
-        //    << " seq_size " << seq_size
-        //    << " r " << removed_element_pos
-        //    << " a " << added_element_pos
-        //    << " j " << se.j
-        //    << std::endl;
-        if (removed_element_pos < added_element_pos) {
-            SequenceData sequence_data = sequence_datas_cur_[sequence.i][removed_element_pos];
-            bool ok = concatenate(sequence_data, (removed_element_pos == 0), SubSequence(sequence, removed_element_pos + 1, added_element_pos - 1), cutoff, gci1);
-            if (!ok)
-                return worst<GlobalCost>();
-            append(sequence_data, se);
-            return global_cost_concatenate(sequence_data, false, SubSequence(sequence, added_element_pos, seq_size - 1), cutoff, gci1);
-        } else {
-            SequenceData sequence_data = sequence_datas_cur_[sequence.i][added_element_pos];
-            append(sequence_data, se);
-            bool ok = concatenate(sequence_data, false, SubSequence(sequence, added_element_pos, removed_element_pos - 1), cutoff, gci1);
-            if (!ok)
-                return worst<GlobalCost>();
-            return global_cost_concatenate(sequence_data, false, SubSequence(sequence, removed_element_pos + 1, seq_size - 1), cutoff, gci1);
         }
     }
 
@@ -2880,6 +3439,7 @@ private:
             const Solution& solution)
     {
         SequenceId m = number_of_sequences();
+        GlobalCost gc = global_cost(solution);
         Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::InterSwapStar)][0][0];
 
         for (SequenceId i1 = 0; i1 < m; ++i1) {
@@ -2905,9 +3465,12 @@ private:
                     GlobalCost gc_best_2 = worst<GlobalCost>();
                     GlobalCost gc_best_3 = worst<GlobalCost>();
                     for (ElementPos pos_2 = 0; pos_2 <= seq_2_size; ++pos_2) {
-                        SequenceData sequence_data = sequence_datas_cur_[i2][pos_2];
-                        append(sequence_data, sequence_1.elements[pos_1]);
-                        GlobalCost gci2_tmp = global_cost_concatenate(sequence_data, false, SubSequence(sequence_2, pos_2, seq_2_size - 1), worst<GlobalCost>());
+                        SubSequence sub_sequences[] = {
+                            SubSequence(sequence_2, 0, pos_2 - 1),
+                            SubSequence(sequence_1, pos_1, pos_1),
+                            SubSequence(sequence_2, pos_2, seq_2_size - 1)};
+                        auto gci2_tmp = global_cost_concatenate_1(
+                                sub_sequences, 3, nullptr);
                         if (pos_best_1 == -1 || !(gci2_tmp >= gc_best_1)) {
                             pos_best_3 = pos_best_2;
                             pos_best_2 = pos_best_1;
@@ -2947,9 +3510,12 @@ private:
                     GlobalCost gc_best_2 = worst<GlobalCost>();
                     GlobalCost gc_best_3 = worst<GlobalCost>();
                     for (ElementPos pos_1 = 0; pos_1 <= seq_1_size; ++pos_1) {
-                        SequenceData sequence_data = sequence_datas_cur_[i1][pos_1];
-                        append(sequence_data, sequence_2.elements[pos_2]);
-                        GlobalCost gci1_tmp = global_cost_concatenate(sequence_data, false, SubSequence(sequence_1, pos_1, seq_1_size - 1), worst<GlobalCost>());
+                        SubSequence sub_sequences[] = {
+                            SubSequence(sequence_1, 0, pos_1 - 1),
+                            SubSequence(sequence_2, pos_2, pos_2),
+                            SubSequence(sequence_1, pos_1, seq_1_size - 1)};
+                        auto gci1_tmp = global_cost_concatenate_1(
+                                sub_sequences, 3, nullptr);
                         if (pos_best_1 == -1 || !(gci1_tmp >= gc_best_1)) {
                             pos_best_3 = pos_best_2;
                             pos_best_2 = pos_best_1;
@@ -2978,10 +3544,6 @@ private:
                     best_positions_2[pos_2] = {pos_best_1, pos_best_2, pos_best_3};
                 }
 
-                GlobalCost gci = global_cost_merge(
-                        global_cost(solution.sequences[i1]),
-                        global_cost(solution.sequences[i2]));
-
                 for (ElementPos pos_1 = 0; pos_1 <= seq_1_size - 1; ++pos_1) {
 
                     for (ElementPos pos_2 = 0; pos_2 <= seq_2_size - 1; ++pos_2) {
@@ -3001,17 +3563,17 @@ private:
                         for (int a = 0; a < 4; ++a) {
                             ElementPos p = (a < 3)? best_positions_1[pos_1][a]: pos_2;
                             if (p != -1) {
-                                GlobalCost gci2 = compute_global_cost(
-                                        sequence_2,
-                                        pos_2,
-                                        p,
-                                        sequence_1.elements[pos_1],
-                                        gci);
+                                SubSequence sub_sequences[] = {
+                                    SubSequence(sequence_2, 0, pos_2 - 1),
+                                    SubSequence(sequence_1, p, p),
+                                    SubSequence(sequence_2, pos_2, seq_2_size - 1)};
+                                auto bgci2 = global_cost_concatenate_1(
+                                        sub_sequences, 3, gc, &partial_global_costs_cur_2_[i1][i2]);
                                 //std::cout << "p " << p
                                 //    << " gc " << to_string(gci2)
                                 //    << std::endl;
-                                if (!(gci2 >= gci2_tmp)) {
-                                    gci2_tmp = gci2;
+                                if (bgci2.first && !(bgci2.second >= gci2_tmp)) {
+                                    gci2_tmp = bgci2.second;
                                     pos_1_new = p;
                                 }
                             }
@@ -3021,22 +3583,21 @@ private:
 
                         // Find pos_2_new.
                         ElementPos pos_2_new = -1;
-                        GlobalCost gci1_tmp = worst<GlobalCost>();
+                        GlobalCost gc_tmp = worst<GlobalCost>();
                         for (int a = 0; a < 4; ++a) {
                             ElementPos p = (a < 3)? best_positions_2[pos_2][a]: pos_1;
                             if (p != -1) {
-                                GlobalCost gci1 = compute_global_cost(
-                                        sequence_1,
-                                        pos_1,
-                                        p,
-                                        sequence_2.elements[pos_2],
-                                        gci,
-                                        &gci2_tmp);
+                                SubSequence sub_sequences[] = {
+                                    SubSequence(sequence_1, 0, pos_1 - 1),
+                                    SubSequence(sequence_2, p, p),
+                                    SubSequence(sequence_1, pos_1, seq_1_size - 1)};
+                                auto bgc = global_cost_concatenate_1(
+                                        sub_sequences, 3, gc, &gci2_tmp);
                                 //std::cout << "p " << p
                                 //    << " gc " << to_string(gci1)
                                 //    << std::endl;
-                                if (!(gci1 >= gci1_tmp)) {
-                                    gci1_tmp = gci1;
+                                if (bgc.first && !(bgc.second >= gc_tmp)) {
+                                    gc_tmp = bgc.second;
                                     pos_2_new = p;
                                 }
                             }
@@ -3050,8 +3611,7 @@ private:
                         //    << " pos_2_new " << pos_2_new
                         //    << std::endl;
 
-                        GlobalCost gci_tmp = global_cost_merge(gci1_tmp, gci2_tmp);
-                        if (!(gci_tmp >= gci)) {
+                        if (!(gc_tmp >= gc)) {
                             Move0 move;
                             move.type = Neighborhoods::InterSwapStar;
                             move.i1 = i1;
@@ -3060,7 +3620,7 @@ private:
                             move.pos_2 = pos_1_new;
                             move.pos_3 = pos_2;
                             move.pos_4 = pos_2_new;
-                            move.global_cost = gci_tmp - gci;
+                            move.global_cost = gc_tmp - gc;
                             neighborhood.improving_moves.push_back(move);
                         }
                     }
@@ -3073,19 +3633,16 @@ private:
             const Solution& solution)
     {
         SequenceId m = number_of_sequences();
+        GlobalCost gc = global_cost(solution);
         Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::ShiftChangeMode)][0][0];
         for (SequenceId i = 0; i < m; ++i) {
             if (!neighborhood.modified_sequences[i])
                 continue;
             const auto& sequence = solution.sequences[i];
             SequencePos seq_size = sequence.elements.size();
-            GlobalCost gci = global_cost(solution.sequences[i]);
 
             for (ElementPos block_pos = 0; block_pos <= seq_size - 1; ++block_pos) {
                 ElementId j = sequence.elements[block_pos].j;
-                // Initialize sequence_data_cur.
-                SequenceData sequence_data_cur = empty_sequence_data(i);
-
                 // Loop through all new positions.
                 ElementPos pos_min = std::max(
                         (ElementPos)0,
@@ -3094,36 +3651,36 @@ private:
                         seq_size - 1,
                         block_pos + parameters_.shift_maximum_distance);
                 for (ElementPos pos_new = pos_min; pos_new <= pos_max; ++pos_new) {
-                    ElementPos p0 = (pos_new < block_pos)? pos_new: pos_new + 1;
-
                     for (Mode mode = 0; mode < number_of_modes(j); ++mode) {
-                        SequenceData sequence_data = sequence_data_cur;
-                        append(sequence_data, {j, mode});
-                        bool ok = concatenate(sequence_data, false, SubSequence(sequence, p0, block_pos - 1), gci);
-                        if (!ok)
-                            continue;
-                        GlobalCost gci_tmp = global_cost_concatenate(sequence_data, false, SubSequence(sequence, std::max(p0, block_pos + 1), seq_size - 1), gci);
-                        if (!(gci_tmp >= gci)) {
+                        std::pair<bool, GlobalCost> bgc_tmp;
+                        if (block_pos > pos_new) {
+                            SubSequence sub_sequences[] = {
+                                SubSequence(sequence, 0, pos_new - 1),
+                                SubSequence(j, mode),
+                                SubSequence(sequence, pos_new, block_pos - 1),
+                                SubSequence(sequence, block_pos + 1, seq_size - 1)};
+                            bgc_tmp = global_cost_concatenate_1(
+                                    sub_sequences, 4, gc, ((m > 1)? &partial_global_costs_cur_1_[i]: nullptr));
+                        } else {
+                            SubSequence sub_sequences[] = {
+                                SubSequence(sequence, 0, block_pos - 1),
+                                SubSequence(sequence, block_pos + 1, pos_new),
+                                SubSequence(j, mode),
+                                SubSequence(sequence, pos_new + 1, seq_size - 1)};
+                            bgc_tmp = global_cost_concatenate_1(
+                                    sub_sequences, 4, gc, ((m > 1)? &partial_global_costs_cur_1_[i]: nullptr));
+                        }
+                        if (bgc_tmp.first && !(bgc_tmp.second >= gc)) {
                             Move0 move;
                             move.type = Neighborhoods::ShiftChangeMode;
                             move.i1 = i;
                             move.pos_1 = block_pos;
                             move.pos_2 = pos_new;
                             move.mode = mode;
-                            move.global_cost = gci_tmp - gci;
+                            move.global_cost = bgc_tmp.second - gc;
                             neighborhood.improving_moves.push_back(move);
                         }
                     }
-
-                    // Stop condition.
-                    if (pos_new == seq_size - 1)
-                        break;
-
-                    // Add next element to sequence_data_cur_.
-                    append(sequence_data_cur, sequence.elements[p0]);
-                    // Check early termination.
-                    if (bound(sequence_data_cur) >= gci)
-                        break;
                 }
             }
         }
@@ -3133,13 +3690,13 @@ private:
             const Solution& solution)
     {
         SequenceId m = number_of_sequences();
+        GlobalCost gc = global_cost(solution);
         Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::ModeSwap)][0][0];
         for (SequenceId i = 0; i < m; ++i) {
             if (!neighborhood.modified_sequences[i])
                 continue;
             const auto& sequence = solution.sequences[i];
             SequencePos seq_size = sequence.elements.size();
-            GlobalCost gci = global_cost(solution.sequences[i]);
 
             // Loop through all pairs.
             Counter pos_max = seq_size - 1;
@@ -3153,25 +3710,24 @@ private:
                 for (ElementPos pos_2 = pos_1 + 1; pos_2 < pos_2_max; ++pos_2) {
                     ElementId j2 = sequence.elements[pos_2].j;
                     ElementId mode_2 = sequence.elements[pos_2].mode;
-
                     if (mode_1 == mode_2)
                         continue;
 
-                    bool ok = true;
-                    SequenceData sequence_data = sequence_datas_cur_[i][pos_1];
-                    append(sequence_data, {j1, mode_2});
-                    ok = concatenate(sequence_data, false, SubSequence(sequence, pos_1 + 1, pos_2 - 1), gci);
-                    if (!ok)
-                        continue;
-                    append(sequence_data, {j2, mode_1});
-                    GlobalCost gci_tmp = global_cost_concatenate(sequence_data, false, SubSequence(sequence, pos_2 + 1, seq_size - 1), gci);
-                    if (!(gci_tmp >= gci)) {
+                    SubSequence sub_sequences[] = {
+                        SubSequence(sequence, 0, pos_1 - 1),
+                        SubSequence(j1, mode_2),
+                        SubSequence(sequence, pos_1 + 1, pos_2 - 1),
+                        SubSequence(j2, mode_1),
+                        SubSequence(sequence, pos_2 + 1, seq_size - 1)};
+                    auto bgc_tmp = global_cost_concatenate_1(
+                            sub_sequences, 5, gc, ((m > 1)? &partial_global_costs_cur_1_[i]: nullptr));
+                    if (bgc_tmp.first && !(bgc_tmp.second >= gc)) {
                         Move0 move;
                         move.type = Neighborhoods::ModeSwap;
                         move.i1 = i;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2;
-                        move.global_cost = gci_tmp - gci;
+                        move.global_cost = bgc_tmp.second - gc;
                         neighborhood.improving_moves.push_back(move);
                     }
                 }
@@ -3183,13 +3739,13 @@ private:
             const Solution& solution)
     {
         SequenceId m = number_of_sequences();
+        GlobalCost gc = global_cost(solution);
         Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::SwapWithModes)][0][0];
         for (SequenceId i = 0; i < m; ++i) {
             if (!neighborhood.modified_sequences[i])
                 continue;
             const auto& sequence = solution.sequences[i];
             SequencePos seq_size = sequence.elements.size();
-            GlobalCost gci = global_cost(solution.sequences[i]);
 
             // Loop through all pairs.
             Counter pos_max = seq_size - 1;
@@ -3203,25 +3759,24 @@ private:
                 for (ElementPos pos_2 = pos_1 + 1; pos_2 < pos_2_max; ++pos_2) {
                     ElementId j2 = sequence.elements[pos_2].j;
                     ElementId mode_2 = sequence.elements[pos_2].mode;
-
                     if (mode_1 == mode_2)
                         continue;
 
-                    bool ok = true;
-                    SequenceData sequence_data = sequence_datas_cur_[i][pos_1];
-                    append(sequence_data, {j2, mode_1});
-                    ok = concatenate(sequence_data, false, SubSequence(sequence, pos_1 + 1, pos_2 - 1), gci);
-                    if (!ok)
-                        continue;
-                    append(sequence_data, {j1, mode_2});
-                    GlobalCost gci_tmp = global_cost_concatenate(sequence_data, false, SubSequence(sequence, pos_2 + 1, seq_size - 1), gci);
-                    if (!(gci_tmp >= gci)) {
+                    SubSequence sub_sequences[] = {
+                        SubSequence(sequence, 0, pos_1 - 1),
+                        SubSequence(j2, mode_1),
+                        SubSequence(sequence, pos_1 + 1, pos_2 - 1),
+                        SubSequence(j1, mode_2),
+                        SubSequence(sequence, pos_2 + 1, seq_size - 1)};
+                    auto bgc_tmp = global_cost_concatenate_1(
+                            sub_sequences, 5, gc, ((m > 1)? &partial_global_costs_cur_1_[i]: nullptr));
+                    if (bgc_tmp.first && !(bgc_tmp.second >= gc)) {
                         Move0 move;
                         move.type = Neighborhoods::SwapWithModes;
                         move.i1 = i;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2;
-                        move.global_cost = gci_tmp - gci;
+                        move.global_cost = bgc_tmp.second - gc;
                         neighborhood.improving_moves.push_back(move);
                     }
                 }
@@ -3234,31 +3789,34 @@ private:
     {
         SequenceId m = number_of_sequences();
         ElementPos n = sequencing_scheme_.number_of_elements();
+        GlobalCost gc = global_cost(solution);
         std::vector<Move0> improving_moves;
         for (SequenceId i = 0; i < m; ++i) {
             const auto& sequence = solution.sequences[i];
             SequencePos seq_size = sequence.elements.size();
-            GlobalCost gci = global_cost(solution.sequences[i]);
 
             // Loop through all new positions.
             for (ElementPos pos = 0; pos <= seq_size; ++pos) {
 
                 for (ElementId j = 0; j < n; ++j) {
-                    if (modes_cur_[j] != -1)
+                    if (elements_cur_[j].mode != -1)
                         continue;
 
                     for (Mode mode = 0; mode < number_of_modes(j); ++mode) {
-                        SequenceData sequence_data = sequence_datas_cur_[i][pos];
-                        append(sequence_data, {j, mode});
-                        GlobalCost gci_tmp = global_cost_concatenate(sequence_data, false, SubSequence(sequence, pos, seq_size - 1), gci);
-                        if (!(gci_tmp >= gci)) {
+                        SubSequence sub_sequences[] = {
+                            SubSequence(sequence, 0, pos - 1),
+                            SubSequence(j, mode),
+                            SubSequence(sequence, pos, seq_size - 1)};
+                        auto bgc_tmp = global_cost_concatenate_1(
+                                sub_sequences, 3, gc, ((m > 1)? &partial_global_costs_cur_1_[i]: nullptr));
+                        if (bgc_tmp.first && !(bgc_tmp.second >= gc)) {
                             Move0 move;
                             move.type = Neighborhoods::Add;
                             move.i1 = i;
                             move.j = j;
                             move.mode = mode;
                             move.pos_1 = pos;
-                            move.global_cost = gci_tmp - gci;
+                            move.global_cost = bgc_tmp.second - gc;
                             improving_moves.push_back(move);
                         }
                     }
@@ -3275,12 +3833,13 @@ private:
             ElementId j_prec_old = -2,
             Mode mode_old = -1)
     {
+        //std::cout << "explore_add j " << j << std::endl;
         std::vector<Move0> improving_moves;
         SequenceId m = number_of_sequences();
+        GlobalCost gc = global_cost(solution);
         for (SequenceId i = 0; i < m; ++i) {
             const auto& sequence = solution.sequences[i];
             SequencePos seq_size = sequence.elements.size();
-            GlobalCost gci = global_cost(solution.sequences[i]);
 
             // Loop through all new positions.
             for (ElementPos pos = 0; pos <= seq_size; ++pos) {
@@ -3298,17 +3857,21 @@ private:
                             && mode == mode_old)
                         continue;
 
-                    SequenceData sequence_data = sequence_datas_cur_[i][pos];
-                    append(sequence_data, {j, mode});
-                    GlobalCost gci_tmp = global_cost_concatenate(sequence_data, false, SubSequence(sequence, pos, seq_size - 1), gci);
-                    if (!(gci_tmp >= gci)) {
+                    SubSequence sub_sequences[] = {
+                        SubSequence(sequence, 0, pos - 1),
+                        SubSequence(j, mode),
+                        SubSequence(sequence, pos, seq_size - 1)};
+                    auto bgc_tmp = global_cost_concatenate_1(
+                            sub_sequences, 3, gc, ((m > 1)? &partial_global_costs_cur_1_[i]: nullptr));
+                    //std::cout << to_string(gc_tmp) << std::endl;
+                    if (bgc_tmp.first && !(bgc_tmp.second >= gc)) {
                         Move0 move;
                         move.type = Neighborhoods::Add;
                         move.i1 = i;
                         move.j = j;
                         move.mode = mode;
                         move.pos_1 = pos;
-                        move.global_cost = gci_tmp - gci;
+                        move.global_cost = bgc_tmp.second - gc;
                         improving_moves.push_back(move);
                     }
                 }
@@ -3323,29 +3886,32 @@ private:
         std::vector<Move0> improving_moves;
         SequenceId m = number_of_sequences();
         ElementPos n = sequencing_scheme_.number_of_elements();
+        GlobalCost gc = global_cost(solution);
         for (SequenceId i = 0; i < m; ++i) {
             const auto& sequence = solution.sequences[i];
             SequencePos seq_size = sequence.elements.size();
-            GlobalCost gci = global_cost(solution.sequences[i]);
             ElementPos pos = seq_size;
 
             // Loop through all new positions.
             for (ElementId j = 0; j < n; ++j) {
-                if (modes_cur_[j] != -1)
+                if (elements_cur_[j].mode != -1)
                     continue;
 
                 for (Mode mode = 0; mode < number_of_modes(j); ++mode) {
-                    SequenceData sequence_data = sequence_datas_cur_[i][pos];
-                    append(sequence_data, {j, mode});
-                    GlobalCost gci_tmp = global_cost_concatenate(sequence_data, false, SubSequence(sequence, pos, seq_size - 1), gci);
-                    if (!(gci_tmp >= gci)) {
+                    SubSequence sub_sequences[] = {
+                        SubSequence(sequence, 0, pos - 1),
+                        SubSequence(j, mode),
+                        SubSequence(sequence, pos, seq_size - 1)};
+                    auto bgc_tmp = global_cost_concatenate_1(
+                            sub_sequences, 3, gc, ((m > 1)? &partial_global_costs_cur_1_[i]: nullptr));
+                    if (bgc_tmp.first && !(bgc_tmp.second >= gc)) {
                         Move0 move;
                         move.type = Neighborhoods::Add;
                         move.i1 = i;
                         move.j = j;
                         move.mode = mode;
                         move.pos_1 = pos;
-                        move.global_cost = gci_tmp - gci;
+                        move.global_cost = bgc_tmp.second - gc;
                         improving_moves.push_back(move);
                     }
                 }
@@ -3358,6 +3924,7 @@ private:
             Solution& solution,
             const Move0& move)
     {
+        auto begin = std::chrono::steady_clock::now();
         SequenceId m = number_of_sequences();
         ElementPos n = sequencing_scheme_.number_of_elements();
 
@@ -3525,6 +4092,13 @@ private:
                 append(sequence_tmp, elements[p]);
             break;
         } case Neighborhoods::InterTwoOpt: {
+            //std::cout << "Apply InterTwoOpt"
+            //    << " i1 " << move.i1
+            //    << " i2 " << move.i2
+            //    << " pos_1 " << move.pos_1
+            //    << " pos_2 " << move.pos_2
+            //    << " gc " << to_string(move.global_cost)
+            //    << std::endl;
             for (SequenceId i = 0; i < m; ++i)
                 if (i != move.i1 && i != move.i2)
                     solution_tmp_.sequences[i] = solution.sequences[i];
@@ -3535,17 +4109,48 @@ private:
             // Sequence 1.
             Sequence& sequence_tmp_1 = solution_tmp_.sequences[move.i1];
             sequence_tmp_1 = empty_sequence(move.i1);
-            for (ElementPos p = 0; p < move.pos_1; ++p)
+            for (ElementPos p = 0; p <= move.pos_1; ++p)
                 append(sequence_tmp_1, elements_1[p]);
-            for (ElementPos p = move.pos_2; p < seq_2_size; ++p)
+            for (ElementPos p = move.pos_2 + 1; p <= seq_2_size - 1; ++p)
                 append(sequence_tmp_1, elements_2[p]);
             // Sequence 2.
             Sequence& sequence_tmp_2 = solution_tmp_.sequences[move.i2];
             sequence_tmp_2 = empty_sequence(move.i2);
-            for (ElementPos p = 0; p < move.pos_2; ++p)
+            for (ElementPos p = 0; p <= move.pos_2; ++p)
                 append(sequence_tmp_2, elements_2[p]);
-            for (ElementPos p = move.pos_1; p < seq_1_size; ++p)
+            for (ElementPos p = move.pos_1 + 1; p <= seq_1_size - 1; ++p)
                 append(sequence_tmp_2, elements_1[p]);
+            break;
+        } case Neighborhoods::InterTwoOptReverse: {
+            //std::cout << "Apply InterTwoOptReverse" << std::endl;
+            //std::cout << "i1 " << move.i1
+            //    << " i2 " << move.i2
+            //    << " pos_1 " << move.pos_1
+            //    << " pos_2 " << move.pos_2
+            //    << " gc " << to_string(move.global_cost)
+            //    << std::endl;
+            for (SequenceId i = 0; i < m; ++i)
+                if (i != move.i1 && i != move.i2)
+                    solution_tmp_.sequences[i] = solution.sequences[i];
+            const auto& elements_1 = solution.sequences[move.i1].elements;
+            const auto& elements_2 = solution.sequences[move.i2].elements;
+            SequencePos seq_1_size = elements_1.size();
+            SequencePos seq_2_size = elements_2.size();
+            // Sequence 1.
+            Sequence& sequence_tmp_1 = solution_tmp_.sequences[move.i1];
+            sequence_tmp_1 = empty_sequence(move.i1);
+            for (ElementPos p = 0; p <= move.pos_1; ++p)
+                append(sequence_tmp_1, elements_1[p]);
+            for (ElementPos p = move.pos_2; p >= 0; --p)
+                append(sequence_tmp_1, elements_2[p]);
+            // Sequence 2.
+            Sequence& sequence_tmp_2 = solution_tmp_.sequences[move.i2];
+            sequence_tmp_2 = empty_sequence(move.i2);
+            for (ElementPos p = seq_1_size - 1; p >= move.pos_1 + 1; --p)
+                append(sequence_tmp_2, elements_1[p]);
+            for (ElementPos p = move.pos_2 + 1; p <= seq_2_size - 1; ++p)
+                append(sequence_tmp_2, elements_2[p]);
+            //std::cout << "End apply InterTwoOptReverse" << std::endl;
             break;
         } case Neighborhoods::InterShift: {
             ElementPos block_size = move.k1;
@@ -3574,6 +4179,15 @@ private:
                 append(sequence_tmp_2, elements_2[p]);
             break;
         } case Neighborhoods::InterSwap: {
+            //std::cout << "Apply InterSwap"
+            //    << " k1 " << move.k1
+            //    << " k2 " << move.k2
+            //    << " i1 " << move.i1
+            //    << " i2 " << move.i2
+            //    << " pos_1 " << move.pos_1
+            //    << " pos_2 " << move.pos_2
+            //    << " gc " << to_string(move.global_cost)
+            //    << std::endl;
             ElementPos block_size_1 = move.k1;
             ElementPos block_size_2 = move.k2;
             for (SequenceId i = 0; i < m; ++i)
@@ -3586,23 +4200,31 @@ private:
             // Sequence 1.
             Sequence& sequence_tmp_1 = solution_tmp_.sequences[move.i1];
             sequence_tmp_1 = empty_sequence(move.i1);
-            for (ElementPos p = 0; p < move.pos_1; ++p)
+            for (ElementPos p = 0; p <= move.pos_1 - 1; ++p)
                 append(sequence_tmp_1, elements_1[p]);
-            for (ElementPos p = move.pos_2; p < move.pos_2 + block_size_2; ++p)
+            for (ElementPos p = move.pos_2; p <= move.pos_2 + block_size_2 - 1; ++p)
                 append(sequence_tmp_1, elements_2[p]);
-            for (ElementPos p = move.pos_1 + block_size_1; p < seq_1_size; ++p)
+            for (ElementPos p = move.pos_1 + block_size_1; p <= seq_1_size - 1; ++p)
                 append(sequence_tmp_1, elements_1[p]);
             // Sequence 2.
             Sequence& sequence_tmp_2 = solution_tmp_.sequences[move.i2];
             sequence_tmp_2 = empty_sequence(move.i2);
-            for (ElementPos p = 0; p < move.pos_2; ++p)
+            for (ElementPos p = 0; p <= move.pos_2 - 1; ++p)
                 append(sequence_tmp_2, elements_2[p]);
-            for (ElementPos p = move.pos_1; p < move.pos_1 + block_size_1; ++p)
+            for (ElementPos p = move.pos_1; p <= move.pos_1 + block_size_1 - 1; ++p)
                 append(sequence_tmp_2, elements_1[p]);
-            for (ElementPos p = move.pos_2 + block_size_2; p < seq_2_size; ++p)
+            for (ElementPos p = move.pos_2 + block_size_2; p <= seq_2_size - 1; ++p)
                 append(sequence_tmp_2, elements_2[p]);
             break;
         } case Neighborhoods::InterShiftReverse: {
+            //std::cout << "Apply InterShiftReverse"
+            //    << " k1 " << move.k1
+            //    << " i1 " << move.i1
+            //    << " i2 " << move.i2
+            //    << " pos_1 " << move.pos_1
+            //    << " pos_2 " << move.pos_2
+            //    << " gc " << to_string(move.global_cost)
+            //    << std::endl;
             ElementPos block_size = move.k1;
             for (SequenceId i = 0; i < m; ++i)
                 if (i != move.i1 && i != move.i2)
@@ -3789,6 +4411,10 @@ private:
         solution_tmp_.modified_sequences = solution.modified_sequences;
         compute_global_cost(solution_tmp_);
         solution = solution_tmp_;
+        auto end = std::chrono::steady_clock::now();
+        auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
+        apply_move_time += time_span.count();
+        number_of_apply_move_calls++;
     }
 
     /*
@@ -3797,31 +4423,74 @@ private:
 
     /** Sequencing scheme. */
     SequencingScheme& sequencing_scheme_;
+
     /** Parameters. */
     Parameters parameters_;
+
     /**
      * Maximum number of modes.
      *
      * Comupted in the constructor.
      */
     Mode maximum_number_of_modes_ = 1;
+
     /** Structure storing neighborhood related information. */
     std::vector<std::vector<std::vector<Neighborhood>>> neighborhoods_
         = std::vector<std::vector<std::vector<Neighborhood>>>(16);
+
+    /**
+     * Structure storing the closest neighbors for each element.
+     *
+     * Then, in the local search, only moves between close elements are
+     * considered. In routing problems, this significantly reduces the
+     * computational effort spent in the local search without degrading the
+     * final solution too much.
+     *
+     * This is only used if the number of elements in greater than 100 and if
+     * the SequencingScheme implements a 'double distance(ElementId,
+     * ElementId)' method.
+     */
+    std::vector<std::vector<ElementId>> closest_neighbors_;
+
+    /**
+     * Size of the neighborhood.
+     */
+    ElementPos neighborhood_size_ = 100;
+
+    /**
+     * Vector which contains all element ids.
+     *
+     * It is used to loop through neighbors when closest_neighbors_ is not
+     * used.
+     */
+    std::vector<ElementId> neighbors_;
+
+    /** Number of calls to a crossover operator. */
     Counter number_of_crossover_calls = 0;
+    /** Time spent in crossover operators. */
     double crossover_time = 0.0;
+    /** Number of calls to the local search method. */
     Counter number_of_local_search_calls = 0;
+    /** Time spent in the local search method. */
     double local_search_time = 0.0;
+    /** Number of calls to the apply_move method. */
+    Counter number_of_apply_move_calls = 0;
+    /** Time spent in the apply_move method. */
+    double apply_move_time = 0.0;
+    /** Number of calls to an initial solution generator. */
     Counter number_of_initial_solution_calls = 0;
+    /** Time spent generating initial solutions. */
     double initial_solution_time = 0.0;
 
     /*
      * Temporary structures.
      */
 
-    std::vector<std::vector<SequenceData>> sequence_datas_cur_;
     std::vector<std::vector<std::vector<SequenceData>>> sequence_datas_cur_2_;
-    std::vector<Mode> modes_cur_;
+    std::vector<GlobalCost> global_costs_cur_;
+    std::vector<GlobalCost> partial_global_costs_cur_1_;
+    std::vector<std::vector<GlobalCost>> partial_global_costs_cur_2_;
+    std::vector<SolutionElement> elements_cur_;
     Solution solution_cur_;
     Solution solution_tmp_;
 

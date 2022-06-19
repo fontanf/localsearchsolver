@@ -42,14 +42,15 @@ In case the `GlobalCost global_cost_concatenate(SequenceData&, const SequenceDat
 * Local search neighborhoods:
   * Intra:
     * Shift a block of `k` consecutive elements
+    * Shift and reverse a block of `k` consecutive elements
     * Swap a block of `k1` consecutive elements with another block of `k2` consecutive elements
     * Reverse a block of consecutive elements (2-opt)
-    * Shift and reverse a block of `k` consecutive elements
   * Inter:
     * 2-opt\*
+    * 2-opt\* (reverse)
     * Shift a block of `k` consecutive elements from one sequence to another
-    * Swap a block of `k1` consecutive elements from a sequence with another block of `k2` consecutive elements from another sequence
     * Shift and reverse a block of `k` consecutive elements from one sequence to another
+    * Swap a block of `k1` consecutive elements from a sequence with another block of `k2` consecutive elements from another sequence
     * Swap the sequences of two elements `j1` and `j2` and try to place them at promising positions in their new sequences (swap\*)
   * Sub-sequences:
     * Add an element into the solution
@@ -64,11 +65,11 @@ In case the `GlobalCost global_cost_concatenate(SequenceData&, const SequenceDat
   * Remove `k` elements and re-insert them (ruin-and-recreate)
   * Force an element into the solution
 * Crossover algorithms:
-  * OX crossover (single sequence only)
-  * SJOX crossover (single sequence only)
-  * SBOX crossover (single sequence only)
-  * SREX1
-  * SREX2
+  * OX crossover
+  * SJOX crossover
+  * SBOX crossover
+  * SREX1 crossover
+  * SREX2 crossover
 
 ### Examples
 

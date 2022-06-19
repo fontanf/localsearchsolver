@@ -44,14 +44,14 @@ local_repository(
 )
 
 git_repository(
-    name = "orproblems",
+    name = "orproblems_",
     remote = "https://github.com/fontanf/orproblems.git",
     commit = "c46524b181f6fbdc24efbef3386f24fee139411e",
     shallow_since = "1654927508 +0200",
 )
 
 local_repository(
-    name = "orproblems_",
+    name = "orproblems",
     path = "../orproblems/",
 )
 

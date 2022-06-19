@@ -53,6 +53,8 @@ public:
 
             sequencing_parameters.ruin_and_recreate_number_of_perturbations = 10;
             sequencing_parameters.ruin_and_recreate_number_of_elements_removed = 10;
+
+            sequencing_parameters.crossover_ox_weight = 1;
         }
 
         sequencing::Parameters sequencing_parameters;
@@ -103,23 +105,16 @@ public:
         };
     }
 
-    inline void append(
-            SequenceData& sequence_data,
-            sequencing::ElementId j) const
+    inline SequenceData sequence_data_init(LocationId j) const
     {
-        if (sequence_data.number_of_locations == 0) {
-            // Uppdate j_first.
-            sequence_data.j_first = j;
-        } else {
-            // Update time.
-            sequence_data.time += instance_.travel_time(sequence_data.j_last + 1, j + 1);
-        }
-        // Update total_completion_time.
-        sequence_data.total_completion_time += sequence_data.time;
+        SequenceData sequence_data;
+        // Uppdate j_first.
+        sequence_data.j_first = j;
         // Update j_last.
         sequence_data.j_last = j;
         // Update number_of_locations.
-        sequence_data.number_of_locations++;
+        sequence_data.number_of_locations = 1;
+        return sequence_data;
     }
 
     bool concatenate(
