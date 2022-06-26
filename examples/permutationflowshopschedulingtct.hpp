@@ -27,10 +27,9 @@ public:
 
     /**
      * Global cost:
-     * - Number of jobs
      * - Total completion time
      */
-    using GlobalCost = std::tuple<JobPos, Time>;
+    using GlobalCost = std::tuple<Time>;
 
     struct SequenceData
     {
@@ -72,20 +71,14 @@ public:
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
-        return {
-            -sequence_data.number_of_jobs,
-            sequence_data.total_completion_time,
-        };
+        return {sequence_data.total_completion_time};
     }
 
     inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {
-        return {
-            -instance_.number_of_jobs(),
-            sequence_data.total_completion_time,
-        };
+        return {sequence_data.total_completion_time};
     }
 
     inline void append(

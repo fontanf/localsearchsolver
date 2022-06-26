@@ -130,12 +130,12 @@ struct Helper<std::tuple<Ts...>>
 {
     static std::tuple<Ts...> max()
     {
-        return { std::numeric_limits<Ts>::max()... };
+        return { (std::numeric_limits<Ts>::max() / 3)... };
     }
 
     static std::tuple<Ts...> min()
     {
-        return { std::numeric_limits<Ts>::lowest()... };
+        return { (std::numeric_limits<Ts>::lowest() / 3)... };
     }
 };
 

@@ -27,16 +27,14 @@ public:
 
     /**
      * Global cost:
-     * - Number of locations
      * - Reversed time
      * - Overcapacity
      * - Total travel time
      */
-    using GlobalCost = std::tuple<LocationPos, Time, Demand, Time>;
+    using GlobalCost = std::tuple<Time, Demand, Time>;
 
     struct SequenceData
     {
-        LocationPos number_of_locations = 0;
         LocationId j_first = -1;
         LocationId j_last = -1;
         Demand demand = 0;
@@ -95,13 +93,12 @@ public:
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
-        if (sequence_data.number_of_locations == 0)
-            return {0, 0, 0, 0};
+        if (sequence_data.j_first == -1)
+            return {0, 0, 0};
         SequenceData sd = sequence_data_init(-1);
         concatenate(sd, sequence_data);
         concatenate(sd, sequence_data_init(-1));
         return {
-            -sequence_data.number_of_locations,
             sd.reversed_time,
             std::max((Demand)0, sequence_data.demand - instance_.capacity()),
             sd.total_travel_time,
@@ -111,7 +108,6 @@ public:
     inline GlobalCost global_cost_goal(double value) const
     {
         return {
-            -instance_.number_of_locations(),
             0,
             0,
             value,
@@ -121,7 +117,6 @@ public:
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {
         return {
-            -instance_.number_of_locations(),
             sequence_data.reversed_time,
             std::max((Demand)0, sequence_data.demand - instance_.capacity()),
             sequence_data.total_travel_time
@@ -129,7 +124,8 @@ public:
         };
     }
 
-    inline SequenceData sequence_data_init(LocationId j) const
+    inline SequenceData sequence_data_init(
+            sequencing::ElementId j) const
     {
         SequenceData sequence_data;
         // Uppdate j_first.
@@ -142,8 +138,6 @@ public:
         sequence_data.demand += instance_.location(j + 1).demand;
         // Update j_last.
         sequence_data.j_last = j;
-        // Update number_of_locations.
-        sequence_data.number_of_locations = 1;
         return sequence_data;
     }
 
@@ -170,8 +164,6 @@ public:
         sequence_data.demand += sequence_data_2.demand;
         // Update j_last.
         sequence_data.j_last = sequence_data_2.j_last;
-        // Update number_of_locations.
-        sequence_data.number_of_locations += sequence_data_2.number_of_locations;
         return true;
     }
 

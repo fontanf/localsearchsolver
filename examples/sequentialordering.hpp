@@ -27,15 +27,13 @@ public:
 
     /**
      * Global cost:
-     * - Number of vertices
      * - Number of precedence violations
      * - Total distance
      */
-    using GlobalCost = std::tuple<VertexPos, VertexPos, Distance>;
+    using GlobalCost = std::tuple<VertexPos, Distance>;
 
     struct SequenceData
     {
-        VertexPos number_of_vertices = 0;
         VertexId j_last = -1;
         Distance length = 0;
         VertexPos number_of_precedence_violations = 0;
@@ -76,7 +74,6 @@ public:
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
         return {
-            -sequence_data.number_of_vertices,
             sequence_data.number_of_precedence_violations,
             sequence_data.length,
         };
@@ -85,7 +82,6 @@ public:
     inline GlobalCost global_cost_goal(double value) const
     {
         return {
-            -instance_.number_of_vertices(),
             0,
             value,
         };
@@ -96,7 +92,6 @@ public:
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {
         return {
-            -instance_.number_of_vertices(),
             sequence_data.number_of_precedence_violations,
             sequence_data.length,
         };
@@ -111,7 +106,7 @@ public:
             if (!sequence_data.contains[j])
                 sequence_data.number_of_precedence_violations++;
         // Update time.
-        if (sequence_data.number_of_vertices > 0) {
+        if (sequence_data.j_last != -1) {
             Distance d = instance_.distance(sequence_data.j_last, j);
             if (d == std::numeric_limits<Distance>::max())
                 d = instance_.distance(j, sequence_data.j_last);
@@ -121,8 +116,6 @@ public:
         sequence_data.contains[j] = 1;
         // Update j_last.
         sequence_data.j_last = j;
-        // Update number_of_vertices.
-        sequence_data.number_of_vertices++;
     }
 
 private:

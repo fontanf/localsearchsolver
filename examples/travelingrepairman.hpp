@@ -28,10 +28,9 @@ public:
 
     /**
      * Global cost:
-     * - Number of locations
      * - Total completion time
      */
-    using GlobalCost = std::tuple<LocationPos, Time>;
+    using GlobalCost = std::tuple<Time>;
 
     struct SequenceData
     {
@@ -74,7 +73,6 @@ public:
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
         return {
-            -sequence_data.number_of_locations,
             sequence_data.total_completion_time
                 + sequence_data.number_of_locations
                 * instance_.travel_time(0, sequence_data.j_first + 1),
@@ -83,10 +81,7 @@ public:
 
     inline GlobalCost global_cost_goal(double value) const
     {
-        return {
-            -instance_.number_of_locations(),
-            value,
-        };
+        return {value};
     }
 
     inline sequencing::ElementPos number_of_elements() const
@@ -98,7 +93,6 @@ public:
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {
         return {
-            -instance_.number_of_locations(),
             sequence_data.total_completion_time
                 + sequence_data.number_of_locations
                 * instance_.travel_time(0, sequence_data.j_first + 1),

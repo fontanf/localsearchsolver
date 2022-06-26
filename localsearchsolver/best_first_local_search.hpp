@@ -218,8 +218,9 @@ inline void best_first_local_search_worker(
             break;
 
         // Check goal.
-        if (local_scheme.global_cost(data.output.solution_pool.best())
-                    <= data.parameters.goal)
+        if (data.output.solution_pool.size() > 0
+                && local_scheme.global_cost(data.output.solution_pool.best())
+                <= data.parameters.goal)
             break;
 
         data.mutex.lock();

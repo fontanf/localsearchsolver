@@ -173,11 +173,13 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/flowshopsc
 
 [Single machine batch scheduling problem, Total weighted tardiness](examples/batchschedulingtotalweightedtardiness.hpp)
 
-#### Single sequence, `void concatenate(SequenceData&, const SequenceData&) const`
+#### Single sequence, `sequence_data_init/concatenate`
 
 [Traveling Repairman Problem](examples/travelingrepairman.hpp)
 
-#### Multiple sequences, `void concatenate(SequenceData&, const SequenceData&) const`
+#### Multiple sequences, `sequence_data_init/concatenate`
+
+[Capacitated vehicle routing problem](examples/capacitatedvehiclerouting.hpp)
 
 [Vehicle routing problem with time windows](examples/vehicleroutingwithtimewindows.hpp)
 

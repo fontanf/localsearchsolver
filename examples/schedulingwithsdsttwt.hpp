@@ -28,14 +28,12 @@ public:
 
     /**
      * Global cost:
-     * - Number of jobs
      * - Total weighted tardiness
      */
-    using GlobalCost = std::tuple<JobPos, Weight>;
+    using GlobalCost = std::tuple<Weight>;
 
     struct SequenceData
     {
-        JobPos number_of_jobs = 0;
         JobId j_last = -1;
         Time time = 0;
         Weight total_weighted_tardiness = 0;
@@ -65,36 +63,25 @@ public:
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
-        return {
-            -sequence_data.number_of_jobs,
-            sequence_data.total_weighted_tardiness,
-        };
+        return {sequence_data.total_weighted_tardiness};
     }
 
     inline GlobalCost global_cost_goal(double value) const
     {
-        return {
-            -instance_.number_of_jobs(),
-            value,
-        };
+        return {value};
     }
 
     inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {
-        return {
-            -instance_.number_of_jobs(),
-            sequence_data.total_weighted_tardiness,
-        };
+        return {sequence_data.total_weighted_tardiness};
     }
 
     inline void append(
             SequenceData& sequence_data,
             sequencing::ElementId j) const
     {
-        // Update number_of_jobs.
-        sequence_data.number_of_jobs++;
         // Update time.
         JobId j_prev = (sequence_data.j_last != -1)?
             sequence_data.j_last:

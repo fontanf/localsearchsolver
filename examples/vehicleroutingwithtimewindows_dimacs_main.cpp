@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
                 std::cout << std::endl;
                 route_id++;
             }
-            Time obj = std::get<3>(solution.global_cost);
+            Time obj = std::get<2>(solution.global_cost);
             std::cout << "Cost " << (double)obj * 2 << std::endl;
         };
     auto output = best_first_local_search(local_scheme, parameters_best_first_local_search);

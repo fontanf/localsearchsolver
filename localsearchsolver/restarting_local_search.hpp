@@ -110,7 +110,8 @@ inline RestartingLocalSearchOutput<LocalScheme> restarting_local_search(
             break;
 
         // Check goal.
-        if (local_scheme.global_cost(output.solution_pool.best())
+        if (output.solution_pool.size() > 0
+                && local_scheme.global_cost(output.solution_pool.best())
                 <= parameters.goal)
             break;
 

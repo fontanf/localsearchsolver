@@ -27,14 +27,12 @@ public:
 
     /**
      * Global cost:
-     * - Number of jobs
      * - Total tardiness
      */
-    using GlobalCost = std::tuple<JobPos, Time>;
+    using GlobalCost = std::tuple<Time>;
 
     struct SequenceData
     {
-        JobPos number_of_jobs = 0;
         std::vector<Time> times;
         Time total_tardiness = 0;
     };
@@ -72,28 +70,19 @@ public:
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
-        return {
-            -sequence_data.number_of_jobs,
-            sequence_data.total_tardiness,
-        };
+        return {sequence_data.total_tardiness};
     }
 
     inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {
-        return {
-            -instance_.number_of_jobs(),
-            sequence_data.total_tardiness,
-        };
+        return {sequence_data.total_tardiness};
     }
 
     inline GlobalCost global_cost_goal(double value) const
     {
-        return {
-            -instance_.number_of_jobs(),
-            value,
-        };
+        return {value};
     }
 
     inline void append(
@@ -113,8 +102,6 @@ public:
         // Update total tardiness.
         if (sequence_data.times[m - 1] > instance_.job(j).due_date)
             sequence_data.total_tardiness += (sequence_data.times[m - 1] - instance_.job(j).due_date);
-        // Update number_of_jobs.
-        sequence_data.number_of_jobs++;
     }
 
 private:

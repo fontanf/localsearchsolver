@@ -27,14 +27,12 @@ public:
 
     /**
      * Global cost:
-     * - Number of locations
      * - Total duration
      */
-    using GlobalCost = std::tuple<LocationPos, Time>;
+    using GlobalCost = std::tuple<Time>;
 
     struct SequenceData
     {
-        LocationPos number_of_locations = 0;
         LocationId j_last = -1;
         Time current_trip_start = 0;
         Time current_trip_duration = 0;
@@ -71,18 +69,12 @@ public:
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
-        return {
-            -sequence_data.number_of_locations,
-            sequence_data.time_full,
-        };
+        return {sequence_data.time_full};
     }
 
     inline GlobalCost global_cost_goal(double value) const
     {
-        return {
-            -instance_.number_of_locations(),
-            value,
-        };
+        return {value};
     }
 
     inline sequencing::ElementPos number_of_elements() const
@@ -101,10 +93,7 @@ public:
 
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {
-        return {
-            -instance_.number_of_locations(),
-            sequence_data.time_full,
-        };
+        return {sequence_data.time_full};
     }
 
     inline void append(
@@ -129,8 +118,6 @@ public:
             + instance_.travel_time(j + 1, 0);
         // Update j_last.
         sequence_data.j_last = j;
-        // Update number_of_locations.
-        sequence_data.number_of_locations++;
     }
 
 private:

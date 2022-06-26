@@ -383,7 +383,8 @@ inline void genetic_local_search_worker(
         // Add the new solution to the population.
         data.population.add(solution, generator);
         // Check for a new best solution.
-        if (local_scheme.global_cost(data.output.solution_pool.worst())
+        if (data.output.solution_pool.size() == 0
+                || local_scheme.global_cost(data.output.solution_pool.worst())
                 > local_scheme.global_cost(solution)) {
             std::stringstream ss;
             ss << "initial solution " << initial_solution_pos
@@ -405,7 +406,8 @@ inline void genetic_local_search_worker(
             break;
 
         // Check goal.
-        if (local_scheme.global_cost(data.output.solution_pool.best())
+        if (data.output.solution_pool.size() > 0
+                && local_scheme.global_cost(data.output.solution_pool.best())
                 <= data.parameters.goal)
             break;
 
@@ -448,7 +450,8 @@ inline void genetic_local_search_worker(
         // Add the new solution to the population.
         data.population.add(solution, generator);
         // Check for a new best solution.
-        if (local_scheme.global_cost(data.output.solution_pool.worst())
+        if (data.output.solution_pool.size() == 0
+                || local_scheme.global_cost(data.output.solution_pool.worst())
                 > local_scheme.global_cost(solution)) {
             std::stringstream ss;
             ss << "iteration " << number_of_iterations

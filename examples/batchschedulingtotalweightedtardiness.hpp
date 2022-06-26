@@ -27,15 +27,13 @@ public:
 
     /**
      * Global cost:
-     * - Number of jobs
      * - Overcapacity
      * - Total weighted tardiness
      */
-    using GlobalCost = std::tuple<JobPos, Size, Weight>;
+    using GlobalCost = std::tuple<Size, Weight>;
 
     struct SequenceData
     {
-        JobPos number_of_jobs = 0;
         std::vector<JobId> current_batch_jobs = {};
         Time current_batch_start = 0;
         Time current_batch_duration = 0;
@@ -76,7 +74,6 @@ public:
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
         return {
-            -sequence_data.number_of_jobs,
             sequence_data.overcapacity,
             sequence_data.total_weighted_tardiness,
         };
@@ -85,7 +82,6 @@ public:
     inline GlobalCost global_cost_goal(double value) const
     {
         return {
-            -instance_.number_of_jobs(),
             0,
             value,
         };
@@ -103,7 +99,6 @@ public:
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {
         return {
-            -instance_.number_of_jobs(),
             sequence_data.overcapacity,
             sequence_data.total_weighted_tardiness,
         };
@@ -160,8 +155,6 @@ public:
             sequence_data.total_weighted_tardiness += wj * (sequence_data.current_batch_end - dj);
         // Update current_batch_jobs.
         sequence_data.current_batch_jobs.push_back(j);
-        // Update number_of_vertices.
-        sequence_data.number_of_jobs++;
     }
 
 private:

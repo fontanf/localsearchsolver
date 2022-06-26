@@ -27,14 +27,12 @@ public:
 
     /**
      * Global cost:
-     * - Number of jobs
      * - Total completion time
      */
-    using GlobalCost = std::tuple<JobPos, Time>;
+    using GlobalCost = std::tuple<Time>;
 
     struct SequenceData
     {
-        JobPos number_of_jobs = 0;
         JobId j_last = -1;
         std::vector<Time> times;
         Time total_completion_time = 0;
@@ -79,10 +77,7 @@ public:
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
-        return {
-            -sequence_data.number_of_jobs,
-            sequence_data.total_completion_time,
-        };
+        return {sequence_data.total_completion_time};
     }
 
     inline sequencing::SequencePos number_of_sequences() const { return instance_.number_of_factories(); }
@@ -91,10 +86,7 @@ public:
 
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {
-        return {
-            -instance_.number_of_jobs(),
-            sequence_data.total_completion_time,
-        };
+        return {sequence_data.total_completion_time};
     }
 
     inline void append(
@@ -113,8 +105,6 @@ public:
         }
         // Update total completion_time.
         sequence_data.total_completion_time += sequence_data.times[m - 1];
-        // Update number_of_jobs.
-        sequence_data.number_of_jobs++;
     }
 
 private:
