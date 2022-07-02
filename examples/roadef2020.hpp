@@ -152,11 +152,6 @@ public:
         sorted_scenarios_.resize(s_max, 0);
     }
 
-    LocalScheme(const LocalScheme& local_scheme):
-        LocalScheme(local_scheme.instance_, local_scheme.parameters_) { }
-
-    virtual ~LocalScheme() { }
-
     /*
      * Initial solutions.
      */

@@ -58,14 +58,7 @@ public:
         return parameters;
     }
 
-    SequencingScheme(
-            const Instance& instance):
-        instance_(instance) { }
-
-    SequencingScheme(const SequencingScheme& sequencing_scheme):
-        SequencingScheme(sequencing_scheme.instance_) { }
-
-    virtual ~SequencingScheme() { }
+    SequencingScheme(const Instance& instance): instance_(instance) { }
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {

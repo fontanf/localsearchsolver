@@ -41,34 +41,24 @@ public:
         Time total_completion_time = 0;  // Without depot -> j_first.
     };
 
-    struct Parameters
+    static sequencing::Parameters sequencing_parameters()
     {
-        Parameters()
-        {
-            sequencing_parameters.shift_block_maximum_length = 4;
-            sequencing_parameters.swap_block_maximum_length = 2;
-            sequencing_parameters.reverse = true;
-            sequencing_parameters.shift_reverse_block_maximum_length = 4;
+        sequencing::Parameters parameters;
 
-            sequencing_parameters.ruin_and_recreate_number_of_perturbations = 10;
-            sequencing_parameters.ruin_and_recreate_number_of_elements_removed = 10;
+        parameters.shift_block_maximum_length = 4;
+        parameters.swap_block_maximum_length = 2;
+        parameters.reverse = true;
+        parameters.shift_reverse_block_maximum_length = 4;
 
-            sequencing_parameters.crossover_ox_weight = 1;
-        }
+        parameters.ruin_and_recreate_number_of_perturbations = 10;
+        parameters.ruin_and_recreate_number_of_elements_removed = 10;
 
-        sequencing::Parameters sequencing_parameters;
-    };
+        parameters.crossover_ox_weight = 1;
 
-    SequencingScheme(
-            const Instance& instance,
-            Parameters parameters):
-        instance_(instance),
-        parameters_(parameters) { }
+        return parameters;
+    }
 
-    SequencingScheme(const SequencingScheme& sequencing_scheme):
-        SequencingScheme(sequencing_scheme.instance_, sequencing_scheme.parameters_) { }
-
-    virtual ~SequencingScheme() { }
+    SequencingScheme(const Instance& instance): instance_(instance) { }
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
@@ -133,7 +123,6 @@ public:
 private:
 
     const Instance& instance_;
-    Parameters parameters_;
 
 };
 

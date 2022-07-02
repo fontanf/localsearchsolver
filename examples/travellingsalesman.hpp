@@ -109,11 +109,6 @@ public:
         std::iota(positions2_.begin(), positions2_.end(), 0);
     }
 
-    LocalScheme(const LocalScheme& local_scheme):
-        LocalScheme(local_scheme.instance_, local_scheme.parameters_) { }
-
-    virtual ~LocalScheme() { }
-
     /*
      * Initial solutions.
      */

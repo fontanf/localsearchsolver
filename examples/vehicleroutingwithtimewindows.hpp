@@ -57,26 +57,22 @@ public:
         parameters.shift_reverse_block_maximum_length = 2;
 
         parameters.inter_shift_block_maximum_length = 2;
+        parameters.inter_shift_reverse_block_maximum_length = 2;
         parameters.inter_swap_block_maximum_length = 2;
-        parameters.inter_two_opt = true;
+        parameters.swap_tails = true;
         //parameters.inter_swap_star = true;
 
-        parameters.ruin_and_recreate_number_of_perturbations = 10;
+        parameters.ruin_and_recreate_number_of_perturbations = 32;
         parameters.ruin_and_recreate_number_of_elements_removed = 10;
+        parameters.ruin_and_recreate_ruin_random_weight = 0.0;
+        parameters.ruin_and_recreate_ruin_nearest_weight = 1.0;
 
-        parameters.crossover_srex1_weight = 1;
+        parameters.crossover_srex1_weight = 1.0;
 
         return parameters;
     }
 
-    SequencingScheme(
-            const Instance& instance):
-        instance_(instance) { }
-
-    SequencingScheme(const SequencingScheme& sequencing_scheme):
-        SequencingScheme(sequencing_scheme.instance_) { }
-
-    virtual ~SequencingScheme() { }
+    SequencingScheme(const Instance& instance): instance_(instance) { }
 
     inline sequencing::SequencePos number_of_sequences() const { return instance_.number_of_vehicles(); }
 
@@ -88,7 +84,15 @@ public:
 
     inline double distance(sequencing::ElementId j1, sequencing::ElementId j2) const
     {
-        return instance_.travel_time(j1 + 1, j2 + 1);
+        Time r1 = instance_.location(j1 + 1).release_date;
+        Time d1 = instance_.location(j1 + 1).deadline;
+        Time s1 = instance_.location(j1 + 1).service_time;
+        Time r2 = instance_.location(j2 + 1).release_date;
+        Time d2 = instance_.location(j2 + 1).deadline;
+        Time t12 = instance_.travel_time(j1 + 1, j2 + 1);
+        Time wt = r2 - (d1 + t12 + s1);
+        Time tw = (r1 + s1 + t12) - d2;
+        return (double)t12 + 1 * std::max((Time)0, wt) + 0.2 * std::max((Time)0, tw);
     }
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const

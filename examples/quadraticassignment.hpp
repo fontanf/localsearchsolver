@@ -130,11 +130,6 @@ public:
                 facility_pairs_.push_back({facility_id_1, facility_id_2});
     }
 
-    LocalScheme(const LocalScheme& local_scheme):
-        LocalScheme(local_scheme.instance_, local_scheme.parameters_) { }
-
-    virtual ~LocalScheme() { }
-
     /*
      * Initial solutions.
      */

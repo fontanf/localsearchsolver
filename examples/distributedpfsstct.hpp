@@ -49,7 +49,7 @@ public:
 
         parameters.inter_shift_block_maximum_length = 1;
         parameters.inter_swap_block_maximum_length = 1;
-        parameters.inter_two_opt = true;
+        parameters.swap_tails = true;
 
         parameters.ruin_and_recreate_number_of_perturbations = 4;
         parameters.ruin_and_recreate_number_of_elements_removed = 4;
@@ -59,14 +59,7 @@ public:
         return parameters;
     }
 
-    SequencingScheme(
-            const Instance& instance):
-        instance_(instance) { }
-
-    SequencingScheme(const SequencingScheme& sequencing_scheme):
-        SequencingScheme(sequencing_scheme.instance_) { }
-
-    virtual ~SequencingScheme() { }
+    SequencingScheme(const Instance& instance): instance_(instance) { }
 
     inline SequenceData empty_sequence_data(sequencing::SequenceId) const
     {

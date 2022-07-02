@@ -46,8 +46,8 @@ In case the `GlobalCost global_cost_concatenate(SequenceData&, const SequenceDat
     * Swap a block of `k1` consecutive elements with another block of `k2` consecutive elements
     * Reverse a block of consecutive elements (2-opt)
   * Inter:
-    * 2-opt\*
-    * 2-opt\* (reverse)
+    * Swap the tails of two sequences (2-opt\*)
+    * Replace the tail of sequence `i1` with the reversed head of sequence `i2` and replace the head of sequence `i2` with the reversed tail of sequence `i1` (reversed 2-opt\*)
     * Shift a block of `k` consecutive elements from one sequence to another
     * Shift and reverse a block of `k` consecutive elements from one sequence to another
     * Swap a block of `k1` consecutive elements from a sequence with another block of `k2` consecutive elements from another sequence

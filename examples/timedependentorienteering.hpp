@@ -57,14 +57,7 @@ public:
         return parameters;
     }
 
-    SequencingScheme(
-            const Instance& instance):
-        instance_(instance) { }
-
-    SequencingScheme(const SequencingScheme& sequencing_scheme):
-        SequencingScheme(sequencing_scheme.instance_) { }
-
-    virtual ~SequencingScheme() { }
+    SequencingScheme(const Instance& instance): instance_(instance) { }
 
     inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_locations() - 2; }
 

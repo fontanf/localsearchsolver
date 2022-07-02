@@ -4,34 +4,6 @@
 using namespace localsearchsolver;
 using namespace travelingrepairman;
 
-inline SequencingScheme::Parameters read_local_scheme_args(
-        const std::vector<char*> argv)
-{
-    SequencingScheme::Parameters parameters;
-    boost::program_options::options_description desc("Allowed options");
-    desc.add_options()
-        ("shift-block-maximum-length,", boost::program_options::value<LocationPos>(&parameters.sequencing_parameters.shift_block_maximum_length), "")
-        ("swap-block-maximum-length,", boost::program_options::value<LocationPos>(&parameters.sequencing_parameters.swap_block_maximum_length), "")
-        ("reverse,", boost::program_options::value<bool>(&parameters.sequencing_parameters.reverse), "")
-        ("shift-reverse-block-maximum-length,", boost::program_options::value<LocationPos>(&(parameters.sequencing_parameters.shift_reverse_block_maximum_length)), "")
-        ("double-bridge-number-of-perturbations,", boost::program_options::value<LocationPos>(&parameters.sequencing_parameters.double_bridge_number_of_perturbations), "")
-        ("ruin-and-recreate-number-of-perturbations,", boost::program_options::value<LocationPos>(&parameters.sequencing_parameters.ruin_and_recreate_number_of_perturbations), "")
-        ("ruin-and-recreate-number-of-elements-removed,", boost::program_options::value<LocationPos>(&parameters.sequencing_parameters.ruin_and_recreate_number_of_elements_removed), "")
-        ("crossover-ox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_ox_weight), "")
-        ("crossover-sjox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_sjox_weight), "")
-        ("crossover-sbox-weight,", boost::program_options::value<double>(&parameters.sequencing_parameters.crossover_sbox_weight), "")
-        ;
-    boost::program_options::variables_map vm;
-    boost::program_options::store(boost::program_options::parse_command_line((Counter)argv.size(), argv.data(), desc), vm);
-    try {
-        boost::program_options::notify(vm);
-    } catch (const boost::program_options::required_option& e) {
-        std::cout << desc << std::endl;;
-        throw "";
-    }
-    return parameters;
-}
-
 int main(int argc, char *argv[])
 {
     MainArgs main_args;
@@ -51,9 +23,9 @@ int main(int argc, char *argv[])
     }
 
     // Create local scheme.
-    auto parameters_sequencing_scheme = read_local_scheme_args(main_args.local_scheme_argv);
-    SequencingScheme sequencing_scheme(instance, parameters_sequencing_scheme);
-    sequencing::LocalScheme<SequencingScheme> local_scheme(sequencing_scheme, parameters_sequencing_scheme.sequencing_parameters);
+    SequencingScheme sequencing_scheme(instance);
+    auto sequencing_parameters = read_sequencing_args<SequencingScheme>(main_args.sequencing_argv);
+    sequencing::LocalScheme<SequencingScheme> local_scheme(sequencing_scheme, sequencing_parameters);
 
     // Run algorithm.
     auto solution_pool =

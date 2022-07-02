@@ -206,7 +206,9 @@ inline void best_first_local_search_worker(
     typedef typename LocalScheme::CompactSolution CompactSolution;
     //std::cout << "best_first_local_search_worker start" << std::endl;
 
-    LocalScheme local_scheme(data.local_scheme);
+    LocalScheme local_scheme_tmp(data.local_scheme);
+    LocalScheme& local_scheme = (data.parameters.number_of_threads_1 == 1 && data.parameters.number_of_threads_2 == 1)?
+        data.local_scheme: local_scheme_tmp;
     Seed seed = data.parameters.seed + thread_id;
     std::mt19937_64 generator(seed);
 

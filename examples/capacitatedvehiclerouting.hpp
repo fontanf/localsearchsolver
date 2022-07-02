@@ -44,34 +44,29 @@ public:
     {
         sequencing::Parameters parameters;
 
-        parameters.shift_block_maximum_length = 2;
-        parameters.swap_block_maximum_length = 2;
+        parameters.shift_block_maximum_length = 3;
+        parameters.swap_block_maximum_length = 3;
         parameters.reverse = true;
-        parameters.shift_reverse_block_maximum_length = 2;
+        parameters.shift_reverse_block_maximum_length = 3;
 
-        parameters.inter_shift_block_maximum_length = 2;
-        parameters.inter_swap_block_maximum_length = 2;
-        parameters.inter_two_opt = true;
-        parameters.inter_two_opt_reverse = true;
-        parameters.inter_shift_reverse_block_maximum_length = 2;
+        parameters.inter_shift_block_maximum_length = 3;
+        parameters.inter_swap_block_maximum_length = 3;
+        parameters.swap_tails = true;
+        parameters.split = true;
+        parameters.inter_shift_reverse_block_maximum_length = 3;
         //parameters.inter_swap_star = true;
 
-        parameters.ruin_and_recreate_number_of_perturbations = 10;
+        parameters.ruin_and_recreate_number_of_perturbations = 32;
         parameters.ruin_and_recreate_number_of_elements_removed = 10;
+        parameters.ruin_and_recreate_ruin_random_weight = 0.0;
+        parameters.ruin_and_recreate_ruin_nearest_weight = 1.0;
 
-        parameters.crossover_ox_weight = 1;
+        parameters.crossover_ox_weight = 1.0;
 
         return parameters;
     }
 
-    SequencingScheme(
-            const Instance& instance):
-        instance_(instance) { }
-
-    SequencingScheme(const SequencingScheme& sequencing_scheme):
-        SequencingScheme(sequencing_scheme.instance_) { }
-
-    virtual ~SequencingScheme() { }
+    SequencingScheme(const Instance& instance): instance_(instance) { }
 
     inline sequencing::SequencePos number_of_sequences() const
     {
