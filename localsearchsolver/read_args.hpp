@@ -198,7 +198,7 @@ inline sequencing::Parameters read_sequencing_args(
         ("shift-reverse-block-maximum-length,", boost::program_options::value<sequencing::ElementPos>(&(parameters.shift_reverse_block_maximum_length)), "")
         ("double-bridge-number-of-perturbations,", boost::program_options::value<sequencing::ElementPos>(&parameters.double_bridge_number_of_perturbations), "")
         ("ruin-and-recreate-number-of-perturbations,", boost::program_options::value<sequencing::ElementPos>(&parameters.ruin_and_recreate_number_of_perturbations), "")
-        ("ruin-and-recreate-number-of-elements-removed,", boost::program_options::value<sequencing::ElementPos>(&parameters.ruin_and_recreate_number_of_elements_removed), "")
+        ("ruin-and-recreate-number-of-elements-removed,", boost::program_options::value<sequencing::ElementPos>(&parameters.ruin_number_of_elements_removed), "")
         ("crossover-ox-weight,", boost::program_options::value<double>(&parameters.crossover_ox_weight), "")
         ("crossover-sjox-weight,", boost::program_options::value<double>(&parameters.crossover_sjox_weight), "")
         ("crossover-sbox-weight,", boost::program_options::value<double>(&parameters.crossover_sbox_weight), "")

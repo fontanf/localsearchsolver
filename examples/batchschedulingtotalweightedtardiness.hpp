@@ -57,7 +57,7 @@ public:
         parameters.swap_with_modes = true;
 
         parameters.ruin_and_recreate_number_of_perturbations = 10;
-        parameters.ruin_and_recreate_number_of_elements_removed = 4;
+        parameters.ruin_number_of_elements_removed = 4;
 
         return parameters;
     }

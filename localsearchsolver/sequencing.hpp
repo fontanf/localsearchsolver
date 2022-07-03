@@ -145,11 +145,16 @@ struct Parameters
     Counter double_bridge_number_of_perturbations = 0;
 
     Counter ruin_and_recreate_number_of_perturbations = 0;
-    ElementPos ruin_and_recreate_number_of_elements_removed = 4;
-    double ruin_and_recreate_ruin_random_weight = 1.0;
-    double ruin_and_recreate_ruin_nearest_weight = 0.0;
-    double ruin_and_recreate_recreate_random_weight = 0.0;
-    double ruin_and_recreate_recreate_best_weight = 1.0;
+    ElementPos ruin_number_of_elements_removed = 4;
+    double ruin_random_weight = 1.0;
+    double ruin_nearest_weight = 0.0;
+    double ruin_adjacent_string_removal_weight = 0.0;
+    ElementPos ruin_adjacent_string_removal_maximum_string_cardinality = 10;
+    double ruin_adjacent_string_removal_split_rate = 0.5;
+    double ruin_adjacent_string_removal_beta = 0.01;
+    double recreate_random_weight = 0.0;
+    double recreate_best_weight = 0.0;
+    double recreate_best_blink_rate = 0.01;
 
     bool force_add = false;
 
@@ -1377,14 +1382,15 @@ public:
         } case Perturbations::RuinAndRecreate: {
 
             std::discrete_distribution<Counter> d_ruin({
-                    parameters_.ruin_and_recreate_ruin_random_weight,
-                    parameters_.ruin_and_recreate_ruin_nearest_weight,
+                    parameters_.ruin_random_weight,
+                    parameters_.ruin_nearest_weight,
+                    parameters_.ruin_adjacent_string_removal_weight,
                     });
             Counter x_ruin = d_ruin(generator);
 
             std::discrete_distribution<Counter> d_recreate({
-                    parameters_.ruin_and_recreate_recreate_random_weight,
-                    parameters_.ruin_and_recreate_recreate_best_weight,
+                    parameters_.recreate_random_weight,
+                    parameters_.recreate_best_weight,
                     });
             Counter x_recreate = d_recreate(generator);
 
@@ -1411,7 +1417,7 @@ public:
             solution_cur_.modified_sequences = std::vector<bool>(m, false);
 
             ElementPos number_of_elements_to_remove = std::min(
-                    parameters_.ruin_and_recreate_number_of_elements_removed,
+                    parameters_.ruin_number_of_elements_removed,
                     elts.size());
             ElementPos number_of_elements_removed = 0;
             switch (x_ruin) {
@@ -1440,6 +1446,138 @@ public:
                         elts.remove(j2);
                         solution_cur_.modified_sequences[sequences[j2]] = true;
                         number_of_elements_removed++;
+                    }
+                }
+                break;
+            } case 2: {  // Adjacent string removal.
+                // Compute average sequence size.
+                double average_sequence_size = 0;
+                SequenceId number_of_non_empty_sequences = 0;
+                for (SequenceId i = 0; i < m; ++i) {
+                    ElementPos seq_size = solution.sequences[i].elements.size();
+                    average_sequence_size += seq_size;
+                    if (seq_size > 0)
+                        number_of_non_empty_sequences++;
+                }
+                average_sequence_size /= number_of_non_empty_sequences;
+                // Compute maximum string cardinality.
+                double maximum_string_cardinality = std::min(
+                        (double)parameters_.ruin_adjacent_string_removal_maximum_string_cardinality,
+                        average_sequence_size);
+                //std::cout << "maximum_string_cardinality "
+                //    << maximum_string_cardinality
+                //    << std::endl;
+                // Compute maximum number of strings to remove.
+                double maximum_number_of_strings_to_remove
+                    = 4.0 * (double)parameters_.ruin_number_of_elements_removed
+                    / (1 + maximum_string_cardinality) - 1;
+                // Compute number of strings to remove.
+                std::uniform_real_distribution<double> d_str(1, maximum_number_of_strings_to_remove + 1);
+                SequenceId number_of_strings_to_remove = d_str(generator);
+                //std::cout << "number_of_strings_to_remove "
+                //    << number_of_strings_to_remove
+                //    << " / " << maximum_number_of_strings_to_remove
+                //    << std::endl;
+                // Draw seed element.
+                std::uniform_int_distribution<ElementPos> d(0, elts.size() - 1);
+                ElementPos pos = d(generator);
+                ElementId j = *(elts.begin() + pos);
+                std::vector<int> ruined_sequences(m, 0);
+                SequencePos number_of_sequences_ruined = 0;
+                for (ElementPos p = 0;
+                        number_of_sequences_ruined < number_of_strings_to_remove; ++p) {
+                    ElementId j2 = (p % 2 == 0)?
+                        sorted_successors_[j][p / 2]:
+                        sorted_predecessors_[j][p / 2];
+                    SequenceId i_j2 = sequences[j2];
+                    if (elts.contains(j2) && ruined_sequences[i_j2] == 0) {
+                        // Compute the cardinality of the string to remove.
+                        ElementPos pos_j2 = positions[j2];
+                        double seq_size = solution.sequences[i_j2].elements.size();
+                        //std::cout << "sequence " << i_j2
+                        //    << " size " << seq_size
+                        //    << " j2 " << j2
+                        //    << " pos_j2 " << pos_j2
+                        //    << std::endl;
+                        std::uniform_real_distribution<double> d_card(
+                                1.0,
+                                std::min(seq_size, maximum_string_cardinality));
+                        ElementPos string_cardinality = d_card(generator);
+                        //std::cout << "string_cardinality "
+                        //    << string_cardinality
+                        //    << " / " << maximum_string_cardinality
+                        //    << std::endl;
+                        // Choose between the 'string' procedure and the 'split
+                        // string' procedure.
+                        std::uniform_real_distribution<double> d01(0, 1);
+                        if (string_cardinality == seq_size
+                                || d01(generator) >= parameters_.ruin_adjacent_string_removal_split_rate) {
+                            // String procedure.
+                            // Draw start of string to remove.
+                            std::uniform_int_distribution<ElementPos> d_start(
+                                    std::max(
+                                        (ElementPos)0,
+                                        pos_j2 - string_cardinality + 1),
+                                    std::min(
+                                        (ElementPos)seq_size - string_cardinality,
+                                        pos_j2));
+                            ElementPos start = d_start(generator);
+                            //std::cout << "start " << start << std::endl;
+                            // Remove string.
+                            for (ElementPos pos_j3 = start;
+                                    pos_j3 < start + string_cardinality; ++pos_j3) {
+                                ElementId j3 = solution.sequences[i_j2].elements[pos_j3].j;
+                                elts.remove(j3);
+                            }
+                            if (elts.contains(j2)) {
+                                throw std::runtime_error("");
+                            }
+                        } else {
+                            // Split string procedure.
+                            // Compute m.
+                            ElementPos m = 1;
+                            while (string_cardinality + m < seq_size
+                                    && d01(generator) > parameters_.ruin_adjacent_string_removal_beta) {
+                                m++;
+                            }
+                            string_cardinality += m;
+                            //std::cout
+                            //    << "m " << m
+                            //    << " string_cardinality " << string_cardinality
+                            //    << std::endl;
+                            // Draw start of string to remove.
+                            ElementPos d_start_min = std::max(
+                                        (ElementPos)0,
+                                        pos_j2 - string_cardinality + 1);
+                            ElementPos d_start_max = std::min(
+                                        (ElementPos)seq_size - string_cardinality,
+                                        pos_j2);
+                            //std::cout << "d_start_min " << d_start_min << " d_start_max " << d_start_max << std::endl;
+                            std::uniform_int_distribution<ElementPos> d_start(
+                                    d_start_min, d_start_max);
+                            ElementPos start = d_start(generator);
+                            //std::cout << "start " << start << std::endl;
+                            // Draw start of the substring to remove.
+                            std::uniform_int_distribution<ElementPos> d_sub(
+                                    start, start + string_cardinality - m);
+                            ElementPos start_sub = d_sub(generator);
+                            //std::cout << "start_sub " << start << std::endl;
+                            // Remove splitted string.
+                            for (ElementPos pos_j3 = start;
+                                    pos_j3 < start_sub; ++pos_j3) {
+                                ElementId j3 = solution.sequences[i_j2].elements[pos_j3].j;
+                                elts.remove(j3);
+                            }
+                            for (ElementPos pos_j3 = start_sub + m;
+                                    pos_j3 < start + string_cardinality; ++pos_j3) {
+                                ElementId j3 = solution.sequences[i_j2].elements[pos_j3].j;
+                                elts.remove(j3);
+                            }
+                        }
+                        // Update structures.
+                        ruined_sequences[i_j2] = 1;
+                        number_of_sequences_ruined++;
+                        solution_cur_.modified_sequences[i_j2] = true;
                     }
                 }
                 break;
@@ -1963,11 +2101,16 @@ public:
             << "        Number of perturbations:               " << parameters_.double_bridge_number_of_perturbations << std::endl
             << "    Ruin-and-recreate" << std::endl
             << "        Number of perturbations:               " << parameters_.ruin_and_recreate_number_of_perturbations << std::endl
-            << "        Number of elements removed:            " << parameters_.ruin_and_recreate_number_of_elements_removed << std::endl
-            << "        Ruin random:                           " << parameters_.ruin_and_recreate_ruin_random_weight << std::endl
-            << "        Ruin nearest:                          " << parameters_.ruin_and_recreate_ruin_nearest_weight << std::endl
-            << "        Recreate random:                       " << parameters_.ruin_and_recreate_recreate_random_weight << std::endl
-            << "        Recreate best:                         " << parameters_.ruin_and_recreate_recreate_best_weight << std::endl
+            << "        Number of elements removed:            " << parameters_.ruin_number_of_elements_removed << std::endl
+            << "        Ruin random weight:                    " << parameters_.ruin_random_weight << std::endl
+            << "        Ruin nearest weight:                   " << parameters_.ruin_nearest_weight << std::endl
+            << "        Ruin adjacent string removal weight:   " << parameters_.ruin_adjacent_string_removal_weight << std::endl
+            << "            Maximum string cardinality:        " << parameters_.ruin_adjacent_string_removal_maximum_string_cardinality << std::endl
+            << "            Split rate:                        " << parameters_.ruin_adjacent_string_removal_split_rate << std::endl
+            << "            Beta:                              " << parameters_.ruin_adjacent_string_removal_beta << std::endl
+            << "        Recreate random:                       " << parameters_.recreate_random_weight << std::endl
+            << "        Recreate best:                         " << parameters_.recreate_best_weight << std::endl
+            << "            Blink rate:                        " << parameters_.recreate_best_blink_rate << std::endl
             << "    Force-add:                                 " << parameters_.force_add << std::endl;
         info.os()
             << "Crossovers" << std::endl
@@ -3497,7 +3640,7 @@ private:
         Neighborhood& neighborhood = (!reverse)?
             neighborhoods_[int(Neighborhoods::InterShift)][block_size][0]:
             neighborhoods_[int(Neighborhoods::InterShiftReverse)][block_size][0];
-        ElementPos granularity = 25 + number_of_local_search_calls_ / 100;
+        ElementPos granularity = 25 + number_of_local_search_calls_ / 256;
 
         for (SequenceId i1 = 0; i1 < m; ++i1) {
             const auto& sequence_1 = solution.sequences[i1];
@@ -3714,7 +3857,7 @@ private:
         GlobalCost gc = global_cost(solution);
         GlobalCost gc_tmp;
         Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::SwapTails)][0][0];
-        ElementPos granularity = 25 + number_of_local_search_calls_ / 100;
+        ElementPos granularity = 25 + number_of_local_search_calls_ / 256;
 
         for (SequenceId i1 = 0; i1 < m; ++i1) {
             const auto& sequence_1 = solution.sequences[i1];
@@ -3799,7 +3942,7 @@ private:
         ElementPos n = sequencing_scheme_.number_of_elements();
         GlobalCost gc = global_cost(solution);
         Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::Split)][0][0];
-        ElementPos granularity = 25 + number_of_local_search_calls_ / 100;
+        ElementPos granularity = 25 + number_of_local_search_calls_ / 256;
 
         for (SequenceId i1 = 0; i1 < m; ++i1) {
             const auto& sequence_1 = solution.sequences[i1];
@@ -3892,7 +4035,7 @@ private:
         ElementPos n = sequencing_scheme_.number_of_elements();
         GlobalCost gc = global_cost(solution);
         Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::InterSwap)][block_size_1][block_size_2];
-        ElementPos granularity = 25 + number_of_local_search_calls_ / 100;
+        ElementPos granularity = 25 + number_of_local_search_calls_ / 256;
 
         for (SequenceId i1 = 0; i1 < m; ++i1) {
             const auto& sequence_1 = solution.sequences[i1];

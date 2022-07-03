@@ -48,7 +48,7 @@ public:
         parameters.shift_reverse_block_maximum_length = 0;
 
         parameters.ruin_and_recreate_number_of_perturbations = 4;
-        parameters.ruin_and_recreate_number_of_elements_removed = 4;
+        parameters.ruin_number_of_elements_removed = 4;
 
         return parameters;
     }

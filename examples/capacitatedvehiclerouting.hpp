@@ -56,10 +56,9 @@ public:
         parameters.inter_shift_reverse_block_maximum_length = 3;
         //parameters.inter_swap_star = true;
 
-        parameters.ruin_and_recreate_number_of_perturbations = 32;
-        parameters.ruin_and_recreate_number_of_elements_removed = 10;
-        parameters.ruin_and_recreate_ruin_random_weight = 0.0;
-        parameters.ruin_and_recreate_ruin_nearest_weight = 1.0;
+        parameters.ruin_and_recreate_number_of_perturbations = 128;
+        parameters.ruin_number_of_elements_removed = 10;
+        parameters.ruin_adjacent_string_removal_weight = 1.0;
 
         parameters.crossover_ox_weight = 1.0;
 
