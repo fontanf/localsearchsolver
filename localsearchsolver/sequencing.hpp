@@ -24,6 +24,7 @@ enum class Perturbations
 {
     None,
     DoubleBridge,
+    AdjacentSwaps,
     RuinAndRecreate,
     ForceAdd,
 };
@@ -142,20 +143,67 @@ struct Parameters
      * Perturbations.
      */
 
+    /**
+     * Perturbation "double-bridge".
+     *
+     * Thsi corresponds to a swap of two blocs of elements.
+     *
+     * This is a classical perturbation introduced for the Traveling Salesman
+     * Problem and used in several variants.
+     *
+     * See:
+     * - "An Iterated Local Search heuristic for the single machine total
+     *   weighted tardiness scheduling problem with sequence-dependent setup
+     *   times" (Subramanian et al. 2014)
+     *   https://doi.org/10.1080/00207543.2014.883472
+     */
     Counter double_bridge_number_of_perturbations = 0;
 
+    /**
+     * Perturbation "random adjacent swaps".
+     *
+     * See:
+     * - "Iterated-greedy-based algorithms with beam search initialization for
+     *   the permutation flowshop to minimise total tardiness"
+     *   (Fernandez-Viagas et al, 2018)
+     *   https://doi.org/10.1016/j.eswa.2017.10.050
+     */
+    Counter adjacent_swaps_number_of_perturbations = 0;
+    /**
+     * Perturbation "random adjacent swaps", number of random adjacent swaps
+     * performed.
+     *
+     * The default value is chosen according to the value that yielded the best
+     * results among the tested values in the computational experiments of the
+     * article cited above.
+     */
+    Counter adjacent_swaps_number_of_swaps = 4;
+
+    /**
+     * Perturbation "ruin-and-recreate".
+     */
     Counter ruin_and_recreate_number_of_perturbations = 0;
     ElementPos ruin_number_of_elements_removed = 4;
     double ruin_random_weight = 1.0;
     double ruin_nearest_weight = 0.0;
+    /**
+     * Ruin method "adjacent string removal".
+     *
+     * See:
+     * - "Slack Induction by String Removals for Vehicle Routing Problems"
+     *   (Christiaens et Greet Vanden Berghe, 2020)
+     *   https://doi.org/10.1287/trsc.2019.0914
+     */
     double ruin_adjacent_string_removal_weight = 0.0;
     ElementPos ruin_adjacent_string_removal_maximum_string_cardinality = 10;
     double ruin_adjacent_string_removal_split_rate = 0.5;
     double ruin_adjacent_string_removal_beta = 0.01;
     double recreate_random_weight = 0.0;
     double recreate_best_weight = 0.0;
-    double recreate_best_blink_rate = 0.01;
 
+    /**
+     * Perturbation "force-add".
+     */
     bool force_add = false;
 
     /*
@@ -731,38 +779,58 @@ public:
                 parameters_.crossover_srex2_weight,
                 });
         Counter x = d_crossover(generator);
-        Solution solution;
+        Solution solution_1;
+        Solution solution_2;
         switch (x) {
         case 0: {
-            solution = crossover_ox(solution_parent_1, solution_parent_2, generator);
+            solution_1 = crossover_ox(solution_parent_1, solution_parent_2, generator);
+            solution_2 = crossover_ox(solution_parent_2, solution_parent_1, generator);
             break;
         } case 1: {
-            solution = crossover_sjox(solution_parent_1, solution_parent_2, generator);
+            solution_1 = crossover_sjox(solution_parent_1, solution_parent_2, generator);
+            solution_2 = crossover_sjox(solution_parent_2, solution_parent_1, generator);
             break;
         } case 2: {
-            solution = crossover_sbox(solution_parent_1, solution_parent_2, generator);
+            solution_1 = crossover_sbox(solution_parent_1, solution_parent_2, generator);
+            solution_2 = crossover_sbox(solution_parent_2, solution_parent_1, generator);
             break;
         } case 3: {
-            solution = crossover_srex1(solution_parent_1, solution_parent_2, generator);
+            solution_1 = crossover_srex1(solution_parent_1, solution_parent_2, generator);
+            solution_2 = crossover_srex1(solution_parent_2, solution_parent_1, generator);
             break;
         } case 4: {
-            solution = crossover_srex2(solution_parent_1, solution_parent_2, generator);
+            solution_1 = crossover_srex2(solution_parent_1, solution_parent_2, generator);
+            solution_2 = crossover_srex2(solution_parent_2, solution_parent_1, generator);
             break;
         } default: {
-            solution = crossover_ox(solution_parent_1, solution_parent_2, generator);
+            solution_1 = crossover_ox(solution_parent_1, solution_parent_2, generator);
+            solution_2 = crossover_ox(solution_parent_2, solution_parent_1, generator);
             break;
         }
+        }
+        Solution solution;
+        if (dominates(global_cost(solution_1), global_cost(solution_2))) {
+            solution = solution_1;
+        } else if (dominates(global_cost(solution_2), global_cost(solution_1))) {
+            solution = solution_2;
+        } else {
+            solution = solution_1;
         }
 
         SequenceId m = number_of_sequences();
         solution.modified_sequences = std::vector<bool>(m, true);
+        SequencePos number_of_non_empty_sequences = 0;
+        SequencePos number_of_modified_sequences = m;
         for (SequenceId i1 = 0; i1 < m; ++i1) {
+            if (solution.sequences[i1].elements.size() > 0)
+                number_of_non_empty_sequences++;
             for (SequenceId i2 = 0; i2 < m; ++i2) {
                 if (solution.sequences[i1].elements
                         == solution_parent_1.sequences[i2].elements
                         && sequencing_scheme_.global_cost(solution.sequences[i1].data)
                         == sequencing_scheme_.global_cost(solution_parent_1.sequences[i2].data)) {
                     solution.modified_sequences[i1] = false;
+                    number_of_modified_sequences--;
                     break;
                 }
                 if (solution.sequences[i1].elements
@@ -770,10 +838,13 @@ public:
                         && sequencing_scheme_.global_cost(solution.sequences[i1].data)
                         == sequencing_scheme_.global_cost(solution_parent_2.sequences[i2].data)) {
                     solution.modified_sequences[i1] = false;
+                    number_of_modified_sequences--;
                     break;
                 }
             }
         }
+        //std::cout << "number_of_modified_sequences " << number_of_modified_sequences << std::endl;
+        //std::cout << "number_of_non_empty_sequences " << number_of_non_empty_sequences << std::endl;
 
         auto end = std::chrono::steady_clock::now();
         auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
@@ -1007,6 +1078,15 @@ public:
         return split(elements, generator);
     }
 
+    /**
+     * Crossover SREX 1
+     *
+     * The idea is to keep some routes from the first parent solution and to
+     * fill the rest of the child solution with routes or partial routes from
+     * the second parent solution.
+     *
+     * This variant kind of assumes that the sequences are homogeneous.
+     */
     inline Solution crossover_srex1(
             const Solution& solution_parent_1,
             const Solution& solution_parent_2,
@@ -1015,33 +1095,94 @@ public:
         //std::cout << "crossover_srex1 start" << std::endl;
         SequenceId m = number_of_sequences();
         ElementPos n = sequencing_scheme_.number_of_elements();
-        std::uniform_real_distribution<double> d01(0, 1);
 
-        Solution solution = empty_solution();
-        solution.modified_sequences = std::vector<bool>(m, false);
-
-        // Draw sequences to inherite from the first parent.
-        std::vector<bool> sequences(m, false);
-        std::vector<bool> added(n, false);
-        ElementId n_cur = 0;
-
-        // Add sequences from the first parent.
+        // Compute the number of sequences to remove.
+        SequenceId m1 = 0;
+        SequenceId m2 = 0;
         for (SequenceId i = 0; i < m; ++i) {
-            if (d01(generator) > 0.5)
-                continue;
-            solution.sequences[i] = solution_parent_1.sequences[i];
-            sequences[i] = true;
-            for (const auto& se: solution.sequences[i].elements) {
-                added[se.j] = true;
-                n_cur++;
-            }
-            //std::cout << "i " << to_string(global_cost(solution.sequences[i])) << std::endl;
+            if (!solution_parent_1.sequences[i].elements.empty())
+                m1++;
+            if (!solution_parent_2.sequences[i].elements.empty())
+                m2++;
         }
-        //std::cout << "n_cur_1 " << n_cur << " / " << n << std::endl;
+        std::uniform_int_distribution<SequencePos> d_m(1, std::min(m1, m2));
+        SequencePos number_of_sequences_to_remove = (std::min(m1, m2) <= 1)? 1: d_m(generator);
+        //std::cout << "m1 " << m1
+        //    << " m2 " << m2
+        //    << " number_of_sequences_to_remove " << number_of_sequences_to_remove
+        //    << std::endl;
 
-        // Add sequences from the second parent.
+        // Child solution.
+        Solution solution = solution_parent_1;
+
+        // Get elements from the first parent solution and store the sequences
+        // they belong to.
+        std::vector<SequenceId> sequences(n, -1);
+        optimizationtools::IndexedSet elts(n);
         for (SequenceId i = 0; i < m; ++i) {
-            if (sequences[i])
+            const auto& elements = solution_parent_1.sequences[i].elements;
+            ElementPos seq_size = (ElementPos)elements.size();
+            for (ElementPos pos = 0; pos < seq_size; ++pos) {
+                ElementId j = elements[pos].j;
+                elts.add(j);
+                sequences[j] = i;
+            }
+        }
+
+        if (sorted_successors_.empty()) {
+
+            // If the 'distance' method has not been provided, remove random
+            // sequences.
+            std::vector<SequenceId> seqs_1;
+            for (SequenceId i = 0; i < m; ++i)
+                if (!solution_parent_1.sequences[i].elements.empty())
+                    seqs_1.push_back(i);
+            std::shuffle(seqs_1.begin(), seqs_1.end(), generator);
+            for (auto it = seqs_1.begin();
+                    it != seqs_1.begin() + number_of_sequences_to_remove; ++it) {
+                SequenceId i = *it;
+                // Remove the sequence containing j2 from the child solution.
+                for (const auto& se: solution.sequences[i].elements)
+                    elts.remove(se.j);
+                solution.sequences[i] = empty_sequence(i);
+            }
+
+        } else {
+
+            // Draw seed element.
+            std::uniform_int_distribution<ElementPos> d(0, elts.size() - 1);
+            ElementPos pos = d(generator);
+            ElementId j = *(elts.begin() + pos);
+
+            // Remove sequence containing the seed element from the child solution..
+            SequencePos number_of_removed_sequences = 1;
+            SequenceId i_j = sequences[j];
+            for (const auto& se: solution.sequences[i_j].elements)
+                elts.remove(se.j);
+            solution.sequences[i_j] = empty_sequence(i_j);
+
+            // Loop through closest elements from the seed element.
+            for (ElementPos p = 0;
+                    number_of_removed_sequences < number_of_sequences_to_remove; ++p) {
+                ElementId j2 = (p % 2 == 0)?
+                    sorted_successors_[j][p / 2]:
+                    sorted_predecessors_[j][p / 2];
+                SequenceId i_j2 = sequences[j2];
+                // If j2 still belongs to the child solution.
+                if (elts.contains(j2)) {
+                    // Remove the sequence containing j2 from the child solution.
+                    for (const auto& se: solution.sequences[i_j2].elements)
+                        elts.remove(se.j);
+                    solution.sequences[i_j2] = empty_sequence(i_j2);
+                    number_of_removed_sequences++;
+                }
+            }
+
+        }
+
+        // Add sequences from the second parent solution.
+        for (SequenceId i = 0; i < m; ++i) {
+            if (!solution.sequences[i].elements.empty())
                 continue;
             // Find the sequence from the second parent with the highest number
             // of unscheduled elements.
@@ -1050,11 +1191,11 @@ public:
             for (SequenceId i2 = 0; i2 < m; ++i2) {
                 ElementPos seq_size = 0;
                 for (const auto& se: solution_parent_2.sequences[i2].elements)
-                    if (!added[se.j])
+                    if (!elts.contains(se.j))
                         seq_size++;
                 if (seq_size <= (SequencePos)solution_parent_2.sequences[i2].elements.size() / 2)
                     continue;
-                if (i2_best == 0 || seq_size_best < seq_size) {
+                if (i2_best == -1 || seq_size_best < seq_size) {
                     i2_best = i2;
                     seq_size_best = seq_size;
                 }
@@ -1065,24 +1206,21 @@ public:
 
             solution.sequences[i] = empty_sequence(i);
             for (const auto& se: solution_parent_2.sequences[i2_best].elements) {
-                if (added[se.j]) {
-                    solution.modified_sequences[i] = true;
-                    continue;
+                if (!elts.contains(se.j)) {
+                    append(solution.sequences[i], se);
+                    elts.add(se.j);
                 }
-                append(solution.sequences[i], se);
-                added[se.j] = true;
-                n_cur++;
             }
             //std::cout << "i " << i
             //    << " gc " << to_string(global_cost(solution.sequences[i]))
             //    << std::endl;
         }
-        //std::cout << "n_cur_2 " << n_cur << " / " << n << std::endl;
+        //std::cout << "elts.size() " << elts.size() << " / " << n << std::endl;
 
         // Add remaining elements at random positions.
         compute_temporary_structures(solution);
         for (ElementId j = 0; j < n; ++j) {
-            if (added[j])
+            if (elts.contains(j))
                 continue;
             auto improving_moves = explore_add(solution, j);
             if (!improving_moves.empty()) {
@@ -1095,7 +1233,6 @@ public:
                     if (move_best.i1 == -1 || dominates(move.global_cost, move_best.global_cost))
                         move_best = move;
                 apply_move(solution, move_best);
-                solution.modified_sequences[move_best.i1] = true;
                 compute_temporary_structures(solution, move_best.i1, move_best.i2);
             }
         }
@@ -1105,6 +1242,11 @@ public:
         return solution;
     }
 
+    /**
+     * Crossover SREX 2.
+     *
+     * This variant kind of assumes that the sequences are heterogeneous.
+     */
     inline Solution crossover_srex2(
             const Solution& solution_parent_1,
             const Solution& solution_parent_2,
@@ -1112,43 +1254,107 @@ public:
     {
         SequenceId m = number_of_sequences();
         ElementPos n = sequencing_scheme_.number_of_elements();
-        std::uniform_real_distribution<double> d01(0, 1);
 
-        Solution solution = empty_solution();
-        solution.modified_sequences = std::vector<bool>(m, false);
-
-        // Draw sequences to inherite from the first parent.
-        std::vector<bool> sequences(m, false);
-        std::vector<bool> added(n, false);
-
-        // Add sequences from the first parent.
+        // Compute the number of sequences to remove.
+        SequenceId m1 = 0;
+        SequenceId m2 = 0;
         for (SequenceId i = 0; i < m; ++i) {
-            if (d01(generator) > 0.5)
-                continue;
-            solution.sequences[i] = solution_parent_1.sequences[i];
-            sequences[i] = true;
-            for (const auto& se: solution.sequences[i].elements)
-                added[se.j] = true;
+            if (!solution_parent_1.sequences[i].elements.empty())
+                m1++;
+            if (!solution_parent_2.sequences[i].elements.empty())
+                m2++;
+        }
+        std::uniform_int_distribution<SequencePos> d_m(1, std::min(m1, m2));
+        SequencePos number_of_sequences_to_remove = (std::min(m1, m2) <= 1)? 1: d_m(generator);
+        //std::cout << "m1 " << m1
+        //    << " m2 " << m2
+        //    << " number_of_sequences_to_remove " << number_of_sequences_to_remove
+        //    << std::endl;
+
+        // Child solution.
+        Solution solution = solution_parent_1;
+
+        // Get elements from the first parent solution and store the sequences
+        // they belong to.
+        std::vector<SequenceId> sequences(n, -1);
+        optimizationtools::IndexedSet elts(n);
+        for (SequenceId i = 0; i < m; ++i) {
+            const auto& elements = solution_parent_1.sequences[i].elements;
+            ElementPos seq_size = (ElementPos)elements.size();
+            for (ElementPos pos = 0; pos < seq_size; ++pos) {
+                ElementId j = elements[pos].j;
+                elts.add(j);
+                sequences[j] = i;
+            }
+        }
+
+        if (sorted_successors_.empty()) {
+
+            // If the 'distance' method has not been provided, remove random
+            // sequences.
+            std::vector<SequenceId> seqs_1;
+            for (SequenceId i = 0; i < m; ++i)
+                if (!solution_parent_1.sequences[i].elements.empty())
+                    seqs_1.push_back(i);
+            std::shuffle(seqs_1.begin(), seqs_1.end(), generator);
+            for (auto it = seqs_1.begin();
+                    it != seqs_1.begin() + number_of_sequences_to_remove; ++it) {
+                SequenceId i = *it;
+                // Remove the sequence containing j2 from the child solution.
+                for (const auto& se: solution.sequences[i].elements)
+                    elts.remove(se.j);
+                solution.sequences[i] = empty_sequence(i);
+            }
+
+        } else {
+
+            // Draw seed element.
+            std::uniform_int_distribution<ElementPos> d(0, elts.size() - 1);
+            ElementPos pos = d(generator);
+            ElementId j = *(elts.begin() + pos);
+
+            // Remove sequence containing the seed element from the child solution..
+            SequencePos number_of_removed_sequences = 1;
+            SequenceId i_j = sequences[j];
+            for (const auto& se: solution.sequences[i_j].elements)
+                elts.remove(se.j);
+            solution.sequences[i_j] = empty_sequence(i_j);
+
+            // Loop through closest elements from the seed element.
+            for (ElementPos p = 0;
+                    number_of_removed_sequences < number_of_sequences_to_remove; ++p) {
+                ElementId j2 = (p % 2 == 0)?
+                    sorted_successors_[j][p / 2]:
+                    sorted_predecessors_[j][p / 2];
+                SequenceId i_j2 = sequences[j2];
+                // If j2 still belongs to the child solution.
+                if (elts.contains(j2)) {
+                    // Remove the sequence containing j2 from the child solution.
+                    for (const auto& se: solution.sequences[i_j2].elements)
+                        elts.remove(se.j);
+                    solution.sequences[i_j2] = empty_sequence(i_j2);
+                    number_of_removed_sequences++;
+                }
+            }
+
         }
 
         // Add sequences from the second parent.
         for (SequenceId i = 0; i < m; ++i) {
-            if (sequences[i])
+            if (!solution.sequences[i].elements.empty())
                 continue;
             solution.sequences[i] = empty_sequence(i);
             for (const auto& se: solution_parent_2.sequences[i].elements) {
-                if (added[se.j]) {
-                    solution.modified_sequences[i] = true;
-                    continue;
+                if (!elts.contains(se.j)) {
+                    append(solution.sequences[i], se);
+                    elts.add(se.j);
                 }
-                append(solution.sequences[i], se);
-                added[se.j] = true;
             }
         }
 
         // Add remaining elements at random positions.
         for (ElementId j = 0; j < n; ++j) {
-            if (added[j])
+            if (elts.contains(j))
                 continue;
             auto improving_moves = explore_add(solution, j);
             if (!improving_moves.empty()) {
@@ -1161,7 +1367,6 @@ public:
                     if (move_best.i1 == -1 || dominates(move.global_cost, move_best.global_cost))
                         move_best = move;
                 apply_move(solution, move_best);
-                solution.modified_sequences[move_best.i1] = true;
                 compute_temporary_structures(solution, move_best.i1, move_best.i2);
             }
         }
@@ -1310,6 +1515,16 @@ public:
             moves.push_back(move);
         }
 
+        // Adjacent swaps.
+        for (Counter perturbation = 0;
+                perturbation < parameters_.adjacent_swaps_number_of_perturbations;
+                ++perturbation) {
+            Move move;
+            move.type = Perturbations::AdjacentSwaps;
+            move.global_cost = global_cost(solution);
+            moves.push_back(move);
+        }
+
         // Ruin-and-recreate.
         for (Counter perturbation = 0;
                 perturbation < parameters_.ruin_and_recreate_number_of_perturbations;
@@ -1377,6 +1592,10 @@ public:
                 append(sequence_tmp, elements[pos]);
             compute_global_cost(solution_tmp_);
             solution = solution_tmp_;
+            break;
+
+        } case Perturbations::AdjacentSwaps: {
+            // TODO
             break;
 
         } case Perturbations::RuinAndRecreate: {
@@ -2110,7 +2329,6 @@ public:
             << "            Beta:                              " << parameters_.ruin_adjacent_string_removal_beta << std::endl
             << "        Recreate random:                       " << parameters_.recreate_random_weight << std::endl
             << "        Recreate best:                         " << parameters_.recreate_best_weight << std::endl
-            << "            Blink rate:                        " << parameters_.recreate_best_blink_rate << std::endl
             << "    Force-add:                                 " << parameters_.force_add << std::endl;
         info.os()
             << "Crossovers" << std::endl
@@ -4728,28 +4946,47 @@ private:
                         continue;
 
                     for (Mode mode = 0; mode < number_of_modes(j); ++mode) {
-                        GlobalCost* gcm = (parameters_.linking_constraints && m > 1)?
-                            &partial_global_costs_cur_1_[i]: nullptr;
-                        SequenceData sequence_data = sequence_datas_cur_1_[i][pos];
-                        bool ok = append(
-                                sequence_data, (pos == 0),
-                                {j, mode},
-                                gc, gcm);
-                        if (!ok)
-                            continue;
-                        ok = concatenate(
-                                sequence_data, false,
-                                sequence, pos, seq_size - 1, false,
-                                gc, gcm);
-                        if (!ok)
-                            continue;
-                        GlobalCost gc_tmp = (parameters_.linking_constraints && m > 1)?
-                            global_cost_merge(
-                                    sequencing_scheme_.global_cost(sequence_data),
-                                    partial_global_costs_cur_1_[i]):
-                            sequencing_scheme_.global_cost(sequence_data);
+                        GlobalCost gc_tmp;
+                        bool accept = false;
+                        if (!parameters_.add_remove) {
+                            SequenceData sequence_data = sequence_datas_cur_1_[i][pos];
+                            append(
+                                    sequence_data, (pos == 0),
+                                    {j, mode});
+                            concatenate(
+                                    sequence_data, false,
+                                    sequence, pos, seq_size - 1, false);
+                            gc_tmp = (parameters_.linking_constraints && m > 1)?
+                                global_cost_merge(
+                                        sequencing_scheme_.global_cost(sequence_data),
+                                        partial_global_costs_cur_1_[i]):
+                                sequencing_scheme_.global_cost(sequence_data);
+                            accept = true;
+                        } else {
+                            GlobalCost* gcm = (parameters_.linking_constraints && m > 1)?
+                                &partial_global_costs_cur_1_[i]: nullptr;
+                            SequenceData sequence_data = sequence_datas_cur_1_[i][pos];
+                            bool ok = append(
+                                    sequence_data, (pos == 0),
+                                    {j, mode},
+                                    gc, gcm);
+                            if (!ok)
+                                continue;
+                            ok = concatenate(
+                                    sequence_data, false,
+                                    sequence, pos, seq_size - 1, false,
+                                    gc, gcm);
+                            if (!ok)
+                                continue;
+                            gc_tmp = (parameters_.linking_constraints && m > 1)?
+                                global_cost_merge(
+                                        sequencing_scheme_.global_cost(sequence_data),
+                                        partial_global_costs_cur_1_[i]):
+                                sequencing_scheme_.global_cost(sequence_data);
+                            accept = (!(gc_tmp >= gc));
+                        }
 
-                        if (!(gc_tmp >= gc)) {
+                        if (accept) {
                             Move0 move;
                             move.type = Neighborhoods::Add;
                             move.i1 = i;
@@ -4801,7 +5038,21 @@ private:
 
                     GlobalCost gc_tmp;
                     bool accept = false;
-                    if (parameters_.add_remove) {
+                    if (!parameters_.add_remove) {
+                        SequenceData sequence_data = sequence_datas_cur_1_[i][pos];
+                        append(
+                                sequence_data, (pos == 0),
+                                {j, mode});
+                        concatenate(
+                                sequence_data, false,
+                                sequence, pos, seq_size - 1, false);
+                        gc_tmp = (parameters_.linking_constraints && m > 1)?
+                            global_cost_merge(
+                                    sequencing_scheme_.global_cost(sequence_data),
+                                    partial_global_costs_cur_1_[i]):
+                            sequencing_scheme_.global_cost(sequence_data);
+                        accept = true;
+                    } else {
                         GlobalCost* gcm = (parameters_.linking_constraints && m > 1)?
                             &partial_global_costs_cur_1_[i]: nullptr;
                         SequenceData sequence_data = sequence_datas_cur_1_[i][pos];
@@ -4823,20 +5074,6 @@ private:
                                     partial_global_costs_cur_1_[i]):
                             sequencing_scheme_.global_cost(sequence_data);
                         accept = (!(gc_tmp >= gc));
-                    } else {
-                        SequenceData sequence_data = sequence_datas_cur_1_[i][pos];
-                        append(
-                                sequence_data, (pos == 0),
-                                {j, mode});
-                        concatenate(
-                                sequence_data, false,
-                                sequence, pos, seq_size - 1, false);
-                        gc_tmp = (parameters_.linking_constraints && m > 1)?
-                            global_cost_merge(
-                                    sequencing_scheme_.global_cost(sequence_data),
-                                    partial_global_costs_cur_1_[i]):
-                            sequencing_scheme_.global_cost(sequence_data);
-                        accept = true;
                     }
 
                     //std::cout << to_string(gc_tmp) << std::endl;
@@ -4875,22 +5112,38 @@ private:
                     continue;
 
                 for (Mode mode = 0; mode < number_of_modes(j); ++mode) {
-                    GlobalCost* gcm = (parameters_.linking_constraints && m > 1)?
-                        &partial_global_costs_cur_1_[i]: nullptr;
-                    SequenceData sequence_data = sequence_datas_cur_1_[i][seq_size];
-                    bool ok = append(
-                            sequence_data, (seq_size == 0),
-                            {j, mode},
-                            gc, gcm);
-                    if (!ok)
-                        continue;
-                    GlobalCost gc_tmp = (parameters_.linking_constraints && m > 1)?
-                        global_cost_merge(
-                                sequencing_scheme_.global_cost(sequence_data),
-                                partial_global_costs_cur_1_[i]):
-                        sequencing_scheme_.global_cost(sequence_data);
+                    GlobalCost gc_tmp;
+                    bool accept = false;
+                    if (!parameters_.add_remove) {
+                        SequenceData sequence_data = sequence_datas_cur_1_[i][seq_size];
+                        append(
+                                sequence_data, (seq_size == 0),
+                                {j, mode});
+                        gc_tmp = (parameters_.linking_constraints && m > 1)?
+                            global_cost_merge(
+                                    sequencing_scheme_.global_cost(sequence_data),
+                                    partial_global_costs_cur_1_[i]):
+                            sequencing_scheme_.global_cost(sequence_data);
+                        accept = true;
+                    } else {
+                        GlobalCost* gcm = (parameters_.linking_constraints && m > 1)?
+                            &partial_global_costs_cur_1_[i]: nullptr;
+                        SequenceData sequence_data = sequence_datas_cur_1_[i][seq_size];
+                        bool ok = append(
+                                sequence_data, (seq_size == 0),
+                                {j, mode},
+                                gc, gcm);
+                        if (!ok)
+                            continue;
+                        gc_tmp = (parameters_.linking_constraints && m > 1)?
+                            global_cost_merge(
+                                    sequencing_scheme_.global_cost(sequence_data),
+                                    partial_global_costs_cur_1_[i]):
+                            sequencing_scheme_.global_cost(sequence_data);
+                        accept = (!(gc_tmp >= gc));
+                    }
 
-                    if (!(gc_tmp >= gc)) {
+                    if (accept) {
                         Move0 move;
                         move.type = Neighborhoods::Add;
                         move.i1 = i;

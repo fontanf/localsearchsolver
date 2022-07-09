@@ -68,8 +68,8 @@ In case the `GlobalCost global_cost_concatenate(SequenceData&, const SequenceDat
   * OX crossover
   * SJOX crossover
   * SBOX crossover
-  * SREX1 crossover
-  * SREX2 crossover
+  * SREX1 crossover (multiple sequences only)
+  * SREX2 crossover (multiple sequences only)
 
 ### Examples
 

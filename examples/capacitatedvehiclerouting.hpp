@@ -59,8 +59,10 @@ public:
         parameters.ruin_and_recreate_number_of_perturbations = 128;
         parameters.ruin_number_of_elements_removed = 10;
         parameters.ruin_adjacent_string_removal_weight = 1.0;
+        parameters.recreate_best_weight = 1.0;
 
-        parameters.crossover_ox_weight = 1.0;
+        //parameters.crossover_ox_weight = 1.0;
+        parameters.crossover_srex1_weight = 1.0;
 
         return parameters;
     }
