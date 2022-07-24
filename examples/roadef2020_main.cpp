@@ -23,6 +23,7 @@ int main(int argc, char *argv[])
     Counter number_of_threads_2 = 1;
     Counter initial_solution_id = 0;
     int seed = 0;
+    int verbosity_level = 1;
     double time_limit = std::numeric_limits<double>::infinity();
 
     po::options_description desc("Allowed options");
@@ -38,8 +39,8 @@ int main(int argc, char *argv[])
         (",s", po::value<int>(&seed), "set seed")
         (",i", po::value<std::string>(&i_path), "")
         (",c", po::value<std::string>(&c_path), "")
+        (",v", po::value<int>(&verbosity_level), "")
         (",e", "Only write output and certificate files at the end")
-        ("verbose", "set verbosity")
         ;
     po::variables_map vm;
     boost::program_options::store(
@@ -80,7 +81,7 @@ int main(int argc, char *argv[])
 
     optimizationtools::Info info = optimizationtools::Info()
         .set_json_output_path(output_path)
-        .set_verbose(true)
+        .set_verbosity_level(verbosity_level)
         .set_time_limit(time_limit)
         .set_certificate_path(certificate_path)
         .set_only_write_at_the_end(false)
@@ -98,7 +99,7 @@ int main(int argc, char *argv[])
 
     // Run A*.
     BestFirstLocalSearchOptionalParameters<LocalScheme> parameters_best_first_local_search;
-    parameters_best_first_local_search.info.set_verbose(true);
+    parameters_best_first_local_search.info.set_verbosity_level(1);
     parameters_best_first_local_search.info.set_time_limit(info.remaining_time());
     parameters_best_first_local_search.number_of_threads_1 = number_of_threads_1;
     parameters_best_first_local_search.number_of_threads_2 = number_of_threads_2;

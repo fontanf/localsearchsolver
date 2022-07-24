@@ -125,6 +125,7 @@ MainArgs read_args(int argc, char *argv[], MainArgs& main_args)
     std::string output_path = "";
     std::string certificate_path = "";
     double time_limit = std::numeric_limits<double>::infinity();
+    int verbosity_level = 1;
 
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
@@ -140,7 +141,7 @@ MainArgs read_args(int argc, char *argv[], MainArgs& main_args)
         ("time-limit,t", boost::program_options::value<double>(&time_limit), "Time limit in seconds\n  ex: 3600")
         ("goal,g", boost::program_options::value<double>(&main_args.goal), "set goal")
         ("only-write-at-the-end,e", "Only write output and certificate files at the end")
-        ("verbose,v", "")
+        ("verbosity-level,v", boost::program_options::value<int>(&verbosity_level), "set verbosity level")
         ("print-instance", boost::program_options::value<int>(&main_args.print_instance), "print instance")
         ("print-solution", boost::program_options::value<int>(&main_args.print_solution), "print solution")
         ("print-checker", boost::program_options::value<int>(&main_args.print_checker), "print checker")
@@ -173,7 +174,7 @@ MainArgs read_args(int argc, char *argv[], MainArgs& main_args)
         main_args.sequencing_argv.push_back(const_cast<char*>(s.c_str()));
 
     main_args.info = optimizationtools::Info()
-        .set_verbose(vm.count("verbose"))
+        .set_verbosity_level(verbosity_level)
         .set_time_limit(time_limit)
         .set_certificate_path(certificate_path)
         .set_json_output_path(output_path)

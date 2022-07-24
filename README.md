@@ -349,7 +349,7 @@ bazel build -- //...
 
 Then, examples can be executed as follows:
 ```shell
-./bazel-bin/examples/knapsackwithconflicts_main -v -i ../ordata/knapsackwithconflicts/bettinelli2017/sparse_corr/test_1000_1000_r0.001-0.dat -f bettinelli2017 -t 5 -c sol.txt --print-solution
+./bazel-bin/examples/knapsackwithconflicts_main -v 1 -i ../ordata/knapsackwithconflicts/bettinelli2017/sparse_corr/test_1000_1000_r0.001-0.dat -f bettinelli2017 -t 5 -c sol.txt --print-solution 1
 ```
 ```
 =======================================

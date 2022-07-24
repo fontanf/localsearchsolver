@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     sequencing::LocalScheme<SequencingScheme> local_scheme(sequencing_scheme, sequencing_parameters);
 
     BestFirstLocalSearchOptionalParameters<sequencing::LocalScheme<SequencingScheme>> parameters_best_first_local_search;
-    parameters_best_first_local_search.info.set_verbose(false);
+    parameters_best_first_local_search.info.set_verbosity_level(0);
     parameters_best_first_local_search.initial_solution_ids = {3};
     parameters_best_first_local_search.new_solution_callback
         = [&sequencing_scheme](
