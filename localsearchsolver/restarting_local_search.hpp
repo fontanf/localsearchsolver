@@ -33,7 +33,8 @@ struct RestartingLocalSearchOptionalParameters
      * The alglorithm stops as soon as a solution with a better global cost is
      * found.
      */
-    GlobalCost goal = best<GlobalCost>();
+    bool has_goal = false;
+    GlobalCost goal;
     /** Callback function called when a new best solution is found. */
     RestartingLocalSearchCallback<LocalScheme> new_solution_callback
         = [](const Solution& solution) { (void)solution; };
@@ -110,7 +111,8 @@ inline RestartingLocalSearchOutput<LocalScheme> restarting_local_search(
             break;
 
         // Check goal.
-        if (output.solution_pool.size() > 0
+        if (parameters.has_goal
+                && output.solution_pool.size() > 0
                 && local_scheme.global_cost(output.solution_pool.best())
                 <= parameters.goal)
             break;

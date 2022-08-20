@@ -44,7 +44,8 @@ struct GeneticLocalSearchOptionalParameters
      * The alglorithm stops as soon as a solution with a better global cost is
      * found.
      */
-    GlobalCost goal = best<GlobalCost>();
+    bool has_goal = false;
+    GlobalCost goal;
     /** Callback function called when a new best solution is found. */
     GeneticLocalSearchCallback<LocalScheme> new_solution_callback
         = [](const Solution&) { };
@@ -209,7 +210,7 @@ public:
         for (Counter solution_id = 0; solution_id < size(); ++solution_id) {
             const PopulationSolution& solution = solutions_[solution_id];
             std::cout << "Solution " << solution_id << ":"
-                << " cost " << to_string(local_scheme_.global_cost(solution.solution))
+                << " cost " << to_string(local_scheme_, local_scheme_.global_cost(solution.solution))
                 << "; cost rank " << solution.global_cost_rank
                 << "; diversity: " << solution.diversity
                 << "; diversity rank: " << solution.diversity_rank
@@ -356,7 +357,8 @@ inline void genetic_local_search_worker(
             break;
 
         // Check goal.
-        if (local_scheme.global_cost(data.output.solution_pool.best())
+        if (data.parameters.has_goal
+                && local_scheme.global_cost(data.output.solution_pool.best())
                 <= data.parameters.goal)
             break;
 
@@ -376,7 +378,7 @@ inline void genetic_local_search_worker(
             data.parameters.initial_solutions[initial_solution_pos - (Counter)data.parameters.initial_solution_ids.size()];
         // Run A* Local Search.
         local_scheme.local_search(solution, generator);
-        //std::cout << to_string(local_scheme.global_cost(solution)) << std::endl;
+        //std::cout << to_string(local_scheme, local_scheme.global_cost(solution)) << std::endl;
 
         // Lock mutex since we will modify the shared structure.
         data.mutex.lock();
@@ -406,7 +408,8 @@ inline void genetic_local_search_worker(
             break;
 
         // Check goal.
-        if (data.output.solution_pool.size() > 0
+        if (data.parameters.has_goal
+                && data.output.solution_pool.size() > 0
                 && local_scheme.global_cost(data.output.solution_pool.best())
                 <= data.parameters.goal)
             break;

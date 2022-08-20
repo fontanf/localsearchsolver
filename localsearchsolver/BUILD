@@ -12,6 +12,7 @@ cc_library(
         deps = [
                 "@optimizationtools//optimizationtools/utils:info",
                 "@optimizationtools//optimizationtools/utils:utils",
+                "@optimizationtools//optimizationtools/containers:containers",
         ],
         visibility = ["//visibility:public"],
 )

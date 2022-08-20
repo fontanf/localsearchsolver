@@ -224,8 +224,10 @@ SolutionPool<LocalScheme> run_restarting_local_search(
     auto parameters = read_restarting_local_search_args<LocalScheme>(main_args.algorithm_argv);
     parameters.info = info;
     parameters.initial_solution_ids = main_args.initial_solution_ids;
-    if (main_args.has_goal)
+    if (main_args.has_goal) {
+        parameters.has_goal = true;
         parameters.goal = global_cost_goal(local_scheme, main_args.goal);
+    }
     return restarting_local_search(local_scheme, parameters).solution_pool;
 }
 
@@ -238,8 +240,10 @@ SolutionPool<LocalScheme> run_iterated_local_search(
     auto parameters = read_iterated_local_search_args<LocalScheme>(main_args.algorithm_argv);
     parameters.info = info;
     parameters.initial_solution_ids = main_args.initial_solution_ids;
-    if (main_args.has_goal)
+    if (main_args.has_goal) {
+        parameters.has_goal = true;
         parameters.goal = global_cost_goal(local_scheme, main_args.goal);
+    }
     return iterated_local_search(local_scheme, parameters).solution_pool;
 }
 
@@ -252,8 +256,10 @@ SolutionPool<LocalScheme> run_best_first_local_search(
     auto parameters = read_best_first_local_search_args<LocalScheme>(main_args.algorithm_argv);
     parameters.info = info;
     parameters.initial_solution_ids = main_args.initial_solution_ids;
-    if (main_args.has_goal)
+    if (main_args.has_goal) {
+        parameters.has_goal = true;
         parameters.goal = global_cost_goal(local_scheme, main_args.goal);
+    }
     return best_first_local_search(local_scheme, parameters).solution_pool;
 }
 
@@ -266,8 +272,10 @@ SolutionPool<LocalScheme> run_genetic_local_search(
     auto parameters = read_genetic_local_search_args<LocalScheme>(main_args.algorithm_argv);
     parameters.info = info;
     parameters.initial_solution_ids = main_args.initial_solution_ids;
-    if (main_args.has_goal)
+    if (main_args.has_goal) {
+        parameters.has_goal = true;
         parameters.goal = global_cost_goal(local_scheme, main_args.goal);
+    }
     return genetic_local_search(local_scheme, parameters).solution_pool;
 }
 

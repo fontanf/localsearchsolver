@@ -37,7 +37,8 @@ struct BestFirstLocalSearchOptionalParameters
      * The alglorithm stops as soon as a solution with a better global cost is
      * found.
      */
-    GlobalCost goal = best<GlobalCost>();
+    bool has_goal = false;
+    GlobalCost goal;
     /** Callback function called when a new best solution is found. */
     BestFirstLocalSearchCallback<LocalScheme> new_solution_callback
         = [](const Solution& solution) { (void)solution; };
@@ -220,7 +221,8 @@ inline void best_first_local_search_worker(
             break;
 
         // Check goal.
-        if (data.output.solution_pool.size() > 0
+        if (data.parameters.has_goal
+                && data.output.solution_pool.size() > 0
                 && local_scheme.global_cost(data.output.solution_pool.best())
                 <= data.parameters.goal)
             break;
@@ -289,8 +291,9 @@ inline void best_first_local_search_worker(
             break;
 
         // Check goal.
-        if (local_scheme.global_cost(data.output.solution_pool.best())
-                    <= data.parameters.goal)
+        if (data.parameters.has_goal
+                && local_scheme.global_cost(data.output.solution_pool.best())
+                <= data.parameters.goal)
             break;
 
         data.mutex.lock();
@@ -329,8 +332,9 @@ inline void best_first_local_search_worker(
         }
 
         // Check goal.
-        if (local_scheme.global_cost(data.output.solution_pool.best())
-                    <= data.parameters.goal)
+        if (data.parameters.has_goal
+                && local_scheme.global_cost(data.output.solution_pool.best())
+                <= data.parameters.goal)
             break;
 
         if (data.q.empty()) {
@@ -393,7 +397,7 @@ inline void best_first_local_search_worker(
         data.number_of_working_threads++;
         //std::cout << "node " << node_id
         //    << " depth " << node_cur->depth
-        //    << " cost " << to_string(move.global_cost)
+        //    << " cost " << to_string(local_scheme, move.global_cost)
         //    << " thread " << thread_id
         //    << std::endl;
         data.mutex.unlock();

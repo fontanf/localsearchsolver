@@ -221,7 +221,7 @@ public:
         };
     }
 
-    inline std::string global_cost_export(const GlobalCost& global_cost) const
+    inline std::string to_string(const GlobalCost& global_cost) const
     {
         if (overweight(global_cost) > 0)
             return "-inf";

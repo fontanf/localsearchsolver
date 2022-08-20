@@ -226,6 +226,11 @@ public:
 
     using GlobalCost = typename SequencingScheme::GlobalCost;
 
+    std::string to_string(const GlobalCost& gc) const
+    {
+        return localsearchsolver::to_string(sequencing_scheme_, gc);
+    }
+
     using SequenceData = typename SequencingScheme::SequenceData;
 
     struct SolutionElement
@@ -531,13 +536,17 @@ public:
         // Run Bellman algorithm.
         std::vector<std::vector<ElementPos>> prev(
                 m + 1, std::vector<ElementPos>(n + 1, -1));
+        std::vector<std::vector<int8_t>> distance_init(
+                m + 1, std::vector<int8_t>(n + 1, false));
         std::vector<std::vector<GlobalCost>> distance(
-                m + 1, std::vector<GlobalCost>(n + 1, worst<GlobalCost>()));
+                m + 1, std::vector<GlobalCost>(n + 1, GlobalCost()));
         distance[0][0] = sequencing_scheme_.global_cost(empty_sequence_data(i));
         for (SequenceId i = 0; i < m; ++i) {
             for (ElementPos pos_1 = 0; pos_1 < seq_size; ++pos_1) {
                 for (ElementPos pos_2 = pos_1 + 1; pos_2 <= seq_size; ++pos_2) {
-                    if (distance[i + 1][pos_2] > distance[i][pos_1] + edges[pos_2][pos_1]) {
+                    if (!distance_init[i + 1][pos_2]
+                            || distance[i + 1][pos_2]
+                            > distance[i][pos_1] + edges[pos_2][pos_1]) {
                         //std::cout << "Update " << i
                         //    << " pos_2 " << pos_2
                         //    << " from pos_1 " << pos_1
@@ -546,6 +555,7 @@ public:
                         //    << " uv " << to_string(edges[pos_2][pos_1])
                         //    << " du+uv " << to_string(distance[i][pos_1] + edges[pos_2][pos_1])
                         //    << std::endl;
+                        distance_init[i + 1][pos_2] = true;
                         distance[i + 1][pos_2] = distance[i][pos_1] + edges[pos_2][pos_1];
                         prev[i + 1][pos_2] = pos_1;
                     }
@@ -581,7 +591,7 @@ public:
                 //    << " p " << p << " / " << elements.size()
                 //    << std::endl;
                 append(solution.sequences[i_cur], elements[p]);
-                //std::cout << to_string(sequencing_scheme_.global_cost(solution.sequences[i_cur].data)) << std::endl;
+                //std::cout << to_string(sequencing_scheme_, sequencing_scheme_.global_cost(solution.sequences[i_cur].data)) << std::endl;
             }
         }
         compute_global_cost(solution);
@@ -644,7 +654,10 @@ public:
                             generator);
                     Move0 move_best;
                     for (const Move0 move: improving_moves)
-                        if (move_best.i1 == -1 || dominates(move.global_cost, move_best.global_cost))
+                        if (move_best.i1 == -1 || dominates(
+                                    sequencing_scheme_,
+                                    move.global_cost,
+                                    move_best.global_cost))
                             move_best = move;
                     apply_move(solution, move_best);
                     compute_temporary_structures(solution, move_best.i1, move_best.i2);
@@ -665,7 +678,10 @@ public:
                             generator);
                     Move0 move_best;
                     for (const Move0 move: improving_moves)
-                        if (move_best.i1 == -1 || dominates(move.global_cost, move_best.global_cost))
+                        if (move_best.i1 == -1 || dominates(
+                                    sequencing_scheme_,
+                                    move.global_cost,
+                                    move_best.global_cost))
                             move_best = move;
                     apply_move(solution, move_best);
                     compute_temporary_structures(solution, move_best.i1, move_best.i2);
@@ -689,7 +705,10 @@ public:
                             generator);
                     Move0 move_best;
                     for (const Move0 move: improving_moves)
-                        if (move_best.i1 == -1 || dominates(move.global_cost, move_best.global_cost))
+                        if (move_best.i1 == -1 || dominates(
+                                    sequencing_scheme_,
+                                    move.global_cost,
+                                    move_best.global_cost))
                             move_best = move;
                     apply_move(solution, move_best);
                     compute_temporary_structures(solution, move_best.i1, move_best.i2);
@@ -809,9 +828,9 @@ public:
         }
         }
         Solution solution;
-        if (dominates(global_cost(solution_1), global_cost(solution_2))) {
+        if (dominates(sequencing_scheme_, global_cost(solution_1), global_cost(solution_2))) {
             solution = solution_1;
-        } else if (dominates(global_cost(solution_2), global_cost(solution_1))) {
+        } else if (dominates(sequencing_scheme_, global_cost(solution_2), global_cost(solution_1))) {
             solution = solution_2;
         } else {
             solution = solution_1;
@@ -1230,7 +1249,10 @@ public:
                         generator);
                 Move0 move_best;
                 for (const Move0 move: improving_moves)
-                    if (move_best.i1 == -1 || dominates(move.global_cost, move_best.global_cost))
+                    if (move_best.i1 == -1 || dominates(
+                                sequencing_scheme_,
+                                move.global_cost,
+                                move_best.global_cost))
                         move_best = move;
                 apply_move(solution, move_best);
                 compute_temporary_structures(solution, move_best.i1, move_best.i2);
@@ -1364,7 +1386,10 @@ public:
                         generator);
                 Move0 move_best;
                 for (const Move0 move: improving_moves)
-                    if (move_best.i1 == -1 || dominates(move.global_cost, move_best.global_cost))
+                    if (move_best.i1 == -1 || dominates(
+                                sequencing_scheme_,
+                                move.global_cost,
+                                move_best.global_cost))
                         move_best = move;
                 apply_move(solution, move_best);
                 compute_temporary_structures(solution, move_best.i1, move_best.i2);
@@ -1869,7 +1894,10 @@ public:
                                 generator);
                         Move0 move_best;
                         for (const Move0 move: improving_moves)
-                            if (move_best.i1 == -1 || dominates(move.global_cost, move_best.global_cost))
+                            if (move_best.i1 == -1 || dominates(
+                                        sequencing_scheme_,
+                                        move.global_cost,
+                                        move_best.global_cost))
                                 move_best = move;
                         apply_move(solution_cur_, move_best);
                         solution_cur_.modified_sequences[move_best.i1] = true;
@@ -2156,7 +2184,10 @@ public:
                             generator);
                     Move0 move_best;
                     for (const Move0 move: neighborhood.improving_moves)
-                        if (move_best.i1 == -1 || dominates(move.global_cost, move_best.global_cost))
+                        if (move_best.i1 == -1 || dominates(
+                                    sequencing_scheme_,
+                                    move.global_cost,
+                                    move_best.global_cost))
                             move_best = move;
                     apply_move(solution, move_best);
                     // Check new current solution cost.

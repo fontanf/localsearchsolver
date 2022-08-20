@@ -147,11 +147,11 @@ T best() { return Helper<T>::min(); }
 
 
 ////////////////////////////////////////////////////////////////////////////////
-//////////////////////// print_local_scheme_global_cost ////////////////////////
+////////////////////////////////// dominates ///////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename, typename T>
-struct HasPrintGlobalCostMethod
+struct HasDominatesMethod
 {
     static_assert(
         std::integral_constant<T, false>::value,
@@ -159,13 +159,13 @@ struct HasPrintGlobalCostMethod
 };
 
 template<typename C, typename Ret, typename... Args>
-struct HasPrintGlobalCostMethod<C, Ret(Args...)>
+struct HasDominatesMethod<C, Ret(Args...)>
 {
 
 private:
 
     template<typename T>
-    static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().global_cost_export(std::declval<Args>()...)), Ret>::type;
+    static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().dominates(std::declval<Args>()...)), Ret>::type;
 
     template<typename>
     static constexpr std::false_type check(...);
@@ -179,7 +179,80 @@ public:
 };
 
 template<typename LocalScheme>
-std::string print_local_scheme_global_cost(
+bool dominates(
+        LocalScheme&,
+        const typename LocalScheme::GlobalCost& global_cost_1,
+        const typename LocalScheme::GlobalCost& global_cost_2,
+        std::false_type)
+{
+    return dominates(global_cost_1, global_cost_2);
+}
+
+template<typename LocalScheme>
+bool dominates(
+        LocalScheme& local_scheme,
+        const typename LocalScheme::GlobalCost& global_cost_1,
+        const typename LocalScheme::GlobalCost& global_cost_2,
+        std::true_type)
+{
+    return local_scheme.dominates(
+            global_cost_1,
+            global_cost_2);
+}
+
+template<typename LocalScheme>
+bool dominates(
+        LocalScheme& local_scheme,
+        const typename LocalScheme::GlobalCost& global_cost_1,
+        const typename LocalScheme::GlobalCost& global_cost_2)
+{
+    return dominates(
+            local_scheme,
+            global_cost_1,
+            global_cost_2,
+            std::integral_constant<
+                bool,
+                HasDominatesMethod<LocalScheme,
+                bool(
+                    const typename LocalScheme::GlobalCost&,
+                    const typename LocalScheme::GlobalCost&)>::value>());
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////// to_string ///////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename, typename T>
+struct HasToStringMethod
+{
+    static_assert(
+        std::integral_constant<T, false>::value,
+        "Second template parameter needs to be of function type.");
+};
+
+template<typename C, typename Ret, typename... Args>
+struct HasToStringMethod<C, Ret(Args...)>
+{
+
+private:
+
+    template<typename T>
+    static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().to_string(std::declval<Args>()...)), Ret>::type;
+
+    template<typename>
+    static constexpr std::false_type check(...);
+
+    typedef decltype(check<C>(0)) type;
+
+public:
+
+    static constexpr bool value = type::value;
+
+};
+
+template<typename LocalScheme>
+std::string to_string(
         LocalScheme&,
         const typename LocalScheme::GlobalCost& global_cost,
         std::false_type)
@@ -188,25 +261,25 @@ std::string print_local_scheme_global_cost(
 }
 
 template<typename LocalScheme>
-std::string print_local_scheme_global_cost(
+std::string to_string(
         LocalScheme& local_scheme,
         const typename LocalScheme::GlobalCost& global_cost,
         std::true_type)
 {
-    return local_scheme.global_cost_export(global_cost);
+    return local_scheme.to_string(global_cost);
 }
 
 template<typename LocalScheme>
-std::string print_local_scheme_global_cost(
+std::string to_string(
         LocalScheme& local_scheme,
         const typename LocalScheme::GlobalCost& global_cost)
 {
-    return print_local_scheme_global_cost(
+    return to_string(
             local_scheme,
             global_cost,
             std::integral_constant<
                 bool,
-                HasPrintGlobalCostMethod<LocalScheme,
+                HasToStringMethod<LocalScheme,
                 std::string(const typename LocalScheme::GlobalCost&)>::value>());
 }
 
@@ -282,7 +355,7 @@ public:
             info.output->number_of_solutions++;
             double t = info.elapsed_time();
             std::string sol_str = "Solution" + std::to_string(info.output->number_of_solutions);
-            info.add_to_json(sol_str, "Value", print_local_scheme_global_cost(scheme_, scheme_.global_cost(solution)));
+            info.add_to_json(sol_str, "Value", to_string(scheme_, scheme_.global_cost(solution)));
             info.add_to_json(sol_str, "Time", t);
             info.add_to_json(sol_str, "Comment", ss.str());
             if (!info.output->only_write_at_the_end) {
@@ -317,7 +390,7 @@ public:
         std::streamsize precision = std::cout.precision();
         info.os()
             << std::setw(10) << std::fixed << std::setprecision(3) << t << std::defaultfloat << std::setprecision(precision)
-            << std::setw(40) << to_string(scheme_.global_cost(best()))
+            << std::setw(40) << to_string(scheme_, scheme_.global_cost(best()))
             << std::setw(40) << ss.str()
             << std::endl;
     }
@@ -329,12 +402,12 @@ public:
             << std::endl
             << "Final statistics" << std::endl
             << "----------------" << std::endl
-            << "Value:                      " << to_string(scheme_.global_cost(best())) << std::endl
+            << "Value:                      " << to_string(scheme_, scheme_.global_cost(best())) << std::endl
             << "Time:                       " << t << std::endl;
 
         std::string sol_str = "Solution";
         info.add_to_json(sol_str, "Time", t);
-        info.add_to_json(sol_str, "Value", print_local_scheme_global_cost(scheme_, scheme_.global_cost(*solutions_.begin())));
+        info.add_to_json(sol_str, "Value", to_string(scheme_, scheme_.global_cost(*solutions_.begin())));
         info.write_json_output();
         scheme_.write(best_, info.output->certificate_path);
     }
@@ -551,6 +624,26 @@ void print_local_scheme_statistics(
                 bool,
                 HasPrintStatisticsMethod<LocalScheme,
                 void(optimizationtools::Info&)>::value>());
+}
+
+namespace relational
+{
+
+struct tag {};
+
+template <typename T>
+bool operator==(T const& lhs, T const& rhs) { return !(rhs < lhs) && !(lhs < rhs); }
+
+template <typename T>
+bool operator!=(T const& lhs, T const& rhs) { return !(lhs == rhs); }
+
+template <typename T>
+bool operator>(T const& lhs, T const& rhs) { return rhs < lhs; }
+template <typename T>
+bool operator<=(T const& lhs, T const& rhs) { return !(rhs < lhs); }
+template <typename T>
+bool operator>=(T const& lhs, T const& rhs) { return !(lhs < rhs); }
+
 }
 
 }
