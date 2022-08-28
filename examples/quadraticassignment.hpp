@@ -316,42 +316,42 @@ public:
      * Local search.
      */
 
-    struct Move
+    struct Perturbation
     {
-        Move(): global_cost(worst<GlobalCost>()) { }
+        Perturbation(): global_cost(worst<GlobalCost>()) { }
 
         std::vector<FacilityId> facilities;
         GlobalCost global_cost;
     };
 
-    struct MoveHasher
+    struct PerturbationHasher
     {
         std::hash<FacilityId> hasher;
 
-        inline bool hashable(const Move&) const { return true; }
+        inline bool hashable(const Perturbation&) const { return true; }
 
         inline bool operator()(
-                const Move& move_1,
-                const Move& move_2) const
+                const Perturbation& perturbation_1,
+                const Perturbation& perturbation_2) const
         {
-            return move_1.facilities[0] == move_2.facilities[0];
+            return perturbation_1.facilities[0] == perturbation_2.facilities[0];
         }
 
         inline std::size_t operator()(
-                const Move& move) const
+                const Perturbation& perturbation) const
         {
-            size_t hash = hasher(move.facilities[0]);
+            size_t hash = hasher(perturbation.facilities[0]);
             return hash;
         }
     };
 
-    inline MoveHasher move_hasher() const { return MoveHasher(); }
+    inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
 
-    inline std::vector<Move> perturbations(
+    inline std::vector<Perturbation> perturbations(
             const Solution& solution,
             std::mt19937_64& generator)
     {
-        std::vector<Move> moves;
+        std::vector<Perturbation> perturbations;
         for (FacilityId facility_id = 0;
                 facility_id < instance_.number_of_facilities();
                 ++facility_id) {
@@ -387,36 +387,36 @@ public:
                 facility_id_1 = facility_id_2_best;
             }
 
-            Move move;
-            move.facilities = facility_ids;
-            move.global_cost = global_cost(solution_tmp);
-            moves.push_back(move);
+            Perturbation perturbation;
+            perturbation.facilities = facility_ids;
+            perturbation.global_cost = global_cost(solution_tmp);
+            perturbations.push_back(perturbation);
         }
-        return moves;
+        return perturbations;
     }
 
-    inline void apply_move(
+    inline void apply_perturbation(
             Solution& solution,
-            const Move& move,
+            const Perturbation& perturbation,
             std::mt19937_64&) const
     {
-        LocationId location_id_1 = solution.locations[move.facilities[0]];
-        remove(solution, move.facilities[0]);
+        LocationId location_id_1 = solution.locations[perturbation.facilities[0]];
+        remove(solution, perturbation.facilities[0]);
         for (FacilityId facility_pos = 0;
-                facility_pos < (Counter)move.facilities.size() - 1;
+                facility_pos < (Counter)perturbation.facilities.size() - 1;
                 ++facility_pos) {
-            LocationId location_id = solution.locations[move.facilities[facility_pos + 1]];
-            remove(solution, move.facilities[facility_pos + 1]);
-            add(solution, move.facilities[facility_pos], location_id);
+            LocationId location_id = solution.locations[perturbation.facilities[facility_pos + 1]];
+            remove(solution, perturbation.facilities[facility_pos + 1]);
+            add(solution, perturbation.facilities[facility_pos], location_id);
         }
-        add(solution, move.facilities.back(), location_id_1);
-        assert(global_cost(solution) == move.global_cost);
+        add(solution, perturbation.facilities.back(), location_id_1);
+        assert(global_cost(solution) == perturbation.global_cost);
     }
 
     inline void local_search(
             Solution& solution,
             std::mt19937_64& generator,
-            const Move& = Move())
+            const Perturbation& = Perturbation())
     {
         Counter it = 0;
         for (;; ++it) {

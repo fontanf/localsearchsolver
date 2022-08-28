@@ -243,77 +243,77 @@ public:
      * Local search.
      */
 
-    struct Move
+    struct Perturbation
     {
-        Move(): j(-1), global_cost(worst<GlobalCost>()) { }
+        Perturbation(): j(-1), global_cost(worst<GlobalCost>()) { }
 
         ItemId j;
         bool add;
         GlobalCost global_cost;
     };
 
-    struct MoveHasher
+    struct PerturbationHasher
     {
         std::hash<ItemId> hasher;
         std::hash<bool> hasher_2;
 
-        inline bool hashable(const Move&) const { return true; }
+        inline bool hashable(const Perturbation&) const { return true; }
 
         inline bool operator()(
-                const Move& move_1,
-                const Move& move_2) const
+                const Perturbation& perturbation_1,
+                const Perturbation& perturbation_2) const
         {
-            return move_1.j == move_2.j && move_1.add == move_2.add;
+            return perturbation_1.j == perturbation_2.j && perturbation_1.add == perturbation_2.add;
         }
 
         inline std::size_t operator()(
-                const Move& move) const
+                const Perturbation& perturbation) const
         {
-            size_t hash = hasher(move.j);
-            optimizationtools::hash_combine(hash, hasher_2(move.add));
+            size_t hash = hasher(perturbation.j);
+            optimizationtools::hash_combine(hash, hasher_2(perturbation.add));
             return hash;
         }
     };
 
-    inline MoveHasher move_hasher() const { return MoveHasher(); }
+    inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
 
-    inline std::vector<Move> perturbations(
+    inline std::vector<Perturbation> perturbations(
             const Solution& solution,
             std::mt19937_64&)
     {
-        std::vector<Move> moves;
+        std::vector<Perturbation> perturbations;
         for (ItemId j = 0; j < instance_.number_of_items(); ++j) {
-            Move move;
-            move.j = j;
+            Perturbation perturbation;
+            perturbation.j = j;
             if (contains(solution, j)) {
-                move.global_cost = global_cost(solution);
-                move.add = false;
+                perturbation.global_cost = global_cost(solution);
+                perturbation.add = false;
             } else {
-                move.global_cost = cost_add(solution, j);
-                overweight(move.global_cost) = overweight(solution);
-                move.add = true;
+                perturbation.global_cost = cost_add(solution, j);
+                overweight(perturbation.global_cost) = overweight(solution);
+                perturbation.add = true;
             }
-            moves.push_back(move);
+            perturbations.push_back(perturbation);
         }
-        return moves;
+        return perturbations;
     }
 
-    inline void apply_move(
+    inline void apply_perturbation(
             Solution& solution,
-            const Move& move,
+            const Perturbation& perturbation,
             std::mt19937_64&) const
     {
-        if (move.add) {
-            add(solution, move.j);
+        if (perturbation.add) {
+            add(solution, perturbation.j);
         } else {
-            remove(solution, move.j);
+            remove(solution, perturbation.j);
         }
     }
 
     inline void local_search(
             Solution& solution,
             std::mt19937_64& generator,
-            const Move& tabu = Move())
+            const Perturbation& tabu = Perturbation())
     {
         //std::cout << "> local search" << std::endl;
         //print(std::cout, solution);
@@ -370,7 +370,7 @@ public:
                     }
                     if (j_best != -1) {
                         improved = true;
-                        // Apply move.
+                        // Apply perturbation.
                         if (contains(solution, j_best)) {
                             remove(solution, j_best);
                         } else {
@@ -418,7 +418,7 @@ public:
                     }
                     if (j_in_best != -1) {
                         improved = true;
-                        // Apply move.
+                        // Apply perturbation.
                         remove(solution, j_in_best);
                         add(solution, j_out_best);
                         swap_number_of_sucesses_++;
@@ -480,7 +480,7 @@ public:
                     }
                     if (j_in_best != -1) {
                         improved = true;
-                        // Apply move.
+                        // Apply perturbation.
                         remove(solution, j_in_best);
                         add(solution, j_out_1_best);
                         add(solution, j_out_2_best);

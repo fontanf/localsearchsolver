@@ -181,75 +181,75 @@ public:
      * Local search.
      */
 
-    struct Move
+    struct Perturbation
     {
-        Move(): group_id(-1), global_cost(worst<GlobalCost>()) { }
+        Perturbation(): group_id(-1), global_cost(worst<GlobalCost>()) { }
 
         GroupId group_id;
         ItemId j;
         GlobalCost global_cost;
     };
 
-    struct MoveHasher
+    struct PerturbationHasher
     {
         std::hash<ItemId> hasher;
 
-        inline bool hashable(const Move&) const { return true; }
+        inline bool hashable(const Perturbation&) const { return true; }
 
         inline bool operator()(
-                const Move& move_1,
-                const Move& move_2) const
+                const Perturbation& perturbation_1,
+                const Perturbation& perturbation_2) const
         {
-            return move_1.group_id == move_2.group_id
-                && move_1.j == move_2.j;
+            return perturbation_1.group_id == perturbation_2.group_id
+                && perturbation_1.j == perturbation_2.j;
         }
 
         inline std::size_t operator()(
-                const Move& move) const
+                const Perturbation& perturbation) const
         {
-            std::size_t hash = hasher(move.group_id);
-            optimizationtools::hash_combine(hash, move.j);
+            std::size_t hash = hasher(perturbation.group_id);
+            optimizationtools::hash_combine(hash, perturbation.j);
             return hash;
         }
     };
 
-    inline MoveHasher move_hasher() const { return MoveHasher(); }
+    inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
 
-    inline std::vector<Move> perturbations(
+    inline std::vector<Perturbation> perturbations(
             Solution& solution,
             std::mt19937_64&)
     {
-        std::vector<Move> moves;
+        std::vector<Perturbation> perturbations;
         for (GroupId group_id = 0; group_id < instance_.number_of_groups(); ++group_id) {
             ItemId j_old = solution.items[group_id];
             remove(solution, group_id, j_old);
             for (ItemId j = 0; j < instance_.number_of_items(group_id); ++j) {
                 if (j == j_old)
                     continue;
-                Move move;
-                move.group_id = group_id;
-                move.j = j;
-                move.global_cost = cost_add(solution, group_id, j);
-                moves.push_back(move);
+                Perturbation perturbation;
+                perturbation.group_id = group_id;
+                perturbation.j = j;
+                perturbation.global_cost = cost_add(solution, group_id, j);
+                perturbations.push_back(perturbation);
             }
             add(solution, group_id, j_old);
         }
-        return moves;
+        return perturbations;
     }
 
-    inline void apply_move(
+    inline void apply_perturbation(
             Solution& solution,
-            const Move& move,
+            const Perturbation& perturbation,
             std::mt19937_64&) const
     {
-        remove(solution, move.group_id, solution.items[move.group_id]);
-        add(solution, move.group_id, move.j);
+        remove(solution, perturbation.group_id, solution.items[perturbation.group_id]);
+        add(solution, perturbation.group_id, perturbation.j);
     }
 
     inline void local_search(
             Solution& solution,
             std::mt19937_64& generator,
-            const Move& tabu = Move())
+            const Perturbation& tabu = Perturbation())
     {
         Counter it = 0;
         for (;; ++it) {

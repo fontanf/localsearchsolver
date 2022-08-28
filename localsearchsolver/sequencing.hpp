@@ -1498,87 +1498,87 @@ public:
      * Local search.
      */
 
-    struct Move
+    struct Perturbation
     {
-        Move(): type(Perturbations::None) { }
+        Perturbation(): type(Perturbations::None) { }
 
         /** Type of perturbation. */
         Perturbations type;
         /** ForceAdd: element to add. */
         ElementId force_add_j = -1;
-        /** Global cost of the move. */
+        /** Global cost of the perturbation. */
         GlobalCost global_cost;
     };
 
-    struct MoveHasher
+    struct PerturbationHasher
     {
         std::hash<ElementPos> hasher;
 
-        inline bool hashable(const Move& move) const
+        inline bool hashable(const Perturbation& perturbation) const
         {
-            if (move.type == Perturbations::ForceAdd)
+            if (perturbation.type == Perturbations::ForceAdd)
                 return true;
             return false;
         }
 
         inline bool operator()(
-                const Move& move_1,
-                const Move& move_2) const
+                const Perturbation& perturbation_1,
+                const Perturbation& perturbation_2) const
         {
-            if (move_1.type == Perturbations::ForceAdd
-                    && move_2.type == Perturbations::ForceAdd
-                    && move_1.force_add_j == move_2.force_add_j)
+            if (perturbation_1.type == Perturbations::ForceAdd
+                    && perturbation_2.type == Perturbations::ForceAdd
+                    && perturbation_1.force_add_j == perturbation_2.force_add_j)
                 return true;
             return false;
         }
 
         inline std::size_t operator()(
-                const Move& move) const
+                const Perturbation& perturbation) const
         {
-            return hasher(move.force_add_j);
+            return hasher(perturbation.force_add_j);
         }
     };
 
-    inline MoveHasher move_hasher() const { return MoveHasher(); }
+    inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
 
     /*
      * Perturbations.
      */
 
-    inline std::vector<Move> perturbations(
+    inline std::vector<Perturbation> perturbations(
             const Solution& solution,
             std::mt19937_64& generator)
     {
-        std::vector<Move> moves;
+        std::vector<Perturbation> perturbations;
 
         // Double-bridge.
-        for (Counter perturbation = 0;
-                perturbation < parameters_.double_bridge_number_of_perturbations;
-                ++perturbation) {
-            Move move;
-            move.type = Perturbations::DoubleBridge;
-            move.global_cost = global_cost(solution);
-            moves.push_back(move);
+        for (Counter perturbation_id = 0;
+                perturbation_id < parameters_.double_bridge_number_of_perturbations;
+                ++perturbation_id) {
+            Perturbation perturbation;
+            perturbation.type = Perturbations::DoubleBridge;
+            perturbation.global_cost = global_cost(solution);
+            perturbations.push_back(perturbation);
         }
 
         // Adjacent swaps.
-        for (Counter perturbation = 0;
-                perturbation < parameters_.adjacent_swaps_number_of_perturbations;
-                ++perturbation) {
-            Move move;
-            move.type = Perturbations::AdjacentSwaps;
-            move.global_cost = global_cost(solution);
-            moves.push_back(move);
+        for (Counter perturbation_id = 0;
+                perturbation_id < parameters_.adjacent_swaps_number_of_perturbations;
+                ++perturbation_id) {
+            Perturbation perturbation;
+            perturbation.type = Perturbations::AdjacentSwaps;
+            perturbation.global_cost = global_cost(solution);
+            perturbations.push_back(perturbation);
         }
 
         // Ruin-and-recreate.
-        for (Counter perturbation = 0;
-                perturbation < parameters_.ruin_and_recreate_number_of_perturbations;
-                ++perturbation) {
-            Move move;
-            move.type = Perturbations::RuinAndRecreate;
-            move.global_cost = global_cost(solution);
-            moves.push_back(move);
+        for (Counter perturbation_id = 0;
+                perturbation_id < parameters_.ruin_and_recreate_number_of_perturbations;
+                ++perturbation_id) {
+            Perturbation perturbation;
+            perturbation.type = Perturbations::RuinAndRecreate;
+            perturbation.global_cost = global_cost(solution);
+            perturbations.push_back(perturbation);
         }
 
         // Force-add.
@@ -1590,26 +1590,26 @@ public:
             for (ElementId j = 0; j < sequencing_scheme_.number_of_elements(); ++j) {
                 if (contains[j])
                     continue;
-                Move move;
-                move.type = Perturbations::ForceAdd;
-                move.force_add_j = j;
-                move.global_cost = global_cost(solution);
-                moves.push_back(move);
+                Perturbation perturbation;
+                perturbation.type = Perturbations::ForceAdd;
+                perturbation.force_add_j = j;
+                perturbation.global_cost = global_cost(solution);
+                perturbations.push_back(perturbation);
             }
         }
 
-        std::shuffle(moves.begin(), moves.end(), generator);
-        return moves;
+        std::shuffle(perturbations.begin(), perturbations.end(), generator);
+        return perturbations;
     }
 
-    inline void apply_move(
+    inline void apply_perturbation(
             Solution& solution,
-            Move& move,
+            Perturbation& perturbation,
             std::mt19937_64& generator)
     {
         SequenceId m = number_of_sequences();
 
-        switch (move.type) {
+        switch (perturbation.type) {
         case Perturbations::None: {
             break;
 
@@ -1934,7 +1934,7 @@ public:
             break;
 
         } case Perturbations::ForceAdd: {
-            ElementId j = move.force_add_j;
+            ElementId j = perturbation.force_add_j;
             // Draw sequence.
             std::uniform_int_distribution<SequenceId> d_i(0, m - 1);
             SequenceId i = d_i(generator);
@@ -1966,7 +1966,7 @@ public:
     inline void local_search(
             Solution& solution,
             std::mt19937_64& generator,
-            const Move& perturbation = Move())
+            const Perturbation& perturbation = Perturbation())
     {
         //std::cout << "local_search" << std::endl;
         //if (tabu.j != -1)
@@ -3850,7 +3850,7 @@ private:
 
     inline void explore_remove(
             const Solution& solution,
-            const Move& perturbation)
+            const Perturbation& perturbation)
     {
         SequenceId m = number_of_sequences();
         GlobalCost gc = global_cost(solution);
@@ -3898,7 +3898,7 @@ private:
 
     inline void explore_replace(
             const Solution& solution,
-            const Move& perturbation)
+            const Perturbation& perturbation)
     {
         SequenceId m = number_of_sequences();
         ElementPos n = sequencing_scheme_.number_of_elements();

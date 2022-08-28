@@ -198,57 +198,57 @@ public:
      * Local search.
      */
 
-    struct Move
+    struct Perturbation
     {
-        Move(): j(-1), t_start(-1), global_cost(worst<GlobalCost>()) { }
+        Perturbation(): j(-1), t_start(-1), global_cost(worst<GlobalCost>()) { }
 
         InterventionId j;
         Time t_start;
         GlobalCost global_cost;
     };
 
-    struct MoveHasher
+    struct PerturbationHasher
     {
         std::hash<InterventionId> hasher_1;
         std::hash<Time> hasher_2;
 
-        inline bool hashable(const Move&) const { return true; }
+        inline bool hashable(const Perturbation&) const { return true; }
 
         inline bool operator()(
-                const Move& move_1,
-                const Move& move_2) const
+                const Perturbation& perturbation_1,
+                const Perturbation& perturbation_2) const
         {
-            return move_1.j == move_2.j && move_1.t_start == move_2.t_start;
+            return perturbation_1.j == perturbation_2.j && perturbation_1.t_start == perturbation_2.t_start;
         }
 
         inline std::size_t operator()(
-                const Move& move) const
+                const Perturbation& perturbation) const
         {
-            size_t hash = hasher_1(move.j);
-            optimizationtools::hash_combine(hash, hasher_2(move.t_start));
+            size_t hash = hasher_1(perturbation.j);
+            optimizationtools::hash_combine(hash, hasher_2(perturbation.t_start));
             return hash;
         }
     };
 
-    inline MoveHasher move_hasher() const { return MoveHasher(); }
+    inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
 
-    std::vector<Move> perturbations(
+    std::vector<Perturbation> perturbations(
             Solution& solution,
             std::mt19937_64&);
 
-    inline void apply_move(
+    inline void apply_perturbation(
             Solution& solution,
-            const Move& move,
+            const Perturbation& perturbation,
             std::mt19937_64&) const
     {
-        remove(solution, move.j);
-        add(solution, move.j, move.t_start);
+        remove(solution, perturbation.j);
+        add(solution, perturbation.j, perturbation.t_start);
     }
 
     void local_search(
             Solution& solution,
             std::mt19937_64& generator,
-            const Move& tabu = Move());
+            const Perturbation& tabu = Perturbation());
 
     /*
      * Outputs.

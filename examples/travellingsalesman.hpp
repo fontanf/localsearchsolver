@@ -148,9 +148,9 @@ public:
      * Local search.
      */
 
-    struct Move
+    struct Perturbation
     {
-        Move(): pos_1(-1), global_cost(worst<GlobalCost>()) { }
+        Perturbation(): pos_1(-1), global_cost(worst<GlobalCost>()) { }
 
         VertexPos pos_1;
         VertexPos pos_2;
@@ -168,70 +168,70 @@ public:
         GlobalCost global_cost;
     };
 
-    struct MoveHasher
+    struct PerturbationHasher
     {
-        inline bool hashable(const Move&) const { return false; }
-        inline bool operator()(const Move&, const Move&) const { return false; }
-        inline std::size_t operator()(const Move&) const { return 0; }
+        inline bool hashable(const Perturbation&) const { return false; }
+        inline bool operator()(const Perturbation&, const Perturbation&) const { return false; }
+        inline std::size_t operator()(const Perturbation&) const { return 0; }
     };
 
-    inline MoveHasher move_hasher() const { return MoveHasher(); }
+    inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
 
-    inline std::vector<Move> perturbations(
+    inline std::vector<Perturbation> perturbations(
             const Solution& solution,
             std::mt19937_64& generator)
     {
-        std::vector<Move> moves;
+        std::vector<Perturbation> perturbations;
         for (Counter perturbation = 0; perturbation < parameters_.number_of_perturbations; ++perturbation) {
             std::vector<VertexPos> edges = optimizationtools::bob_floyd<VertexPos>(
                     4, solution.vertices.size() - 1, generator);
             std::sort(edges.begin(), edges.end());
-            Move move;
-            move.pos_1 = edges[0];
-            move.pos_2 = edges[1];
-            move.pos_3 = edges[2];
-            move.pos_4 = edges[3];
-            move.j11 = solution.vertices[move.pos_1];
-            move.j12 = solution.vertices[move.pos_3 + 1];
-            move.j21 = solution.vertices[move.pos_4];
-            move.j22 = solution.vertices[move.pos_2 + 1];
-            move.j31 = solution.vertices[move.pos_3];
-            move.j32 = solution.vertices[move.pos_1 + 1];
-            move.j41 = solution.vertices[move.pos_2];
-            move.j42 = solution.vertices[move.pos_4 + 1];
-            assert(move.pos_1 >= 0);
-            assert(move.pos_4 + 1 < (VertexPos)solution.vertices.size());
-            move.global_cost = global_cost(solution);
-            moves.push_back(move);
+            Perturbation perturbation;
+            perturbation.pos_1 = edges[0];
+            perturbation.pos_2 = edges[1];
+            perturbation.pos_3 = edges[2];
+            perturbation.pos_4 = edges[3];
+            perturbation.j11 = solution.vertices[perturbation.pos_1];
+            perturbation.j12 = solution.vertices[perturbation.pos_3 + 1];
+            perturbation.j21 = solution.vertices[perturbation.pos_4];
+            perturbation.j22 = solution.vertices[perturbation.pos_2 + 1];
+            perturbation.j31 = solution.vertices[perturbation.pos_3];
+            perturbation.j32 = solution.vertices[perturbation.pos_1 + 1];
+            perturbation.j41 = solution.vertices[perturbation.pos_2];
+            perturbation.j42 = solution.vertices[perturbation.pos_4 + 1];
+            assert(perturbation.pos_1 >= 0);
+            assert(perturbation.pos_4 + 1 < (VertexPos)solution.vertices.size());
+            perturbation.global_cost = global_cost(solution);
+            perturbations.push_back(perturbation);
         }
-        return moves;
+        return perturbations;
     }
 
-    inline void apply_move(
+    inline void apply_perturbation(
             Solution& solution,
-            const Move& move,
+            const Perturbation& perturbation,
             std::mt19937_64&) const
     {
         //print(std::cout, solution);
-        //std::cout << "pos_1 " << move.pos_1
-        //    << " pos_2 " << move.pos_2
-        //    << " pos_3 " << move.pos_3
-        //    << " pos_4 " << move.pos_4
+        //std::cout << "pos_1 " << perturbation.pos_1
+        //    << " pos_2 " << perturbation.pos_2
+        //    << " pos_3 " << perturbation.pos_3
+        //    << " pos_4 " << perturbation.pos_4
         //    << std::endl;
-        //std::cout << "j11 " << move.j11 << " j12 " << move.j12 << std::endl;
-        //std::cout << "j21 " << move.j21 << " j22 " << move.j22 << std::endl;
-        //std::cout << "j31 " << move.j31 << " j32 " << move.j32 << std::endl;
-        //std::cout << "j41 " << move.j41 << " j42 " << move.j42 << std::endl;
+        //std::cout << "j11 " << perturbation.j11 << " j12 " << perturbation.j12 << std::endl;
+        //std::cout << "j21 " << perturbation.j21 << " j22 " << perturbation.j22 << std::endl;
+        //std::cout << "j31 " << perturbation.j31 << " j32 " << perturbation.j32 << std::endl;
+        //std::cout << "j41 " << perturbation.j41 << " j42 " << perturbation.j42 << std::endl;
         std::vector<VertexId> vertices;
-        for (VertexPos pos = 0; pos <= move.pos_1; ++pos)
+        for (VertexPos pos = 0; pos <= perturbation.pos_1; ++pos)
             vertices.push_back(solution.vertices[pos]);
-        for (VertexPos pos = move.pos_3 + 1; pos <= move.pos_4; ++pos)
+        for (VertexPos pos = perturbation.pos_3 + 1; pos <= perturbation.pos_4; ++pos)
             vertices.push_back(solution.vertices[pos]);
-        for (VertexPos pos = move.pos_2 + 1; pos <= move.pos_3; ++pos)
+        for (VertexPos pos = perturbation.pos_2 + 1; pos <= perturbation.pos_3; ++pos)
             vertices.push_back(solution.vertices[pos]);
-        for (VertexPos pos = move.pos_1 + 1; pos <= move.pos_2; ++pos)
+        for (VertexPos pos = perturbation.pos_1 + 1; pos <= perturbation.pos_2; ++pos)
             vertices.push_back(solution.vertices[pos]);
-        for (VertexPos pos = move.pos_4 + 1; pos < (VertexPos)solution.vertices.size(); ++pos)
+        for (VertexPos pos = perturbation.pos_4 + 1; pos < (VertexPos)solution.vertices.size(); ++pos)
             vertices.push_back(solution.vertices[pos]);
         assert((VertexPos)vertices.size() <= instance_.number_of_vertices() + 1);
         compute(solution, vertices);
@@ -289,7 +289,7 @@ public:
     inline void local_search(
             Solution& solution,
             std::mt19937_64& generator,
-            const Move& perturbation = Move())
+            const Perturbation& perturbation = Perturbation())
     {
         //print(std::cout, solution);
         //std::cout << to_string(global_cost(solution)) << std::endl;

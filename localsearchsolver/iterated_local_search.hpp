@@ -87,7 +87,7 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
         IteratedLocalSearchOptionalParameters<LocalScheme> parameters)
 {
     typedef typename LocalScheme::Solution Solution;
-    typedef typename LocalScheme::Move Move;
+    typedef typename LocalScheme::Perturbation Perturbation;
 
     // Initial display.
     parameters.info.os()
@@ -110,7 +110,7 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
     print_local_scheme_parameters(local_scheme, parameters.info);
     parameters.info.os() << std::endl;
 
-    auto move_compare = [](const Move& move_1, const Move& move_2) -> bool
+    auto move_compare = [](const Perturbation& move_1, const Perturbation& move_2) -> bool
     {
         return move_1.global_cost < move_2.global_cost;
     };
@@ -186,7 +186,7 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
         Solution solution_cur = initial_solutions.back();
         initial_solutions.pop_back();
         Counter perturbation_id = 0;
-        std::vector<Move> perturbations = local_scheme.perturbations(solution_cur, generator);
+        std::vector<Perturbation> perturbations = local_scheme.perturbations(solution_cur, generator);
         // Sort moves.
         std::sort(perturbations.begin(), perturbations.end(), move_compare);
         Counter depth = 1;
@@ -223,9 +223,9 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
 
             // Apply perturbation and local search.
             Solution solution_tmp = solution_cur;
-            auto move = perturbations[perturbation_id];
-            local_scheme.apply_move(solution_tmp, move, generator);
-            local_scheme.local_search(solution_tmp, generator, move);
+            auto perturbation = perturbations[perturbation_id];
+            local_scheme.apply_perturbation(solution_tmp, perturbation, generator);
+            local_scheme.local_search(solution_tmp, generator, perturbation);
 
             // Check for a new best solution.
             if (output.solution_pool.size() == 0

@@ -72,10 +72,10 @@ template <typename LocalScheme>
 struct BestFirstLocalSearchNode
 {
     typedef typename LocalScheme::CompactSolution CompactSolution;
-    typedef typename LocalScheme::Move Move;
+    typedef typename LocalScheme::Perturbation Perturbation;
 
     std::shared_ptr<CompactSolution> compact_solution;
-    std::vector<Move> perturbations;
+    std::vector<Perturbation> perturbations;
     Counter id = -1;
     Counter depth;
     Counter next_child_pos = 0;
@@ -113,18 +113,18 @@ using NodeSet = std::multiset<
         const BestFirstLocalSearchNodeComparator<LocalScheme>&>;
 
 template <typename LocalScheme>
-using MoveMap = std::unordered_map<
-        typename LocalScheme::Move,
+using PerturbationMap = std::unordered_map<
+        typename LocalScheme::Perturbation,
         Counter,
-        typename LocalScheme::MoveHasher&,
-        typename LocalScheme::MoveHasher&>;
+        typename LocalScheme::PerturbationHasher&,
+        typename LocalScheme::PerturbationHasher&>;
 
 template <typename LocalScheme>
 struct BestFirstLocalSearchData
 {
     typedef typename LocalScheme::CompactSolutionHasher CompactSolutionHasher;
-    typedef typename LocalScheme::MoveHasher MoveHasher;
-    typedef typename LocalScheme::Move Move;
+    typedef typename LocalScheme::PerturbationHasher PerturbationHasher;
+    typedef typename LocalScheme::Perturbation Perturbation;
 
     BestFirstLocalSearchData(
             LocalScheme& local_scheme,
@@ -136,8 +136,8 @@ struct BestFirstLocalSearchData
         compact_solution_hasher(local_scheme.compact_solution_hasher()),
         history{0, compact_solution_hasher, compact_solution_hasher},
         q(local_scheme),
-        move_hasher(local_scheme.move_hasher()),
-        move_nodes{0, move_hasher, move_hasher}
+        perturbation_hasher(local_scheme.perturbation_hasher()),
+        perturbation_nodes{0, perturbation_hasher, perturbation_hasher}
         {  }
 
     LocalScheme& local_scheme;
@@ -150,13 +150,13 @@ struct BestFirstLocalSearchData
     Counter initial_solution_pos = 0;
     Counter number_of_perturbations = -1;
 
-    MoveHasher move_hasher;
+    PerturbationHasher perturbation_hasher;
 
     /**
-     * move_nodes[move] is last node at which move "move" has been used as a
+     * perturbation_nodes[perturbation] is last node at which perturbation "perturbation" has been used as a
      * perturbation.
      */
-    MoveMap<LocalScheme> move_nodes;
+    PerturbationMap<LocalScheme> perturbation_nodes;
 
     /**
      * tabu_nodes[number_of_nodes] is a vector a nodes which are currently tabu
@@ -171,32 +171,32 @@ struct BestFirstLocalSearchData
 };
 
 template <typename LocalScheme>
-std::vector<typename LocalScheme::Move> update_children(
+std::vector<typename LocalScheme::Perturbation> update_children(
         LocalScheme& local_scheme,
         typename LocalScheme::Solution& solution,
         std::mt19937_64& generator,
         Counter next_child_pos = 0)
 {
-    typedef typename LocalScheme::Move Move;
+    typedef typename LocalScheme::Perturbation Perturbation;
 
-    auto move_compare = [](const Move& move_1, const Move& move_2) -> bool
+    auto perturbation_compare = [](const Perturbation& perturbation_1, const Perturbation& perturbation_2) -> bool
     {
-        return move_1.global_cost < move_2.global_cost;
+        return perturbation_1.global_cost < perturbation_2.global_cost;
     };
 
-    // Get perturbation moves.
-    auto moves_0 = local_scheme.perturbations(solution, generator);
-    if (next_child_pos >= (Counter)moves_0.size())
+    // Get perturbation perturbations.
+    auto perturbations_0 = local_scheme.perturbations(solution, generator);
+    if (next_child_pos >= (Counter)perturbations_0.size())
         return {};
-    // Sort moves.
-    std::sort(moves_0.begin(), moves_0.end(), move_compare);
-    std::vector<Move> moves;
-    for (auto it = moves_0.begin() + next_child_pos;
-            it != moves_0.end() && it != moves_0.begin() + next_child_pos + 1024;
+    // Sort perturbations.
+    std::sort(perturbations_0.begin(), perturbations_0.end(), perturbation_compare);
+    std::vector<Perturbation> perturbations;
+    for (auto it = perturbations_0.begin() + next_child_pos;
+            it != perturbations_0.end() && it != perturbations_0.begin() + next_child_pos + 1024;
             ++it)
-        moves.push_back(*it);
-    std::reverse(moves.begin(), moves.end());
-    return moves;
+        perturbations.push_back(*it);
+    std::reverse(perturbations.begin(), perturbations.end());
+    return perturbations;
 }
 
 template <typename LocalScheme>
@@ -264,8 +264,8 @@ inline void best_first_local_search_worker(
             }
         }
 
-        // Get perturbation moves.
-        auto moves = update_children(local_scheme, solution, generator);
+        // Get perturbation perturbations.
+        auto perturbations = update_children(local_scheme, solution, generator);
         auto compact_solution = std::shared_ptr<CompactSolution>(
                 new CompactSolution(local_scheme.solution2compact(solution)));
 
@@ -273,11 +273,11 @@ inline void best_first_local_search_worker(
         if (data.number_of_perturbations == -1)
             data.number_of_perturbations = local_scheme.perturbations(solution, generator).size();
         if (data.history.find(compact_solution) == data.history.end()
-                && moves.size() > 0) {
+                && perturbations.size() > 0) {
             BestFirstLocalSearchNode<LocalScheme> root;
             root.id = -1;
             root.compact_solution = compact_solution;
-            root.perturbations = moves;
+            root.perturbations = perturbations;
             root.child_id = 0;
             root.depth = 1;
             data.history.insert(compact_solution);
@@ -355,22 +355,22 @@ inline void best_first_local_search_worker(
         // Draw next node from the queue.
         auto node_cur = *data.q.begin();
         data.q.erase(data.q.begin());
-        auto move = node_cur->perturbations.back();
+        auto perturbation = node_cur->perturbations.back();
         // Check if the perturbation is tabu.
-        while (data.move_hasher.hashable(move)
-                && data.move_nodes.find(move) != data.move_nodes.end()
-                && data.move_nodes[move] > node_id - tabu_tenure) {
+        while (data.perturbation_hasher.hashable(perturbation)
+                && data.perturbation_nodes.find(perturbation) != data.perturbation_nodes.end()
+                && data.perturbation_nodes[perturbation] > node_id - tabu_tenure) {
             // Add a new node for this perturbation to the tabu node set.
             BestFirstLocalSearchNode<LocalScheme> node_tmp;
             node_tmp.compact_solution = node_cur->compact_solution;
-            node_tmp.perturbations = {move};
+            node_tmp.perturbations = {perturbation};
             node_tmp.id = node_cur->id;
             node_tmp.depth = node_cur->depth;
             node_tmp.child_id = node_cur->child_id;
             node_tmp.next_child_pos = -1;
-            if (data.tabu_nodes.find(data.move_nodes[move] + tabu_tenure) == data.tabu_nodes.end())
-                data.tabu_nodes[data.move_nodes[move] + tabu_tenure] = {};
-            data.tabu_nodes[data.move_nodes[move] + tabu_tenure].push_back(
+            if (data.tabu_nodes.find(data.perturbation_nodes[perturbation] + tabu_tenure) == data.tabu_nodes.end())
+                data.tabu_nodes[data.perturbation_nodes[perturbation] + tabu_tenure] = {};
+            data.tabu_nodes[data.perturbation_nodes[perturbation] + tabu_tenure].push_back(
                     std::shared_ptr<BestFirstLocalSearchNode<LocalScheme>>(
                         new BestFirstLocalSearchNode<LocalScheme>(node_tmp)));
 
@@ -396,18 +396,18 @@ inline void best_first_local_search_worker(
 
             node_cur = *data.q.begin();
             data.q.erase(data.q.begin());
-            move = node_cur->perturbations.back();
+            perturbation = node_cur->perturbations.back();
         }
         if (node_cur == nullptr) {
             data.mutex.unlock();
             continue;
         }
-        if (data.move_hasher.hashable(move))
-            data.move_nodes[move] = node_id;
+        if (data.perturbation_hasher.hashable(perturbation))
+            data.perturbation_nodes[perturbation] = node_id;
         data.number_of_working_threads++;
         //std::cout << "node " << node_id
         //    << " depth " << node_cur->depth
-        //    << " cost " << to_string(local_scheme, move.global_cost)
+        //    << " cost " << to_string(local_scheme, perturbation.global_cost)
         //    << " thread " << thread_id
         //    << std::endl;
         data.mutex.unlock();
@@ -425,8 +425,8 @@ inline void best_first_local_search_worker(
                         node_cur->next_child_pos);
         }
         // Apply perturbation and local search.
-        local_scheme.apply_move(solution, move, generator);
-        local_scheme.local_search(solution, generator, move);
+        local_scheme.apply_perturbation(solution, perturbation, generator);
+        local_scheme.local_search(solution, generator, perturbation);
 
         // Check for a new best solution.
         if (data.output.solution_pool.size() == 0
@@ -446,18 +446,18 @@ inline void best_first_local_search_worker(
             }
         }
 
-        // Get perturbation moves.
-        auto moves = update_children(local_scheme, solution, generator);
+        // Get perturbation perturbations.
+        auto perturbations = update_children(local_scheme, solution, generator);
         auto compact_solution = std::shared_ptr<CompactSolution>(
                     new CompactSolution(local_scheme.solution2compact(solution)));
 
         data.mutex.lock();
 
         if (data.history.find(compact_solution) == data.history.end()
-                && !moves.empty()) {
+                && !perturbations.empty()) {
             BestFirstLocalSearchNode<LocalScheme> child;
             child.compact_solution = compact_solution;
-            child.perturbations = moves;
+            child.perturbations = perturbations;
             child.id = node_id;
             child.depth = node_cur->depth + 1;
             child.child_id = node_cur->next_child_pos - 1;

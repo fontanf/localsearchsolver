@@ -334,11 +334,11 @@ LocalScheme::Solution LocalScheme::initial_solution(
 
 /******************************** Local search *******************************/
 
-std::vector<LocalScheme::Move> LocalScheme::perturbations(
+std::vector<LocalScheme::Perturbation> LocalScheme::perturbations(
         Solution& solution,
         std::mt19937_64&)
 {
-    std::vector<Move> moves;
+    std::vector<Perturbation> perturbations;
     for (InterventionId j = 0; j < instance_.number_of_interventions(); ++j) {
         Time t_start_old = solution.intervention_starts[j];
         if (instance_.fixed(j, t_start_old) == 1)
@@ -348,24 +348,24 @@ std::vector<LocalScheme::Move> LocalScheme::perturbations(
             if (instance_.fixed(j, t_start) == 0)
                 continue;
             auto c = cost_add(solution, j, t_start, worst<GlobalCost>());
-            Move move;
-            move.j = j;
-            move.t_start = t_start;
-            move.global_cost = c;
-            number_of_conflicts(move.global_cost) = number_of_conflicts(global_cost(solution));
-            overwork(move.global_cost) = overwork(global_cost(solution));
-            underwork(move.global_cost) = underwork(global_cost(solution));
-            moves.push_back(move);
+            Perturbation perturbation;
+            perturbation.j = j;
+            perturbation.t_start = t_start;
+            perturbation.global_cost = c;
+            number_of_conflicts(perturbation.global_cost) = number_of_conflicts(global_cost(solution));
+            overwork(perturbation.global_cost) = overwork(global_cost(solution));
+            underwork(perturbation.global_cost) = underwork(global_cost(solution));
+            perturbations.push_back(perturbation);
         }
         add(solution, j, t_start_old);
     }
-    return moves;
+    return perturbations;
 }
 
 void LocalScheme::local_search(
         Solution& solution,
         std::mt19937_64& generator,
-        const Move& tabu)
+        const Perturbation& tabu)
 {
     //if (tabu.j != -1)
     //    std::cout << "j " << tabu.j

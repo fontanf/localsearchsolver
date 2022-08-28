@@ -155,9 +155,9 @@ public:
      * Local search.
      */
 
-    struct Move
+    struct Perturbation
     {
-        Move(): pos_1(-1), global_cost(worst<GlobalCost>()) { }
+        Perturbation(): pos_1(-1), global_cost(worst<GlobalCost>()) { }
 
         JobPos pos_1;
         JobPos pos_2;
@@ -166,52 +166,54 @@ public:
         GlobalCost global_cost;
     };
 
-    struct MoveHasher
+    struct PerturbationHasher
     {
-        inline bool hashable(const Move&) const { return false; }
-        inline bool operator()(const Move&, const Move&) const { return false; }
-        inline std::size_t operator()(const Move&) const { return 0; }
+        inline bool hashable(const Perturbation&) const { return false; }
+        inline bool operator()(const Perturbation&, const Perturbation&) const { return false; }
+        inline std::size_t operator()(const Perturbation&) const { return 0; }
     };
 
-    inline MoveHasher move_hasher() const { return MoveHasher(); }
+    inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
 
-    inline std::vector<Move> perturbations(
+    inline std::vector<Perturbation> perturbations(
             const Solution& solution,
             std::mt19937_64& generator)
     {
-        std::vector<Move> moves;
-        for (Counter perturbation = 0; perturbation < parameters_.number_of_perturbations; ++perturbation) {
+        std::vector<Perturbation> perturbations;
+        for (Counter perturbation_id = 0;
+                perturbation_id < parameters_.number_of_perturbations;
+                ++perturbation_id) {
             std::vector<JobPos> edges = optimizationtools::bob_floyd<JobPos>(
                     4, solution.jobs.size() + 1, generator);
             std::sort(edges.begin(), edges.end());
-            Move move;
-            move.pos_1 = edges[0];
-            move.pos_2 = edges[1];
-            move.pos_3 = edges[2];
-            move.pos_4 = edges[3];
-            assert(move.pos_1 >= 0);
-            assert(move.pos_4 <= (JobPos)solution.jobs.size());
-            move.global_cost = global_cost(solution);
-            moves.push_back(move);
+            Perturbation perturbation;
+            perturbation.pos_1 = edges[0];
+            perturbation.pos_2 = edges[1];
+            perturbation.pos_3 = edges[2];
+            perturbation.pos_4 = edges[3];
+            assert(perturbation.pos_1 >= 0);
+            assert(perturbation.pos_4 <= (JobPos)solution.jobs.size());
+            perturbation.global_cost = global_cost(solution);
+            perturbations.push_back(perturbation);
         }
-        return moves;
+        return perturbations;
     }
 
-    inline void apply_move(
+    inline void apply_perturbation(
             Solution& solution,
-            const Move& move,
+            const Perturbation& perturbation,
             std::mt19937_64&)
     {
         std::vector<JobId> jobs;
-        for (JobPos pos = 0; pos < move.pos_1; ++pos)
+        for (JobPos pos = 0; pos < perturbation.pos_1; ++pos)
             jobs.push_back(solution.jobs[pos]);
-        for (JobPos pos = move.pos_3; pos < move.pos_4; ++pos)
+        for (JobPos pos = perturbation.pos_3; pos < perturbation.pos_4; ++pos)
             jobs.push_back(solution.jobs[pos]);
-        for (JobPos pos = move.pos_2; pos < move.pos_3; ++pos)
+        for (JobPos pos = perturbation.pos_2; pos < perturbation.pos_3; ++pos)
             jobs.push_back(solution.jobs[pos]);
-        for (JobPos pos = move.pos_1; pos < move.pos_2; ++pos)
+        for (JobPos pos = perturbation.pos_1; pos < perturbation.pos_2; ++pos)
             jobs.push_back(solution.jobs[pos]);
-        for (JobPos pos = move.pos_4; pos < (JobPos)solution.jobs.size(); ++pos)
+        for (JobPos pos = perturbation.pos_4; pos < (JobPos)solution.jobs.size(); ++pos)
             jobs.push_back(solution.jobs[pos]);
         assert((JobPos)jobs.size() <= instance_.number_of_jobs());
         compute(solution, jobs);
@@ -220,7 +222,7 @@ public:
     inline void local_search(
             Solution& solution,
             std::mt19937_64& generator,
-            const Move& = Move())
+            const Perturbation& = Perturbation())
     {
         MachineId m = instance_.number_of_machines();
         Counter it = 0;
@@ -268,7 +270,7 @@ public:
                 if (pos_best != -1) {
                     improved = true;
                     assert(makespan(c_best) < solution.makespan);
-                    // Apply best move.
+                    // Apply best perturbation.
                     //std::cout << "pos_best " << pos_best
                     //    << " pos_new_best " << pos_new_best
                     //    << " size " << block_size
