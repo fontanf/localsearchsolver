@@ -284,7 +284,7 @@ public:
         Mode mode = -1;
     };
 
-    struct Move0
+    struct Move
     {
         Neighborhoods type;
         ElementPos k1 = -1;
@@ -304,7 +304,7 @@ public:
 
     struct Neighborhood
     {
-        std::vector<Move0> improving_moves = {};
+        std::vector<Move> improving_moves = {};
         // modified_sequences[i] == true iff sequence i has changed since last
         // neighborhood exploration.
         std::vector<bool> modified_sequences;
@@ -654,8 +654,8 @@ public:
                             improving_moves.begin(),
                             improving_moves.end(),
                             generator);
-                    Move0 move_best;
-                    for (const Move0 move: improving_moves)
+                    Move move_best;
+                    for (const Move move: improving_moves)
                         if (move_best.i1 == -1 || dominates(
                                     move.global_cost,
                                     move_best.global_cost))
@@ -677,8 +677,8 @@ public:
                             improving_moves.begin(),
                             improving_moves.end(),
                             generator);
-                    Move0 move_best;
-                    for (const Move0 move: improving_moves)
+                    Move move_best;
+                    for (const Move move: improving_moves)
                         if (move_best.i1 == -1 || dominates(
                                     move.global_cost,
                                     move_best.global_cost))
@@ -703,8 +703,8 @@ public:
                             improving_moves.begin(),
                             improving_moves.end(),
                             generator);
-                    Move0 move_best;
-                    for (const Move0 move: improving_moves)
+                    Move move_best;
+                    for (const Move move: improving_moves)
                         if (move_best.i1 == -1 || dominates(
                                     move.global_cost,
                                     move_best.global_cost))
@@ -1248,8 +1248,8 @@ public:
                         improving_moves.begin(),
                         improving_moves.end(),
                         generator);
-                Move0 move_best;
-                for (const Move0 move: improving_moves)
+                Move move_best;
+                for (const Move move: improving_moves)
                     if (move_best.i1 == -1 || dominates(
                                 move.global_cost,
                                 move_best.global_cost))
@@ -1384,8 +1384,8 @@ public:
                         improving_moves.begin(),
                         improving_moves.end(),
                         generator);
-                Move0 move_best;
-                for (const Move0 move: improving_moves)
+                Move move_best;
+                for (const Move move: improving_moves)
                     if (move_best.i1 == -1 || dominates(
                                 move.global_cost,
                                 move_best.global_cost))
@@ -1882,7 +1882,7 @@ public:
                     std::uniform_int_distribution<SequenceId> d_mode(0, number_of_modes(j) - 1);
                     Mode mode = d_mode(generator);
                     // Apply move.
-                    Move0 move;
+                    Move move;
                     move.type = Neighborhoods::Add;
                     move.i1 = i;
                     move.j = j;
@@ -1913,8 +1913,8 @@ public:
                                 improving_moves.begin(),
                                 improving_moves.end(),
                                 generator);
-                        Move0 move_best;
-                        for (const Move0 move: improving_moves)
+                        Move move_best;
+                        for (const Move move: improving_moves)
                             if (move_best.i1 == -1 || dominates(
                                         move.global_cost,
                                         move_best.global_cost))
@@ -1947,7 +1947,7 @@ public:
             std::uniform_int_distribution<SequenceId> d_mode(0, number_of_modes(j) - 1);
             Mode mode = d_mode(generator);
             // Apply move.
-            Move0 move;
+            Move move;
             move.type = Neighborhoods::Add;
             move.i1 = i;
             move.j = j;
@@ -2202,8 +2202,8 @@ public:
                             neighborhood.improving_moves.begin(),
                             neighborhood.improving_moves.end(),
                             generator);
-                    Move0 move_best;
-                    for (const Move0 move: neighborhood.improving_moves)
+                    Move move_best;
+                    for (const Move move: neighborhood.improving_moves)
                         if (move_best.i1 == -1 || dominates(
                                     move.global_cost,
                                     move_best.global_cost))
@@ -3580,7 +3580,7 @@ private:
                             sequencing_scheme_.global_cost(sequence_data);
                     }
                     if (strictly_better(gc_tmp, gc)) {
-                        Move0 move;
+                        Move move;
                         move.type = (!reverse)?
                             Neighborhoods::Shift:
                             Neighborhoods::ShiftReverse;
@@ -3659,7 +3659,7 @@ private:
                         //std::cout << to_string(gc_tmp)
                         //    << " " << to_string(gc)
                         //    << std::endl;
-                        Move0 move;
+                        Move move;
                         move.type = Neighborhoods::Swap;
                         move.k1 = block_size_1;
                         move.k2 = block_size_2;
@@ -3715,7 +3715,7 @@ private:
                         sequencing_scheme_.global_cost(sequence_data);
 
                     if (strictly_better(gc_tmp, gc)) {
-                        Move0 move;
+                        Move move;
                         move.type = Neighborhoods::Swap;
                         move.k1 = block_size_1;
                         move.k2 = block_size_2;
@@ -3773,7 +3773,7 @@ private:
                         sequencing_scheme_.global_cost(sequence_data);
 
                     if (strictly_better(gc_tmp, gc)) {
-                        Move0 move;
+                        Move move;
                         move.type = Neighborhoods::Reverse;
                         move.i1 = i;
                         move.pos_1 = pos_1;
@@ -3833,7 +3833,7 @@ private:
                             sequencing_scheme_.global_cost(sequence_data);
 
                         if (strictly_better(gc_tmp, gc)) {
-                            Move0 move;
+                            Move move;
                             move.type = Neighborhoods::Add;
                             move.i1 = i;
                             move.j = j;
@@ -3885,7 +3885,7 @@ private:
                     sequencing_scheme_.global_cost(sequence_data);
 
                 if (strictly_better(gc_tmp, gc)) {
-                    Move0 move;
+                    Move move;
                     move.type = Neighborhoods::Remove;
                     move.i1 = i;
                     move.pos_1 = pos;
@@ -3948,7 +3948,7 @@ private:
                             sequencing_scheme_.global_cost(sequence_data);
 
                         if (strictly_better(gc_tmp, gc)) {
-                            Move0 move;
+                            Move move;
                             move.type = Neighborhoods::Replace;
                             move.i1 = i;
                             move.j = j;
@@ -4040,7 +4040,7 @@ private:
                             gcm);
 
                     if (strictly_better(gc_tmp, gc)) {
-                        Move0 move;
+                        Move move;
                         move.type = (!reverse)?
                             Neighborhoods::InterShift:
                             Neighborhoods::InterShiftReverse;
@@ -4074,7 +4074,7 @@ private:
                                 gcm);
 
                         if (strictly_better(gc_tmp, gc)) {
-                            Move0 move;
+                            Move move;
                             move.type = (!reverse)?
                                 Neighborhoods::InterShift:
                                 Neighborhoods::InterShiftReverse;
@@ -4168,7 +4168,7 @@ private:
                             inter_shift_1_best_positions_[i2][j].second,
                             gc_tmp_1);
                     if (strictly_better(gc_tmp, gc)) {
-                        Move0 move;
+                        Move move;
                         move.type = Neighborhoods::InterShift;
                         move.k1 = 1;
                         move.i1 = i1;
@@ -4255,7 +4255,7 @@ private:
                             gc_tmp_1);
 
                     if (strictly_better(gc_tmp, gc)) {
-                        Move0 move;
+                        Move move;
                         move.type = Neighborhoods::SwapTails;
                         move.i1 = i1;
                         move.i2 = i2;
@@ -4346,7 +4346,7 @@ private:
                             gc_tmp_1);
 
                     if (strictly_better(gc_tmp, gc)) {
-                        Move0 move;
+                        Move move;
                         move.type = Neighborhoods::Split;
                         move.i1 = i1;
                         move.i2 = i2;
@@ -4454,7 +4454,7 @@ private:
                             gc_tmp_1);
 
                     if (ok && strictly_better(gc_tmp, gc)) {
-                        Move0 move;
+                        Move move;
                         move.type = Neighborhoods::InterSwap;
                         move.k1 = block_size_1;
                         move.k2 = block_size_2;
@@ -4776,7 +4776,7 @@ private:
                         //    << std::endl;
 
                         if (strictly_better(gc_tmp, gc)) {
-                            Move0 move;
+                            Move move;
                             move.type = Neighborhoods::InterSwapStar;
                             move.i1 = i1;
                             move.i2 = i2;
@@ -4874,7 +4874,7 @@ private:
                                 sequencing_scheme_.global_cost(sequence_data);
                         }
                         if (strictly_better(gc_tmp, gc)) {
-                            Move0 move;
+                            Move move;
                             move.type = Neighborhoods::ShiftChangeMode;
                             move.i1 = i;
                             move.pos_1 = block_pos;
@@ -4952,7 +4952,7 @@ private:
                         sequencing_scheme_.global_cost(sequence_data);
 
                     if (strictly_better(gc_tmp, gc)) {
-                        Move0 move;
+                        Move move;
                         move.type = Neighborhoods::ModeSwap;
                         move.i1 = i;
                         move.pos_1 = pos_1;
@@ -5028,7 +5028,7 @@ private:
                         sequencing_scheme_.global_cost(sequence_data);
 
                     if (ok && strictly_better(gc_tmp, gc)) {
-                        Move0 move;
+                        Move move;
                         move.type = Neighborhoods::SwapWithModes;
                         move.i1 = i;
                         move.pos_1 = pos_1;
@@ -5041,13 +5041,13 @@ private:
         }
     }
 
-    inline std::vector<Move0> explore_add_2(
+    inline std::vector<Move> explore_add_2(
             const Solution& solution)
     {
         SequenceId m = number_of_sequences();
         ElementPos n = sequencing_scheme_.number_of_elements();
         GlobalCost gc = global_cost(solution);
-        std::vector<Move0> improving_moves;
+        std::vector<Move> improving_moves;
         for (SequenceId i = 0; i < m; ++i) {
             const auto& sequence = solution.sequences[i];
             SequencePos seq_size = sequence.elements.size();
@@ -5103,7 +5103,7 @@ private:
                         }
 
                         if (accept) {
-                            Move0 move;
+                            Move move;
                             move.type = Neighborhoods::Add;
                             move.i1 = i;
                             move.j = j;
@@ -5119,7 +5119,7 @@ private:
         return improving_moves;
     }
 
-    inline std::vector<Move0> explore_add(
+    inline std::vector<Move> explore_add(
             const Solution& solution,
             ElementId j,
             SequenceId i_old = -1,
@@ -5127,7 +5127,7 @@ private:
             Mode mode_old = -1)
     {
         //std::cout << "explore_add j " << j << std::endl;
-        std::vector<Move0> improving_moves;
+        std::vector<Move> improving_moves;
         SequenceId m = number_of_sequences();
         GlobalCost gc = global_cost(solution);
         for (SequenceId i = 0; i < m; ++i) {
@@ -5194,7 +5194,7 @@ private:
 
                     //std::cout << to_string(gc_tmp) << std::endl;
                     if (accept) {
-                        Move0 move;
+                        Move move;
                         move.type = Neighborhoods::Add;
                         move.i1 = i;
                         move.j = j;
@@ -5209,10 +5209,10 @@ private:
         return improving_moves;
     }
 
-    inline std::vector<Move0> explore_add_end(
+    inline std::vector<Move> explore_add_end(
             const Solution& solution)
     {
-        std::vector<Move0> improving_moves;
+        std::vector<Move> improving_moves;
         SequenceId m = number_of_sequences();
         ElementPos n = sequencing_scheme_.number_of_elements();
         GlobalCost gc = global_cost(solution);
@@ -5260,7 +5260,7 @@ private:
                     }
 
                     if (accept) {
-                        Move0 move;
+                        Move move;
                         move.type = Neighborhoods::Add;
                         move.i1 = i;
                         move.j = j;
@@ -5277,7 +5277,7 @@ private:
 
     inline void apply_move(
             Solution& solution,
-            const Move0& move)
+            const Move& move)
     {
         SequenceId m = number_of_sequences();
         ElementPos n = sequencing_scheme_.number_of_elements();
