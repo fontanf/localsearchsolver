@@ -269,8 +269,10 @@ private:
                 global_cost_ranks.begin(), global_cost_ranks.end(),
                 [this](Counter solution_id_1, Counter solution_id_2) -> bool
                 {
-                    return local_scheme_.global_cost(solutions_[solution_id_1].solution)
-                            < local_scheme_.global_cost(solutions_[solution_id_2].solution);
+                    return strictly_better(
+                            local_scheme_,
+                            local_scheme_.global_cost(solutions_[solution_id_1].solution),
+                            local_scheme_.global_cost(solutions_[solution_id_2].solution));
                 });
         for (Counter pos = 0; pos < size(); ++pos)
             solutions_[global_cost_ranks[pos]].global_cost_rank = pos;
@@ -358,8 +360,11 @@ inline void genetic_local_search_worker(
 
         // Check goal.
         if (data.parameters.has_goal
-                && local_scheme.global_cost(data.output.solution_pool.best())
-                <= data.parameters.goal)
+                && data.output.solution_pool.size() > 0
+                && !strictly_better(
+                    local_scheme,
+                    data.parameters.goal,
+                    local_scheme.global_cost(data.output.solution_pool.best())))
             break;
 
         data.mutex.lock();
@@ -386,8 +391,10 @@ inline void genetic_local_search_worker(
         data.population.add(solution, generator);
         // Check for a new best solution.
         if (data.output.solution_pool.size() == 0
-                || local_scheme.global_cost(data.output.solution_pool.worst())
-                > local_scheme.global_cost(solution)) {
+                || strictly_better(
+                    local_scheme,
+                    local_scheme.global_cost(solution),
+                    local_scheme.global_cost(data.output.solution_pool.worst()))) {
             std::stringstream ss;
             ss << "initial solution " << initial_solution_pos
                 << " (thread " << thread_id << ")";
@@ -410,8 +417,10 @@ inline void genetic_local_search_worker(
         // Check goal.
         if (data.parameters.has_goal
                 && data.output.solution_pool.size() > 0
-                && local_scheme.global_cost(data.output.solution_pool.best())
-                <= data.parameters.goal)
+                && !strictly_better(
+                    local_scheme,
+                    data.parameters.goal,
+                    local_scheme.global_cost(data.output.solution_pool.best())))
             break;
 
         data.mutex.lock();
@@ -454,8 +463,10 @@ inline void genetic_local_search_worker(
         data.population.add(solution, generator);
         // Check for a new best solution.
         if (data.output.solution_pool.size() == 0
-                || local_scheme.global_cost(data.output.solution_pool.worst())
-                > local_scheme.global_cost(solution)) {
+                || strictly_better(
+                    local_scheme,
+                    local_scheme.global_cost(solution),
+                    local_scheme.global_cost(data.output.solution_pool.worst()))) {
             std::stringstream ss;
             ss << "iteration " << number_of_iterations
                 << " (thread " << thread_id << ")";

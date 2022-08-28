@@ -147,6 +147,79 @@ T best() { return Helper<T>::min(); }
 
 
 ////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////// strictly_better ///////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename, typename T>
+struct HasStrictlyBetterMethod
+{
+    static_assert(
+        std::integral_constant<T, false>::value,
+        "Second template parameter needs to be of function type.");
+};
+
+template<typename C, typename Ret, typename... Args>
+struct HasStrictlyBetterMethod<C, Ret(Args...)>
+{
+
+private:
+
+    template<typename T>
+    static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().strictly_better(std::declval<Args>()...)), Ret>::type;
+
+    template<typename>
+    static constexpr std::false_type check(...);
+
+    typedef decltype(check<C>(0)) type;
+
+public:
+
+    static constexpr bool value = type::value;
+
+};
+
+template<typename LocalScheme>
+bool strictly_better(
+        LocalScheme&,
+        const typename LocalScheme::GlobalCost& global_cost_1,
+        const typename LocalScheme::GlobalCost& global_cost_2,
+        std::false_type)
+{
+    return global_cost_1 < global_cost_2;
+}
+
+template<typename LocalScheme>
+bool strictly_better(
+        LocalScheme& local_scheme,
+        const typename LocalScheme::GlobalCost& global_cost_1,
+        const typename LocalScheme::GlobalCost& global_cost_2,
+        std::true_type)
+{
+    return local_scheme.strictly_better(
+            global_cost_1,
+            global_cost_2);
+}
+
+template<typename LocalScheme>
+bool strictly_better(
+        LocalScheme& local_scheme,
+        const typename LocalScheme::GlobalCost& global_cost_1,
+        const typename LocalScheme::GlobalCost& global_cost_2)
+{
+    return strictly_better(
+            local_scheme,
+            global_cost_1,
+            global_cost_2,
+            std::integral_constant<
+                bool,
+                HasStrictlyBetterMethod<LocalScheme,
+                bool(
+                    const typename LocalScheme::GlobalCost&,
+                    const typename LocalScheme::GlobalCost&)>::value>());
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// dominates ///////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -301,8 +374,10 @@ struct SolutionPoolComparator
     bool operator()(
             const Solution& solution_1,
             const Solution& solution_2) const {
-        return local_scheme.global_cost(solution_1)
-            < local_scheme.global_cost(solution_2);
+        return strictly_better(
+                local_scheme,
+                local_scheme.global_cost(solution_1),
+                local_scheme.global_cost(solution_2));
     }
 };
 
@@ -337,8 +412,10 @@ public:
         info.output->mutex.lock();
         // If the solution is worse than the worst solution of the pool, stop.
         if ((Counter)solutions_.size() >= size_max_) {
-            if (scheme_.global_cost(solution)
-                    > scheme_.global_cost(*std::prev(solutions_.end()))) {
+            if (!strictly_better(
+                        scheme_,
+                        scheme_.global_cost(solution),
+                        scheme_.global_cost(*std::prev(solutions_.end())))) {
                 info.output->mutex.unlock();
                 return 0;
             }
@@ -348,7 +425,10 @@ public:
         //        return 0;
         // If new best solution, display.
         bool new_best = (solutions_.size() == 0)
-            || (scheme_.global_cost(solution) < scheme_.global_cost(*solutions_.begin()));
+            || strictly_better(
+                    scheme_,
+                    scheme_.global_cost(solution),
+                    scheme_.global_cost(*solutions_.begin()));
         // Add new solution to solution pool.
         solutions_.insert(solution);
         if (new_best) {
@@ -624,26 +704,6 @@ void print_local_scheme_statistics(
                 bool,
                 HasPrintStatisticsMethod<LocalScheme,
                 void(optimizationtools::Info&)>::value>());
-}
-
-namespace relational
-{
-
-struct tag {};
-
-template <typename T>
-bool operator==(T const& lhs, T const& rhs) { return !(rhs < lhs) && !(lhs < rhs); }
-
-template <typename T>
-bool operator!=(T const& lhs, T const& rhs) { return !(lhs == rhs); }
-
-template <typename T>
-bool operator>(T const& lhs, T const& rhs) { return rhs < lhs; }
-template <typename T>
-bool operator<=(T const& lhs, T const& rhs) { return !(rhs < lhs); }
-template <typename T>
-bool operator>=(T const& lhs, T const& rhs) { return !(lhs < rhs); }
-
 }
 
 }

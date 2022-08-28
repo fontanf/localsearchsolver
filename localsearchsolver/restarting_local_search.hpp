@@ -113,8 +113,10 @@ inline RestartingLocalSearchOutput<LocalScheme> restarting_local_search(
         // Check goal.
         if (parameters.has_goal
                 && output.solution_pool.size() > 0
-                && local_scheme.global_cost(output.solution_pool.best())
-                <= parameters.goal)
+                && !strictly_better(
+                    local_scheme,
+                    parameters.goal,
+                    local_scheme.global_cost(output.solution_pool.best())))
             break;
 
         // Generate initial solution.
@@ -127,8 +129,10 @@ inline RestartingLocalSearchOutput<LocalScheme> restarting_local_search(
 
         // Check for a new best solution.
         if (output.solution_pool.size() == 0
-                || local_scheme.global_cost(output.solution_pool.worst())
-                > local_scheme.global_cost(solution)) {
+                || strictly_better(
+                    local_scheme,
+                    local_scheme.global_cost(solution),
+                    local_scheme.global_cost(output.solution_pool.worst()))) {
             std::stringstream ss;
             ss << "iteration " << output.number_of_restarts;
             output.solution_pool.add(solution, ss, parameters.info);

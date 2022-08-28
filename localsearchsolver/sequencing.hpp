@@ -544,11 +544,11 @@ public:
         for (SequenceId i = 0; i < m; ++i) {
             for (ElementPos pos_1 = 0; pos_1 < seq_size; ++pos_1) {
                 for (ElementPos pos_2 = pos_1 + 1; pos_2 <= seq_size; ++pos_2) {
-                    GlobalCost d = global_cost_merge(
+                    GlobalCost d = merge(
                             distance[i][pos_1],
                             edges[pos_2][pos_1]);
                     if (!distance_init[i + 1][pos_2]
-                            || distance[i + 1][pos_2] > d) {
+                            || strictly_better(d, distance[i + 1][pos_2])) {
                         //std::cout << "Update " << i
                         //    << " pos_2 " << pos_2
                         //    << " from pos_1 " << pos_1
@@ -657,7 +657,6 @@ public:
                     Move0 move_best;
                     for (const Move0 move: improving_moves)
                         if (move_best.i1 == -1 || dominates(
-                                    sequencing_scheme_,
                                     move.global_cost,
                                     move_best.global_cost))
                             move_best = move;
@@ -681,7 +680,6 @@ public:
                     Move0 move_best;
                     for (const Move0 move: improving_moves)
                         if (move_best.i1 == -1 || dominates(
-                                    sequencing_scheme_,
                                     move.global_cost,
                                     move_best.global_cost))
                             move_best = move;
@@ -708,7 +706,6 @@ public:
                     Move0 move_best;
                     for (const Move0 move: improving_moves)
                         if (move_best.i1 == -1 || dominates(
-                                    sequencing_scheme_,
                                     move.global_cost,
                                     move_best.global_cost))
                             move_best = move;
@@ -830,9 +827,9 @@ public:
         }
         }
         Solution solution;
-        if (dominates(sequencing_scheme_, global_cost(solution_1), global_cost(solution_2))) {
+        if (dominates(global_cost(solution_1), global_cost(solution_2))) {
             solution = solution_1;
-        } else if (dominates(sequencing_scheme_, global_cost(solution_2), global_cost(solution_1))) {
+        } else if (dominates(global_cost(solution_2), global_cost(solution_1))) {
             solution = solution_2;
         } else {
             solution = solution_1;
@@ -848,16 +845,18 @@ public:
             for (SequenceId i2 = 0; i2 < m; ++i2) {
                 if (solution.sequences[i1].elements
                         == solution_parent_1.sequences[i2].elements
-                        && sequencing_scheme_.global_cost(solution.sequences[i1].data)
-                        == sequencing_scheme_.global_cost(solution_parent_1.sequences[i2].data)) {
+                        && equals(
+                            sequencing_scheme_.global_cost(solution.sequences[i1].data),
+                            sequencing_scheme_.global_cost(solution_parent_1.sequences[i2].data))) {
                     solution.modified_sequences[i1] = false;
                     number_of_modified_sequences--;
                     break;
                 }
                 if (solution.sequences[i1].elements
                         == solution_parent_2.sequences[i2].elements
-                        && sequencing_scheme_.global_cost(solution.sequences[i1].data)
-                        == sequencing_scheme_.global_cost(solution_parent_2.sequences[i2].data)) {
+                        && equals(
+                            sequencing_scheme_.global_cost(solution.sequences[i1].data),
+                            sequencing_scheme_.global_cost(solution_parent_2.sequences[i2].data))) {
                     solution.modified_sequences[i1] = false;
                     number_of_modified_sequences--;
                     break;
@@ -1252,7 +1251,6 @@ public:
                 Move0 move_best;
                 for (const Move0 move: improving_moves)
                     if (move_best.i1 == -1 || dominates(
-                                sequencing_scheme_,
                                 move.global_cost,
                                 move_best.global_cost))
                         move_best = move;
@@ -1389,7 +1387,6 @@ public:
                 Move0 move_best;
                 for (const Move0 move: improving_moves)
                     if (move_best.i1 == -1 || dominates(
-                                sequencing_scheme_,
                                 move.global_cost,
                                 move_best.global_cost))
                         move_best = move;
@@ -1424,6 +1421,28 @@ public:
     GlobalCost global_cost_goal(double value) const
     {
         return localsearchsolver::global_cost_goal(sequencing_scheme_, value);
+    }
+
+    inline bool strictly_better(
+            const GlobalCost& gc1,
+            const GlobalCost& gc2) const
+    {
+        return localsearchsolver::strictly_better(sequencing_scheme_, gc1, gc2);
+    }
+
+    inline bool dominates(
+            const GlobalCost& gc1,
+            const GlobalCost& gc2) const
+    {
+        return localsearchsolver::dominates(sequencing_scheme_, gc1, gc2);
+    }
+
+    inline bool equals(
+            const GlobalCost& gc1,
+            const GlobalCost& gc2) const
+    {
+        return !strictly_better(gc1, gc2)
+            && !strictly_better(gc2, gc1);
     }
 
     /**
@@ -1897,7 +1916,6 @@ public:
                         Move0 move_best;
                         for (const Move0 move: improving_moves)
                             if (move_best.i1 == -1 || dominates(
-                                        sequencing_scheme_,
                                         move.global_cost,
                                         move_best.global_cost))
                                 move_best = move;
@@ -2187,13 +2205,14 @@ public:
                     Move0 move_best;
                     for (const Move0 move: neighborhood.improving_moves)
                         if (move_best.i1 == -1 || dominates(
-                                    sequencing_scheme_,
                                     move.global_cost,
                                     move_best.global_cost))
                             move_best = move;
                     apply_move(solution, move_best);
                     // Check new current solution cost.
-                    if (global_cost(solution) - gc_old != move_best.global_cost) {
+                    if (!equals(
+                                diff(global_cost(solution), gc_old),
+                                move_best.global_cost)) {
                         std::cout
                             << "k1 " << move_best.k1
                             << " k2 " << move_best.k2
@@ -2716,13 +2735,13 @@ private:
     }
 
     /*
-     * global_cost_merge(
+     * diff(
      *         const GlobalCost&,
      *         const GlobalCost&)
      */
 
     template<typename, typename T>
-    struct HasGlobalCostMergeMethod
+    struct HasDiffMethod
     {
         static_assert(
                 std::integral_constant<T, false>::value,
@@ -2730,13 +2749,13 @@ private:
     };
 
     template<typename C, typename Ret, typename... Args>
-    struct HasGlobalCostMergeMethod<C, Ret(Args...)>
+    struct HasDiffMethod<C, Ret(Args...)>
     {
 
     private:
 
         template<typename T>
-        static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().global_cost_merge(std::declval<Args>()...)), Ret>::type;
+        static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().diff(std::declval<Args>()...)), Ret>::type;
 
         template<typename>
         static constexpr std::false_type check(...);
@@ -2749,7 +2768,71 @@ private:
 
     };
 
-    GlobalCost global_cost_merge(
+    GlobalCost diff(
+            const GlobalCost& gc1,
+            const GlobalCost& gc2,
+            std::false_type) const
+    {
+        return gc1 - gc2;
+    }
+
+    GlobalCost diff(
+            const GlobalCost& gc1,
+            const GlobalCost& gc2,
+            std::true_type) const
+    {
+        return sequencing_scheme_.diff(gc1, gc2);
+    }
+
+    GlobalCost diff(
+            const GlobalCost& gc1,
+            const GlobalCost& gc2) const
+    {
+        return diff(
+                gc1,
+                gc2,
+                std::integral_constant<
+                    bool,
+                    HasDiffMethod<SequencingScheme, GlobalCost(
+                        const GlobalCost&,
+                        const GlobalCost&)>::value>());
+    }
+
+    /*
+     * merge(
+     *         const GlobalCost&,
+     *         const GlobalCost&)
+     */
+
+    template<typename, typename T>
+    struct HasMergeMethod
+    {
+        static_assert(
+                std::integral_constant<T, false>::value,
+                "Second template parameter needs to be of function type.");
+    };
+
+    template<typename C, typename Ret, typename... Args>
+    struct HasMergeMethod<C, Ret(Args...)>
+    {
+
+    private:
+
+        template<typename T>
+        static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().merge(std::declval<Args>()...)), Ret>::type;
+
+        template<typename>
+        static constexpr std::false_type check(...);
+
+        typedef decltype(check<C>(0)) type;
+
+    public:
+
+        static constexpr bool value = type::value;
+
+    };
+
+    GlobalCost merge(
             const GlobalCost& gc1,
             const GlobalCost& gc2,
             std::false_type) const
@@ -2757,12 +2840,12 @@ private:
         return gc1 + gc2;
     }
 
-    GlobalCost global_cost_merge(
+    GlobalCost merge(
             const GlobalCost& gc1,
             const GlobalCost& gc2,
             std::true_type) const
     {
-        return sequencing_scheme_.global_cost_merge(gc1, gc2);
+        return sequencing_scheme_.merge(gc1, gc2);
     }
 
     /**
@@ -2775,16 +2858,16 @@ private:
      * is not the case, for example when the objective is the makespan,
      * SequencingScheme needs to implement a custom method.
      */
-    GlobalCost global_cost_merge(
+    GlobalCost merge(
             const GlobalCost& gc1,
             const GlobalCost& gc2) const
     {
-        return global_cost_merge(
+        return merge(
                 gc1,
                 gc2,
                 std::integral_constant<
                     bool,
-                    HasGlobalCostMergeMethod<SequencingScheme, GlobalCost(
+                    HasMergeMethod<SequencingScheme, GlobalCost(
                         const GlobalCost&,
                         const GlobalCost&)>::value>());
     }
@@ -2804,10 +2887,10 @@ private:
         append(sequence_data, se);;
         // Check early termination.
         if (gci == nullptr) {
-            if (bound(sequence_data) >= cutoff)
+            if (!strictly_better(bound(sequence_data), cutoff))
                 return false;
         } else {
-            if (global_cost_merge(*gci, bound(sequence_data)) >= cutoff)
+            if (!strictly_better(merge(*gci, bound(sequence_data)), cutoff))
                 return false;
         }
         return true;
@@ -2830,10 +2913,10 @@ private:
         }
         // Check early termination.
         if (gci == nullptr) {
-            if (bound(sequence_data) >= cutoff)
+            if (!strictly_better(bound(sequence_data), cutoff))
                 return false;
         } else {
-            if (global_cost_merge(*gci, bound(sequence_data)) >= cutoff)
+            if (!strictly_better(merge(*gci, bound(sequence_data)), cutoff))
                 return false;
         }
         return true;
@@ -3009,10 +3092,10 @@ private:
                 //    << std::endl;
                 // Check early termination.
                 if (gci == nullptr) {
-                    if (bound(sequence_data) >= cutoff)
+                    if (!strictly_better(bound(sequence_data), cutoff))
                         return false;
                 } else {
-                    if (global_cost_merge(*gci, bound(sequence_data)) >= cutoff)
+                    if (!strictly_better(merge(*gci, bound(sequence_data)), cutoff))
                         return false;
                 }
                 // End condition.
@@ -3031,10 +3114,10 @@ private:
                 //    << std::endl;
                 // Check early termination.
                 if (gci == nullptr) {
-                    if (bound(sequence_data) >= cutoff)
+                    if (!strictly_better(bound(sequence_data), cutoff))
                         return false;
                 } else {
-                    if (global_cost_merge(*gci, bound(sequence_data)) >= cutoff)
+                    if (!strictly_better(merge(*gci, bound(sequence_data)), cutoff))
                         return false;
                 }
                 // End condition.
@@ -3083,10 +3166,10 @@ private:
         }
         // Check early termination.
         if (gci == nullptr) {
-            if (bound(sequence_data) >= cutoff)
+            if (!strictly_better(bound(sequence_data), cutoff))
                 return false;
         } else {
-            if (global_cost_merge(*gci, bound(sequence_data)) >= cutoff)
+            if (!strictly_better(merge(*gci, bound(sequence_data)), cutoff))
                 return false;
         }
         return true;
@@ -3336,18 +3419,18 @@ private:
                 std::vector<GlobalCost> front(m);
                 front[0] = global_costs_cur_[0];
                 for (SequenceId i = 1; i < m; ++i)
-                    front[i] = global_cost_merge(front[i - 1], global_costs_cur_[i]);
+                    front[i] = merge(front[i - 1], global_costs_cur_[i]);
 
                 std::vector<GlobalCost> back(m);
                 back[0] = global_costs_cur_[m - 1];
                 for (SequenceId i = m - 2; i >= 0; --i)
-                    back[i] = global_cost_merge(back[i + 1], global_costs_cur_[i]);
+                    back[i] = merge(back[i + 1], global_costs_cur_[i]);
 
                 partial_global_costs_cur_1_[0] = back[1];
                 partial_global_costs_cur_1_[m - 1] = front[m - 2];
                 for (SequenceId i = 1; i < m - 1; ++i) {
                     partial_global_costs_cur_1_[i]
-                        = global_cost_merge(front[i - 1], back[i + 1]);
+                        = merge(front[i - 1], back[i + 1]);
                 }
 
                 // Update partial_global_costs_2_.
@@ -3355,14 +3438,14 @@ private:
 
                     partial_global_costs_cur_2_[0][2] = global_costs_cur_[1];
                     for (SequenceId i2 = 3; i2 < m; ++i2) {
-                        partial_global_costs_cur_2_[0][i2] = global_cost_merge(
+                        partial_global_costs_cur_2_[0][i2] = merge(
                                 partial_global_costs_cur_2_[0][i2 - 1],
                                 global_costs_cur_[i2 - 1]);
                     }
                     for (SequenceId i1 = 1; i1 < m - 1; ++i1) {
                         partial_global_costs_cur_2_[i1][i1 + 1] = front[i1 - 1];
                         for (SequenceId i2 = i1 + 2; i2 < m; ++i2) {
-                            partial_global_costs_cur_2_[i1][i2] = global_cost_merge(
+                            partial_global_costs_cur_2_[i1][i2] = merge(
                                     partial_global_costs_cur_2_[i1][i2 - 1],
                                     global_costs_cur_[i2 - 1]);
                         }
@@ -3375,7 +3458,7 @@ private:
                             if (i1 == 0 && i2 == 1) {
                                 partial_global_costs_cur_2_[i1][i2] = back[2];
                             } else {
-                                partial_global_costs_cur_2_[i1][i2] = global_cost_merge(
+                                partial_global_costs_cur_2_[i1][i2] = merge(
                                         partial_global_costs_cur_2_[i1][i2],
                                         back[i2 + 1]);
                                 partial_global_costs_cur_2_[i2][i1]
@@ -3400,7 +3483,7 @@ private:
     {
         solution.global_cost = sequencing_scheme_.global_cost(solution.sequences[0].data);
         for (SequenceId i = 1; i < number_of_sequences(); ++i) {
-            solution.global_cost = global_cost_merge(
+            solution.global_cost = merge(
                     solution.global_cost,
                     sequencing_scheme_.global_cost(solution.sequences[i].data));
         }
@@ -3466,7 +3549,7 @@ private:
                         if (!ok)
                             continue;
                         gc_tmp = (parameters_.linking_constraints && m > 1)?
-                            global_cost_merge(
+                            merge(
                                     sequencing_scheme_.global_cost(sequence_data),
                                     partial_global_costs_cur_1_[i]):
                             sequencing_scheme_.global_cost(sequence_data);
@@ -3491,12 +3574,12 @@ private:
                         if (!ok)
                             continue;
                         gc_tmp = (parameters_.linking_constraints && m > 1)?
-                            global_cost_merge(
+                            merge(
                                     sequencing_scheme_.global_cost(sequence_data),
                                     partial_global_costs_cur_1_[i]):
                             sequencing_scheme_.global_cost(sequence_data);
                     }
-                    if (!(gc_tmp >= gc)) {
+                    if (strictly_better(gc_tmp, gc)) {
                         Move0 move;
                         move.type = (!reverse)?
                             Neighborhoods::Shift:
@@ -3505,7 +3588,7 @@ private:
                         move.i1 = i;
                         move.pos_1 = block_pos;
                         move.pos_2 = pos_new;
-                        move.global_cost = gc_tmp - gc;
+                        move.global_cost = diff(gc_tmp, gc);
                         neighborhood.improving_moves.push_back(move);
                     }
                 }
@@ -3567,12 +3650,12 @@ private:
                     if (!ok)
                         continue;
                     GlobalCost gc_tmp = (parameters_.linking_constraints && m > 1)?
-                        global_cost_merge(
+                        merge(
                                 sequencing_scheme_.global_cost(sequence_data),
                                 partial_global_costs_cur_1_[i]):
                         sequencing_scheme_.global_cost(sequence_data);
 
-                    if (!(gc_tmp >= gc)) {
+                    if (strictly_better(gc_tmp, gc)) {
                         //std::cout << to_string(gc_tmp)
                         //    << " " << to_string(gc)
                         //    << std::endl;
@@ -3583,7 +3666,7 @@ private:
                         move.i1 = i;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2;
-                        move.global_cost = gc_tmp - gc;
+                        move.global_cost = diff(gc_tmp, gc);
                         neighborhood.improving_moves.push_back(move);
                     }
                 }
@@ -3626,12 +3709,12 @@ private:
                     if (!ok)
                         continue;
                     GlobalCost gc_tmp = (parameters_.linking_constraints && m > 1)?
-                        global_cost_merge(
+                        merge(
                                 sequencing_scheme_.global_cost(sequence_data),
                                 partial_global_costs_cur_1_[i]):
                         sequencing_scheme_.global_cost(sequence_data);
 
-                    if (!(gc_tmp >= gc)) {
+                    if (strictly_better(gc_tmp, gc)) {
                         Move0 move;
                         move.type = Neighborhoods::Swap;
                         move.k1 = block_size_1;
@@ -3639,7 +3722,7 @@ private:
                         move.i1 = i;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2;
-                        move.global_cost = gc_tmp - gc;
+                        move.global_cost = diff(gc_tmp, gc);
                         neighborhood.improving_moves.push_back(move);
                     }
                 }
@@ -3684,18 +3767,18 @@ private:
                     if (!ok)
                         continue;
                     GlobalCost gc_tmp = (parameters_.linking_constraints && m > 1)?
-                        global_cost_merge(
+                        merge(
                                 sequencing_scheme_.global_cost(sequence_data),
                                 partial_global_costs_cur_1_[i]):
                         sequencing_scheme_.global_cost(sequence_data);
 
-                    if (!(gc_tmp >= gc)) {
+                    if (strictly_better(gc_tmp, gc)) {
                         Move0 move;
                         move.type = Neighborhoods::Reverse;
                         move.i1 = i;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2;
-                        move.global_cost = gc_tmp - gc;
+                        move.global_cost = diff(gc_tmp, gc);
                         neighborhood.improving_moves.push_back(move);
                     }
                 }
@@ -3744,19 +3827,19 @@ private:
                         if (!ok)
                             continue;
                         GlobalCost gc_tmp = (parameters_.linking_constraints && m > 1)?
-                            global_cost_merge(
+                            merge(
                                     sequencing_scheme_.global_cost(sequence_data),
                                     partial_global_costs_cur_1_[i]):
                             sequencing_scheme_.global_cost(sequence_data);
 
-                        if (!(gc_tmp >= gc)) {
+                        if (strictly_better(gc_tmp, gc)) {
                             Move0 move;
                             move.type = Neighborhoods::Add;
                             move.i1 = i;
                             move.j = j;
                             move.mode = mode;
                             move.pos_1 = pos;
-                            move.global_cost = gc_tmp - gc;
+                            move.global_cost = diff(gc_tmp, gc);
                             neighborhood.improving_moves.push_back(move);
                         }
                     }
@@ -3796,17 +3879,17 @@ private:
                 if (!ok)
                     continue;
                 GlobalCost gc_tmp = (parameters_.linking_constraints && m > 1)?
-                    global_cost_merge(
+                    merge(
                             sequencing_scheme_.global_cost(sequence_data),
                             partial_global_costs_cur_1_[i]):
                     sequencing_scheme_.global_cost(sequence_data);
 
-                if (!(gc_tmp >= gc)) {
+                if (strictly_better(gc_tmp, gc)) {
                     Move0 move;
                     move.type = Neighborhoods::Remove;
                     move.i1 = i;
                     move.pos_1 = pos;
-                    move.global_cost = gc_tmp - gc;
+                    move.global_cost = diff(gc_tmp, gc);
                     neighborhood.improving_moves.push_back(move);
                 }
             }
@@ -3859,19 +3942,19 @@ private:
                         if (!ok)
                             continue;
                         GlobalCost gc_tmp = (parameters_.linking_constraints && m > 1)?
-                            global_cost_merge(
+                            merge(
                                     sequencing_scheme_.global_cost(sequence_data),
                                     partial_global_costs_cur_1_[i]):
                             sequencing_scheme_.global_cost(sequence_data);
 
-                        if (!(gc_tmp >= gc)) {
+                        if (strictly_better(gc_tmp, gc)) {
                             Move0 move;
                             move.type = Neighborhoods::Replace;
                             move.i1 = i;
                             move.j = j;
                             move.mode = mode;
                             move.pos_1 = pos;
-                            move.global_cost = gc_tmp - gc;
+                            move.global_cost = diff(gc_tmp, gc);
                             neighborhood.improving_moves.push_back(move);
                         }
                     }
@@ -3930,11 +4013,11 @@ private:
                     SequencePos seq_2_size = sequence_2.elements.size();
 
                     if (!(parameters_.linking_constraints && m > 1))
-                        gc = global_cost_merge(
+                        gc = merge(
                                 global_costs_cur_[i1],
                                 global_costs_cur_[i2]);
                     GlobalCost gcm = (parameters_.linking_constraints && m > 2)?
-                        global_cost_merge(
+                        merge(
                             gc_tmp_1,
                             partial_global_costs_cur_2_[i1][i2]):
                         gc_tmp_1;
@@ -3952,11 +4035,11 @@ private:
                             gc, &gcm);
                     if (!ok)
                         continue;
-                    GlobalCost gc_tmp = global_cost_merge(
+                    GlobalCost gc_tmp = merge(
                             sequencing_scheme_.global_cost(sequence_data_2),
                             gcm);
 
-                    if (!(gc_tmp >= gc)) {
+                    if (strictly_better(gc_tmp, gc)) {
                         Move0 move;
                         move.type = (!reverse)?
                             Neighborhoods::InterShift:
@@ -3966,7 +4049,7 @@ private:
                         move.i2 = i2;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2 + 1;
-                        move.global_cost = gc_tmp - gc;
+                        move.global_cost = diff(gc_tmp, gc);
                         neighborhood.improving_moves.push_back(move);
                     }
 
@@ -3986,11 +4069,11 @@ private:
                                 gc, &gcm);
                         if (!ok)
                             continue;
-                        GlobalCost gc_tmp = global_cost_merge(
+                        GlobalCost gc_tmp = merge(
                                 sequencing_scheme_.global_cost(sequence_data_2),
                                 gcm);
 
-                        if (!(gc_tmp >= gc)) {
+                        if (strictly_better(gc_tmp, gc)) {
                             Move0 move;
                             move.type = (!reverse)?
                                 Neighborhoods::InterShift:
@@ -4000,7 +4083,7 @@ private:
                             move.i2 = i2;
                             move.pos_1 = pos_1;
                             move.pos_2 = pos_2;
-                            move.global_cost = gc_tmp - gc;
+                            move.global_cost = diff(gc_tmp, gc);
                             neighborhood.improving_moves.push_back(move);
                         }
                     }
@@ -4054,7 +4137,7 @@ private:
                     const auto& sequence_2 = solution.sequences[i2];
                     SequencePos seq_2_size = sequence_2.elements.size();
 
-                    GlobalCost gc = global_cost_merge(
+                    GlobalCost gc = merge(
                             global_costs_cur_[i1],
                             global_costs_cur_[i2]);
 
@@ -4081,10 +4164,10 @@ private:
                         inter_shift_1_best_positions_[i2][j] = {pos_2_best, gc_best};
                     }
 
-                    GlobalCost gc_tmp = global_cost_merge(
+                    GlobalCost gc_tmp = merge(
                             inter_shift_1_best_positions_[i2][j].second,
                             gc_tmp_1);
-                    if (!(gc_tmp >= gc)) {
+                    if (strictly_better(gc_tmp, gc)) {
                         Move0 move;
                         move.type = Neighborhoods::InterShift;
                         move.k1 = 1;
@@ -4092,7 +4175,7 @@ private:
                         move.i2 = i2;
                         move.pos_1 = pos_1;
                         move.pos_2 = inter_shift_1_best_positions_[i2][j].first;
-                        move.global_cost = gc_tmp - gc;
+                        move.global_cost = diff(gc_tmp, gc);
                         neighborhood.improving_moves.push_back(move);
                     }
                 }
@@ -4141,7 +4224,7 @@ private:
                     SequencePos seq_2_size = sequence_2.elements.size();
 
                     if (!(parameters_.linking_constraints && m > 2))
-                        gc = global_cost_merge(
+                        gc = merge(
                                 global_costs_cur_[i1],
                                 global_costs_cur_[i2]);
                     GlobalCost* gcm = (parameters_.linking_constraints && m > 2)?
@@ -4155,7 +4238,7 @@ private:
                     if (!ok)
                         continue;
                     GlobalCost gc_tmp_1 = (parameters_.linking_constraints && m > 2)?
-                        global_cost_merge(
+                        merge(
                                 sequencing_scheme_.global_cost(sequence_data_1),
                                 partial_global_costs_cur_2_[i1][i2]):
                         sequencing_scheme_.global_cost(sequence_data_1);
@@ -4167,18 +4250,18 @@ private:
                             gc, &gc_tmp_1);
                     if (!ok)
                         continue;
-                    GlobalCost gc_tmp = global_cost_merge(
+                    GlobalCost gc_tmp = merge(
                             sequencing_scheme_.global_cost(sequence_data_2),
                             gc_tmp_1);
 
-                    if (!(gc_tmp >= gc)) {
+                    if (strictly_better(gc_tmp, gc)) {
                         Move0 move;
                         move.type = Neighborhoods::SwapTails;
                         move.i1 = i1;
                         move.i2 = i2;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2;
-                        move.global_cost = gc_tmp - gc;
+                        move.global_cost = diff(gc_tmp, gc);
                         neighborhood.improving_moves.push_back(move);
                     }
                 }
@@ -4226,7 +4309,7 @@ private:
                     SequencePos seq_2_size = sequence_2.elements.size();
 
                     if (!(parameters_.linking_constraints && m > 1))
-                        gc = global_cost_merge(
+                        gc = merge(
                                 global_costs_cur_[i1],
                                 global_costs_cur_[i2]);
                     GlobalCost* gcm = (parameters_.linking_constraints && m > 2)?
@@ -4240,7 +4323,7 @@ private:
                     if (!ok)
                         continue;
                     GlobalCost gc_tmp_1 = (parameters_.linking_constraints && m > 2)?
-                        global_cost_merge(
+                        merge(
                                 sequencing_scheme_.global_cost(sequence_data_1),
                                 partial_global_costs_cur_2_[i1][i2]):
                         sequencing_scheme_.global_cost(sequence_data_1);
@@ -4258,18 +4341,18 @@ private:
                             gc, &gc_tmp_1);
                     if (!ok)
                         continue;
-                    GlobalCost gc_tmp = global_cost_merge(
+                    GlobalCost gc_tmp = merge(
                             sequencing_scheme_.global_cost(sequence_data_2),
                             gc_tmp_1);
 
-                    if (!(gc_tmp >= gc)) {
+                    if (strictly_better(gc_tmp, gc)) {
                         Move0 move;
                         move.type = Neighborhoods::Split;
                         move.i1 = i1;
                         move.i2 = i2;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2;
-                        move.global_cost = gc_tmp - gc;
+                        move.global_cost = diff(gc_tmp, gc);
                         neighborhood.improving_moves.push_back(move);
                     }
                 }
@@ -4323,7 +4406,7 @@ private:
                         continue;
 
                     if (!(parameters_.linking_constraints && m > 1))
-                        gc = global_cost_merge(
+                        gc = merge(
                                 global_costs_cur_[i1],
                                 global_costs_cur_[i2]);
 
@@ -4331,7 +4414,7 @@ private:
                     SequenceData sequence_data_2 = sequence_datas_cur_1_[i2][pos_2 + 1];
 
                     GlobalCost gcm = (parameters_.linking_constraints && m > 2)?
-                        global_cost_merge(
+                        merge(
                             bound(sequence_data_2),
                             partial_global_costs_cur_2_[i1][i2]):
                         bound(sequence_data_2);
@@ -4349,7 +4432,7 @@ private:
                     if (!ok)
                         continue;
                     GlobalCost gc_tmp_1 = (parameters_.linking_constraints && m > 2)?
-                        global_cost_merge(
+                        merge(
                                 sequencing_scheme_.global_cost(sequence_data_1),
                                 partial_global_costs_cur_2_[i1][i2]):
                         sequencing_scheme_.global_cost(sequence_data_1);
@@ -4366,11 +4449,11 @@ private:
                             gc, &gc_tmp_1);
                     if (!ok)
                         continue;
-                    GlobalCost gc_tmp = global_cost_merge(
+                    GlobalCost gc_tmp = merge(
                             sequencing_scheme_.global_cost(sequence_data_2),
                             gc_tmp_1);
 
-                    if (ok && !(gc_tmp >= gc)) {
+                    if (ok && strictly_better(gc_tmp, gc)) {
                         Move0 move;
                         move.type = Neighborhoods::InterSwap;
                         move.k1 = block_size_1;
@@ -4379,7 +4462,7 @@ private:
                         move.i2 = i2;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2 + 1;
-                        move.global_cost = gc_tmp - gc;
+                        move.global_cost = diff(gc_tmp, gc);
                         neighborhood.improving_moves.push_back(move);
                     }
                 }
@@ -4421,7 +4504,7 @@ private:
                         && !neighborhood.modified_sequences[i2])
                     continue;
 
-                GlobalCost gc = global_cost_merge(
+                GlobalCost gc = merge(
                         global_costs_cur_[i1],
                         global_costs_cur_[i2]);
 
@@ -4454,19 +4537,19 @@ private:
                             if (!ok)
                                 continue;
                             GlobalCost gci2_tmp = sequencing_scheme_.global_cost(sequence_data);
-                            if (pos_best_1 == -1 || !(gci2_tmp >= gc_best_1)) {
+                            if (pos_best_1 == -1 || strictly_better(gci2_tmp, gc_best_1)) {
                                 pos_best_3 = pos_best_2;
                                 pos_best_2 = pos_best_1;
                                 pos_best_1 = pos_2;
                                 gc_best_3 = gc_best_2;
                                 gc_best_2 = gc_best_1;
                                 gc_best_1 = gci2_tmp;
-                            } else if (pos_best_2 == -1 || !(gci2_tmp >= gc_best_2)) {
+                            } else if (pos_best_2 == -1 || strictly_better(gci2_tmp, gc_best_2)) {
                                 pos_best_3 = pos_best_2;
                                 pos_best_2 = pos_2;
                                 gc_best_3 = gc_best_2;
                                 gc_best_2 = gci2_tmp;
-                            } else if (pos_best_3 == -1 || !(gci2_tmp >= gc_best_3)) {
+                            } else if (pos_best_3 == -1 || strictly_better(gci2_tmp, gc_best_3)) {
                                 pos_best_3 = pos_2;
                                 gc_best_3 = gci2_tmp;
                             }
@@ -4510,19 +4593,19 @@ private:
                             if (!ok)
                                 continue;
                             GlobalCost gci1_tmp = sequencing_scheme_.global_cost(sequence_data);
-                            if (pos_best_1 == -1 || !(gci1_tmp >= gc_best_1)) {
+                            if (pos_best_1 == -1 || strictly_better(gci1_tmp, gc_best_1)) {
                                 pos_best_3 = pos_best_2;
                                 pos_best_2 = pos_best_1;
                                 pos_best_1 = pos_1;
                                 gc_best_3 = gc_best_2;
                                 gc_best_2 = gc_best_1;
                                 gc_best_1 = gci1_tmp;
-                            } else if (pos_best_2 == -1 || !(gci1_tmp >= gc_best_2)) {
+                            } else if (pos_best_2 == -1 || strictly_better(gci1_tmp, gc_best_2)) {
                                 pos_best_3 = pos_best_2;
                                 pos_best_2 = pos_1;
                                 gc_best_3 = gc_best_2;
                                 gc_best_2 = gci1_tmp;
-                            } else if (pos_best_3 == -1 || !(gci1_tmp >= gc_best_3)) {
+                            } else if (pos_best_3 == -1 || strictly_better(gci1_tmp, gc_best_3)) {
                                 pos_best_3 = pos_1;
                                 gc_best_3 = gci1_tmp;
                             }
@@ -4610,7 +4693,7 @@ private:
                                 //std::cout << "p " << p
                                 //    << " gc " << to_string(gci2)
                                 //    << std::endl;
-                                if ((pos_1_new == -1 || !(gci2 >= gci2_tmp))) {
+                                if ((pos_1_new == -1 || strictly_better(gci2, gci2_tmp))) {
                                     gci2_tmp = gci2;
                                     pos_1_new = p;
                                 }
@@ -4674,7 +4757,7 @@ private:
                                 //std::cout << "p " << p
                                 //    << " gc " << to_string(gci1)
                                 //    << std::endl;
-                                if ((pos_2_new == -1 || !(gci1 >= gci1_tmp))) {
+                                if ((pos_2_new == -1 || strictly_better(gci1, gci1_tmp))) {
                                     gci1_tmp = gci1;
                                     pos_2_new = p;
                                 }
@@ -4682,7 +4765,7 @@ private:
                         }
                         if (pos_2_new == -1)
                             continue;
-                        GlobalCost gc_tmp = global_cost_merge(
+                        GlobalCost gc_tmp = merge(
                                 gci1_tmp,
                                 gci2_tmp);
 
@@ -4692,7 +4775,7 @@ private:
                         //    << " pos_2_new " << pos_2_new
                         //    << std::endl;
 
-                        if (!(gc_tmp >= gc)) {
+                        if (strictly_better(gc_tmp, gc)) {
                             Move0 move;
                             move.type = Neighborhoods::InterSwapStar;
                             move.i1 = i1;
@@ -4701,7 +4784,7 @@ private:
                             move.pos_2 = pos_1_new;
                             move.pos_3 = pos_2;
                             move.pos_4 = pos_2_new;
-                            move.global_cost = gc_tmp - gc;
+                            move.global_cost = diff(gc_tmp, gc);
                             neighborhood.improving_moves.push_back(move);
                         }
                     }
@@ -4760,7 +4843,7 @@ private:
                             if (!ok)
                                 continue;
                             gc_tmp = (parameters_.linking_constraints && m > 1)?
-                                global_cost_merge(
+                                merge(
                                         sequencing_scheme_.global_cost(sequence_data),
                                         partial_global_costs_cur_1_[i]):
                                 sequencing_scheme_.global_cost(sequence_data);
@@ -4785,19 +4868,19 @@ private:
                             if (!ok)
                                 continue;
                             gc_tmp = (parameters_.linking_constraints && m > 1)?
-                                global_cost_merge(
+                                merge(
                                         sequencing_scheme_.global_cost(sequence_data),
                                         partial_global_costs_cur_1_[i]):
                                 sequencing_scheme_.global_cost(sequence_data);
                         }
-                        if (!(gc_tmp >= gc)) {
+                        if (strictly_better(gc_tmp, gc)) {
                             Move0 move;
                             move.type = Neighborhoods::ShiftChangeMode;
                             move.i1 = i;
                             move.pos_1 = block_pos;
                             move.pos_2 = pos_new;
                             move.mode = mode;
-                            move.global_cost = gc_tmp - gc;
+                            move.global_cost = diff(gc_tmp, gc);
                             neighborhood.improving_moves.push_back(move);
                         }
                     }
@@ -4863,18 +4946,18 @@ private:
                     if (!ok)
                         continue;
                     GlobalCost gc_tmp = (parameters_.linking_constraints && m > 1)?
-                        global_cost_merge(
+                        merge(
                                 sequencing_scheme_.global_cost(sequence_data),
                                 partial_global_costs_cur_1_[i]):
                         sequencing_scheme_.global_cost(sequence_data);
 
-                    if (!(gc_tmp >= gc)) {
+                    if (strictly_better(gc_tmp, gc)) {
                         Move0 move;
                         move.type = Neighborhoods::ModeSwap;
                         move.i1 = i;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2;
-                        move.global_cost = gc_tmp - gc;
+                        move.global_cost = diff(gc_tmp, gc);
                         neighborhood.improving_moves.push_back(move);
                     }
                 }
@@ -4939,18 +5022,18 @@ private:
                     if (!ok)
                         continue;
                     GlobalCost gc_tmp = (parameters_.linking_constraints && m > 1)?
-                        global_cost_merge(
+                        merge(
                                 sequencing_scheme_.global_cost(sequence_data),
                                 partial_global_costs_cur_1_[i]):
                         sequencing_scheme_.global_cost(sequence_data);
 
-                    if (ok && !(gc_tmp >= gc)) {
+                    if (ok && strictly_better(gc_tmp, gc)) {
                         Move0 move;
                         move.type = Neighborhoods::SwapWithModes;
                         move.i1 = i;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2;
-                        move.global_cost = gc_tmp - gc;
+                        move.global_cost = diff(gc_tmp, gc);
                         neighborhood.improving_moves.push_back(move);
                     }
                 }
@@ -4990,7 +5073,7 @@ private:
                                     sequence_data, false,
                                     sequence, pos, seq_size - 1, false);
                             gc_tmp = (parameters_.linking_constraints && m > 1)?
-                                global_cost_merge(
+                                merge(
                                         sequencing_scheme_.global_cost(sequence_data),
                                         partial_global_costs_cur_1_[i]):
                                 sequencing_scheme_.global_cost(sequence_data);
@@ -5012,11 +5095,11 @@ private:
                             if (!ok)
                                 continue;
                             gc_tmp = (parameters_.linking_constraints && m > 1)?
-                                global_cost_merge(
+                                merge(
                                         sequencing_scheme_.global_cost(sequence_data),
                                         partial_global_costs_cur_1_[i]):
                                 sequencing_scheme_.global_cost(sequence_data);
-                            accept = (!(gc_tmp >= gc));
+                            accept = (strictly_better(gc_tmp, gc));
                         }
 
                         if (accept) {
@@ -5026,7 +5109,7 @@ private:
                             move.j = j;
                             move.mode = mode;
                             move.pos_1 = pos;
-                            move.global_cost = gc_tmp - gc;
+                            move.global_cost = diff(gc_tmp, gc);
                             improving_moves.push_back(move);
                         }
                     }
@@ -5080,7 +5163,7 @@ private:
                                 sequence_data, false,
                                 sequence, pos, seq_size - 1, false);
                         gc_tmp = (parameters_.linking_constraints && m > 1)?
-                            global_cost_merge(
+                            merge(
                                     sequencing_scheme_.global_cost(sequence_data),
                                     partial_global_costs_cur_1_[i]):
                             sequencing_scheme_.global_cost(sequence_data);
@@ -5102,11 +5185,11 @@ private:
                         if (!ok)
                             continue;
                         gc_tmp = (parameters_.linking_constraints && m > 1)?
-                            global_cost_merge(
+                            merge(
                                     sequencing_scheme_.global_cost(sequence_data),
                                     partial_global_costs_cur_1_[i]):
                             sequencing_scheme_.global_cost(sequence_data);
-                        accept = (!(gc_tmp >= gc));
+                        accept = (strictly_better(gc_tmp, gc));
                     }
 
                     //std::cout << to_string(gc_tmp) << std::endl;
@@ -5117,7 +5200,7 @@ private:
                         move.j = j;
                         move.mode = mode;
                         move.pos_1 = pos;
-                        move.global_cost = gc_tmp - gc;
+                        move.global_cost = diff(gc_tmp, gc);
                         improving_moves.push_back(move);
                     }
                 }
@@ -5153,7 +5236,7 @@ private:
                                 sequence_data, (seq_size == 0),
                                 {j, mode});
                         gc_tmp = (parameters_.linking_constraints && m > 1)?
-                            global_cost_merge(
+                            merge(
                                     sequencing_scheme_.global_cost(sequence_data),
                                     partial_global_costs_cur_1_[i]):
                             sequencing_scheme_.global_cost(sequence_data);
@@ -5169,11 +5252,11 @@ private:
                         if (!ok)
                             continue;
                         gc_tmp = (parameters_.linking_constraints && m > 1)?
-                            global_cost_merge(
+                            merge(
                                     sequencing_scheme_.global_cost(sequence_data),
                                     partial_global_costs_cur_1_[i]):
                             sequencing_scheme_.global_cost(sequence_data);
-                        accept = (!(gc_tmp >= gc));
+                        accept = (strictly_better(gc_tmp, gc));
                     }
 
                     if (accept) {
@@ -5183,7 +5266,7 @@ private:
                         move.j = j;
                         move.mode = mode;
                         move.pos_1 = seq_size;
-                        move.global_cost = gc_tmp - gc;
+                        move.global_cost = diff(gc_tmp, gc);
                         improving_moves.push_back(move);
                     }
                 }

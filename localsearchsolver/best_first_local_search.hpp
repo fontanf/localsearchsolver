@@ -223,8 +223,10 @@ inline void best_first_local_search_worker(
         // Check goal.
         if (data.parameters.has_goal
                 && data.output.solution_pool.size() > 0
-                && local_scheme.global_cost(data.output.solution_pool.best())
-                <= data.parameters.goal)
+                && !strictly_better(
+                    local_scheme,
+                    data.parameters.goal,
+                    local_scheme.global_cost(data.output.solution_pool.best())))
             break;
 
         data.mutex.lock();
@@ -248,8 +250,10 @@ inline void best_first_local_search_worker(
 
         // Check for a new best solution.
         if (data.output.solution_pool.size() == 0
-                || local_scheme.global_cost(data.output.solution_pool.worst())
-                > local_scheme.global_cost(solution)) {
+                || strictly_better(
+                    local_scheme,
+                    local_scheme.global_cost(solution),
+                    local_scheme.global_cost(data.output.solution_pool.worst()))) {
             std::stringstream ss;
             ss << "s" << initial_solution_pos
                 << " (t" << thread_id << ")";
@@ -292,8 +296,11 @@ inline void best_first_local_search_worker(
 
         // Check goal.
         if (data.parameters.has_goal
-                && local_scheme.global_cost(data.output.solution_pool.best())
-                <= data.parameters.goal)
+                && data.output.solution_pool.size() > 0
+                && !strictly_better(
+                    local_scheme,
+                    data.parameters.goal,
+                    local_scheme.global_cost(data.output.solution_pool.best())))
             break;
 
         data.mutex.lock();
@@ -333,8 +340,11 @@ inline void best_first_local_search_worker(
 
         // Check goal.
         if (data.parameters.has_goal
-                && local_scheme.global_cost(data.output.solution_pool.best())
-                <= data.parameters.goal)
+                && data.output.solution_pool.size() > 0
+                && !strictly_better(
+                    local_scheme,
+                    data.parameters.goal,
+                    local_scheme.global_cost(data.output.solution_pool.best())))
             break;
 
         if (data.q.empty()) {
@@ -420,8 +430,10 @@ inline void best_first_local_search_worker(
 
         // Check for a new best solution.
         if (data.output.solution_pool.size() == 0
-                || local_scheme.global_cost(data.output.solution_pool.worst())
-                > local_scheme.global_cost(solution)) {
+                || strictly_better(
+                    local_scheme,
+                    local_scheme.global_cost(solution),
+                    local_scheme.global_cost(data.output.solution_pool.worst()))) {
             std::stringstream ss;
             ss << "n" << node_id
                 << " d" << node_cur->depth

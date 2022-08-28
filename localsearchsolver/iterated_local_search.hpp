@@ -140,8 +140,10 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
         // Check goal.
         if (parameters.has_goal
                 && output.solution_pool.size() > 0
-                && local_scheme.global_cost(output.solution_pool.best())
-                <= parameters.goal)
+                && !strictly_better(
+                    local_scheme,
+                    parameters.goal,
+                    local_scheme.global_cost(output.solution_pool.best())))
             break;
 
         // Generate initial solutions.
@@ -157,8 +159,10 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
 
                 // Check for a new best solution.
                 if (output.solution_pool.size() == 0
-                        || local_scheme.global_cost(output.solution_pool.worst())
-                        > local_scheme.global_cost(solution_tmp)) {
+                        || strictly_better(
+                            local_scheme,
+                            local_scheme.global_cost(solution_tmp),
+                            local_scheme.global_cost(output.solution_pool.worst()))) {
                     std::stringstream ss;
                     ss << "s" << output.number_of_restarts;
                     output.solution_pool.add(solution_tmp, ss, parameters.info);
@@ -196,8 +200,11 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
 
             // Check goal.
             if (parameters.has_goal
-                    && local_scheme.global_cost(output.solution_pool.best())
-                    <= parameters.goal)
+                    && output.solution_pool.size() > 0
+                    && !strictly_better(
+                        local_scheme,
+                        parameters.goal,
+                        local_scheme.global_cost(output.solution_pool.best())))
                 break;
 
             if (perturbation_id >= parameters.minimum_number_of_perturbations
@@ -222,8 +229,10 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
 
             // Check for a new best solution.
             if (output.solution_pool.size() == 0
-                    || local_scheme.global_cost(output.solution_pool.worst())
-                    > local_scheme.global_cost(solution_tmp)) {
+                || strictly_better(
+                    local_scheme,
+                    local_scheme.global_cost(solution_tmp),
+                    local_scheme.global_cost(output.solution_pool.worst()))) {
                 std::stringstream ss;
                 ss << "s" << output.number_of_restarts
                     << " d" << depth
