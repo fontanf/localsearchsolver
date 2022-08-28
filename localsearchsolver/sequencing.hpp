@@ -544,9 +544,11 @@ public:
         for (SequenceId i = 0; i < m; ++i) {
             for (ElementPos pos_1 = 0; pos_1 < seq_size; ++pos_1) {
                 for (ElementPos pos_2 = pos_1 + 1; pos_2 <= seq_size; ++pos_2) {
+                    GlobalCost d = global_cost_merge(
+                            distance[i][pos_1],
+                            edges[pos_2][pos_1]);
                     if (!distance_init[i + 1][pos_2]
-                            || distance[i + 1][pos_2]
-                            > distance[i][pos_1] + edges[pos_2][pos_1]) {
+                            || distance[i + 1][pos_2] > d) {
                         //std::cout << "Update " << i
                         //    << " pos_2 " << pos_2
                         //    << " from pos_1 " << pos_1
@@ -556,7 +558,7 @@ public:
                         //    << " du+uv " << to_string(distance[i][pos_1] + edges[pos_2][pos_1])
                         //    << std::endl;
                         distance_init[i + 1][pos_2] = true;
-                        distance[i + 1][pos_2] = distance[i][pos_1] + edges[pos_2][pos_1];
+                        distance[i + 1][pos_2] = d;
                         prev[i + 1][pos_2] = pos_1;
                     }
                 }
