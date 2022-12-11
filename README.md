@@ -2,6 +2,10 @@
 
 A solver based on local search.
 
+![localsearch](img/localsearch.jpg?raw=true "localsearch")
+
+[image source](https://commons.wikimedia.org/wiki/File:Chocolate_Hills_overview.JPG)
+
 ## Description
 
 The goal of this repository is to provide a simple framework to quickly implement heuristic algorithms based on local search.
