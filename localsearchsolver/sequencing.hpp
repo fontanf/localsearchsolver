@@ -3903,7 +3903,7 @@ private:
         SequenceId m = number_of_sequences();
         ElementPos n = sequencing_scheme_.number_of_elements();
         GlobalCost gc = global_cost(solution);
-        Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::Add)][0][0];
+        Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::Replace)][0][0];
 
         for (SequenceId i = 0; i < m; ++i) {
             if (!neighborhood.modified_sequences[i])

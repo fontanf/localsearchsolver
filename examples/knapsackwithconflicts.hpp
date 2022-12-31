@@ -183,13 +183,13 @@ public:
         Solution solution = empty_solution();
         std::vector<ItemId> items;
         for (ItemId j = 0; j < instance_.number_of_items(); ++j) {
-            // Add items which are in both parents.
             if (contains(solution_parent_1, j)
                     && contains(solution_parent_2, j)) {
+                // Add items which are in both parents.
                 add(solution, j);
-            // Store items which are in one parent.
             } else if (contains(solution_parent_1, j)
                     || contains(solution_parent_2, j)) {
+                // Store items which are in one parent.
                 items.push_back(j);
             }
         }
@@ -505,15 +505,43 @@ public:
 
     std::ostream& print(
             std::ostream &os,
-            const Solution& solution)
+            const Solution& solution,
+            int verbosity_level)
     {
-        os << "Items:";
-        for (ItemId j = 0; j < instance_.number_of_items(); ++j)
-            if (contains(solution, j))
-                os << " " << j;
-        os << std::endl;
-        os << "Weight: " << solution.weight << " / " << instance_.capacity() << std::endl;
-        os << "Profit: " << solution.profit << std::endl;
+        if (verbosity_level >= 1) {
+            ItemId number_of_items = 0;
+            for (ItemId j = 0; j < instance_.number_of_items(); ++j)
+                if (contains(solution, j))
+                    number_of_items++;
+            os << "Profit:            " << solution.profit << std::endl;
+            os << "Weight:            " << solution.weight << " / " << instance_.capacity() << std::endl;
+            os << "Number of items:   " << number_of_items << " / " << instance_.number_of_items() << std::endl;
+        }
+        if (verbosity_level >= 2) {
+            os << std::endl
+                << std::setw(12) << "Item"
+                << std::setw(12) << "Profit"
+                << std::setw(12) << "Weight"
+                << std::setw(12) << "Efficiency"
+                << std::setw(12) << "# conflicts"
+                << std::endl
+                << std::setw(12) << "----"
+                << std::setw(12) << "------"
+                << std::setw(12) << "------"
+                << std::setw(12) << "----------"
+                << std::setw(12) << "-----------"
+                << std::endl;
+            for (ItemId j = 0; j < instance_.number_of_items(); ++j) {
+                if (!contains(solution, j))
+                    continue;
+                os << std::setw(12) << j
+                    << std::setw(12) << instance_.item(j).profit
+                    << std::setw(12) << instance_.item(j).weight
+                    << std::setw(12) << (double)instance_.item(j).profit / instance_.item(j).weight
+                    << std::setw(12) << instance_.item(j).neighbors.size()
+                    << std::endl;
+            }
+        }
         return os;
     }
 
@@ -546,7 +574,7 @@ public:
             optimizationtools::Info& info) const
     {
         info.os()
-            << std::left << std::setw(28) << ("Toggle:")
+            << "Toggle:            "
             << toggle_number_of_explorations_
             << " / " << toggle_number_of_sucesses_
             << " / " << (double)toggle_number_of_sucesses_ / toggle_number_of_explorations_ * 100 << "%"
@@ -557,7 +585,7 @@ public:
             = toggle_number_of_explorations_;
         if (parameters_.swap) {
             info.os()
-                << std::left << std::setw(28) << ("Swap:")
+                << "Swap:              "
                 << swap_number_of_explorations_
                 << " / " << swap_number_of_sucesses_
                 << " / " << (double)swap_number_of_sucesses_ / swap_number_of_explorations_ * 100 << "%"
@@ -569,7 +597,7 @@ public:
         }
         if (parameters_.swap_2_1) {
             info.os()
-                << std::left << std::setw(28) << ("(2-1)-swap:")
+                << "(2-1)-swap:        "
                 << swap_2_1_number_of_explorations_
                 << " / " << swap_2_1_number_of_sucesses_
                 << " / " << (double)swap_2_1_number_of_sucesses_ / swap_2_1_number_of_explorations_ * 100 << "%"
