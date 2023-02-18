@@ -293,7 +293,9 @@ LocalScheme::GlobalCost LocalScheme::cost_add(
     return c;
 }
 
-/***************************** Initial solutions *****************************/
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////// Initial solutions ///////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 LocalScheme::Solution LocalScheme::empty_solution() const
 {
@@ -332,7 +334,9 @@ LocalScheme::Solution LocalScheme::initial_solution(
     return solution;
 }
 
-/******************************** Local search *******************************/
+////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////// Local search /////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 std::vector<LocalScheme::Perturbation> LocalScheme::perturbations(
         Solution& solution,
@@ -377,6 +381,7 @@ void LocalScheme::local_search(
     //std::cout << real_cost(solution) << std::endl;
     std::vector<Counter> neighborhoods = {0};
     Counter it;
+    (void)it;
     for (it = 0; ; ++it) {
         GlobalCost c_best = global_cost(solution);
 

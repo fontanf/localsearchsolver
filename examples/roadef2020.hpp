@@ -1,5 +1,3 @@
-#pragma once
-
 /**
  * ROADEF/EURO Challenge 2020: Maintenance Planning Problem.
  *
@@ -9,6 +7,8 @@
  * TODO
  *
  */
+
+#pragma once
 
 #include "localsearchsolver/common.hpp"
 
@@ -27,7 +27,14 @@ class LocalScheme
 
 public:
 
-    /** Global cost: <Number of interventions, Number of conflicts, Overwork, Underwork, Cost>; */
+    /**
+     * Global cost:
+     * - Number of interventions
+     * - Number of conflicts
+     * - Overwork
+     * - Underwork
+     * - Cost
+     */
     using GlobalCost = std::tuple<InterventionId, ExclusionId, Workload, Workload, Cost>;
 
     inline InterventionId&       number_of_interventions(GlobalCost& global_cost) { return std::get<0>(global_cost); }
@@ -299,14 +306,17 @@ private:
                 + instance_.alpha_2() * solution.expected_excess);
     }
 
+    /** Add an intervention to a solution. */
     void add(Solution& solution, InterventionId j, Time t_start) const;
 
+    /** Remove an intervention from a solution. */
     void remove(Solution& solution, InterventionId j) const;
 
     /*
      * Evaluate moves.
      */
 
+    /** Compute the cost of adding an intervention. */
     GlobalCost cost_add(
             const Solution& solution,
             InterventionId j,
@@ -317,7 +327,10 @@ private:
      * Private attributes.
      */
 
+    /** Instance. */
     const Instance& instance_;
+
+    /** Parameters. */
     Parameters parameters_;
 
     /*
