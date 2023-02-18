@@ -26,6 +26,22 @@ class SequencingScheme
 
 public:
 
+    static sequencing::Parameters sequencing_parameters()
+    {
+        sequencing::Parameters parameters;
+
+        parameters.shift_block_maximum_length = 7;
+        parameters.swap_block_maximum_length = 5;
+        parameters.reverse = true;
+        parameters.shift_reverse_block_maximum_length = 6;
+        parameters.add_remove = true;
+        parameters.replace = true;
+
+        parameters.force_add = true;
+
+        return parameters;
+    }
+
     /**
      * Global cost:
      * - Reversed time
@@ -44,23 +60,9 @@ public:
         Profit profit = 0;
     };
 
-    static sequencing::Parameters sequencing_parameters()
-    {
-        sequencing::Parameters parameters;
-
-        parameters.shift_block_maximum_length = 7;
-        parameters.swap_block_maximum_length = 5;
-        parameters.reverse = true;
-        parameters.shift_reverse_block_maximum_length = 6;
-        parameters.add_remove = true;
-        parameters.replace = true;
-
-        parameters.force_add = true;
-
-        return parameters;
-    }
-
     SequencingScheme(const Instance& instance): instance_(instance) { }
+
+    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_jobs() - 2; }
 
     inline SequenceData empty_sequence_data() const
     {
@@ -77,8 +79,6 @@ public:
             sequence_data.total_weighted_tardiness_full - sequence_data.profit,
         };
     }
-
-    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_jobs() - 2; }
 
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {

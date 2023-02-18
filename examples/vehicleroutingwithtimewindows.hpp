@@ -25,28 +25,6 @@ class SequencingScheme
 
 public:
 
-    /**
-     * Global cost:
-     * - Reversed time
-     * - Overcapacity
-     * - Total travel time
-     */
-    using GlobalCost = std::tuple<Time, Demand, Time>;
-
-    struct SequenceData
-    {
-        LocationId j_first = -1;
-        LocationId j_last = -1;
-        Demand demand = 0;
-
-        Time duration = 0;
-        Time earliest_start = 0;
-        Time latest_start = 0;
-        Time reversed_time = 0;
-
-        Time total_travel_time = 0;  // Without depot -> j_first.
-    };
-
     static sequencing::Parameters sequencing_parameters()
     {
         sequencing::Parameters parameters;
@@ -71,6 +49,28 @@ public:
 
         return parameters;
     }
+
+    /**
+     * Global cost:
+     * - Reversed time
+     * - Overcapacity
+     * - Total travel time
+     */
+    using GlobalCost = std::tuple<Time, Demand, Time>;
+
+    struct SequenceData
+    {
+        LocationId j_first = -1;
+        LocationId j_last = -1;
+        Demand demand = 0;
+
+        Time duration = 0;
+        Time earliest_start = 0;
+        Time latest_start = 0;
+        Time reversed_time = 0;
+
+        Time total_travel_time = 0;  // Without depot -> j_first.
+    };
 
     SequencingScheme(const Instance& instance): instance_(instance) { }
 

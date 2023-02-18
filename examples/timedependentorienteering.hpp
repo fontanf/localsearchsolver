@@ -25,22 +25,6 @@ class SequencingScheme
 
 public:
 
-    /**
-     * Global cost:
-     * - Overtime
-     * - Profit
-     * - Total time
-     */
-    using GlobalCost = std::tuple<Time, Profit, Time>;
-
-    struct SequenceData
-    {
-        LocationId j_last = -1;
-        Time time_cur = 0;
-        Time time_full = 0;
-        Profit profit = 0;
-    };
-
     static sequencing::Parameters sequencing_parameters()
     {
         sequencing::Parameters parameters;
@@ -56,6 +40,22 @@ public:
 
         return parameters;
     }
+
+    /**
+     * Global cost:
+     * - Overtime
+     * - Profit
+     * - Total time
+     */
+    using GlobalCost = std::tuple<Time, Profit, Time>;
+
+    struct SequenceData
+    {
+        LocationId j_last = -1;
+        Time time_cur = 0;
+        Time time_full = 0;
+        Profit profit = 0;
+    };
 
     SequencingScheme(const Instance& instance): instance_(instance) { }
 

@@ -25,19 +25,6 @@ class SequencingScheme
 
 public:
 
-    /**
-     * Global cost:
-     * - Total completion time
-     */
-    using GlobalCost = std::tuple<Time>;
-
-    struct SequenceData
-    {
-        JobPos number_of_jobs = 0;
-        std::vector<Time> times;
-        Time total_completion_time = 0;
-    };
-
     static sequencing::Parameters sequencing_parameters()
     {
         sequencing::Parameters parameters;
@@ -53,7 +40,22 @@ public:
         return parameters;
     }
 
+    /**
+     * Global cost:
+     * - Total completion time
+     */
+    using GlobalCost = std::tuple<Time>;
+
+    struct SequenceData
+    {
+        JobPos number_of_jobs = 0;
+        std::vector<Time> times;
+        Time total_completion_time = 0;
+    };
+
     SequencingScheme(const Instance& instance): instance_(instance) { }
+
+    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
     inline SequenceData empty_sequence_data(sequencing::SequenceId) const
     {
@@ -66,8 +68,6 @@ public:
     {
         return {sequence_data.total_completion_time};
     }
-
-    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {

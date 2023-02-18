@@ -25,21 +25,6 @@ class SequencingScheme
 
 public:
 
-    /**
-     * Global cost:
-     * - Overcapacity
-     * - Total distance
-     */
-    using GlobalCost = std::tuple<Demand, Distance>;
-
-    struct SequenceData
-    {
-        LocationId j_first = -1;
-        LocationId j_last = -1;
-        Demand demand = 0;
-        Distance total_distance = 0;  // Without depot -> j_first.
-    };
-
     static sequencing::Parameters sequencing_parameters()
     {
         sequencing::Parameters parameters;
@@ -66,6 +51,21 @@ public:
 
         return parameters;
     }
+
+    /**
+     * Global cost:
+     * - Overcapacity
+     * - Total distance
+     */
+    using GlobalCost = std::tuple<Demand, Distance>;
+
+    struct SequenceData
+    {
+        LocationId j_first = -1;
+        LocationId j_last = -1;
+        Demand demand = 0;
+        Distance total_distance = 0;  // Without depot -> j_first.
+    };
 
     SequencingScheme(const Instance& instance): instance_(instance) { }
 

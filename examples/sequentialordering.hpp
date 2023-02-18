@@ -25,6 +25,20 @@ class SequencingScheme
 
 public:
 
+    static sequencing::Parameters sequencing_parameters()
+    {
+        sequencing::Parameters parameters;
+
+        parameters.shift_block_maximum_length = 8;
+        parameters.swap_block_maximum_length = 2;
+        parameters.reverse = true;
+        parameters.shift_reverse_block_maximum_length = 3;
+
+        parameters.ruin_and_recreate_number_of_perturbations = 10;
+
+        return parameters;
+    }
+
     /**
      * Global cost:
      * - Number of precedence violations
@@ -40,21 +54,9 @@ public:
         std::vector<uint8_t> contains;
     };
 
-    static sequencing::Parameters sequencing_parameters()
-    {
-        sequencing::Parameters parameters;
-
-        parameters.shift_block_maximum_length = 8;
-        parameters.swap_block_maximum_length = 2;
-        parameters.reverse = true;
-        parameters.shift_reverse_block_maximum_length = 3;
-
-        parameters.ruin_and_recreate_number_of_perturbations = 10;
-
-        return parameters;
-    }
-
     SequencingScheme(const Instance& instance): instance_(instance) { }
+
+    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_vertices(); }
 
     inline SequenceData empty_sequence_data(sequencing::SequenceId) const
     {
@@ -79,8 +81,6 @@ public:
             value,
         };
     }
-
-    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_vertices(); }
 
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {

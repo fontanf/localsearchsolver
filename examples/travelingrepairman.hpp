@@ -26,21 +26,6 @@ class SequencingScheme
 
 public:
 
-    /**
-     * Global cost:
-     * - Total completion time
-     */
-    using GlobalCost = std::tuple<Time>;
-
-    struct SequenceData
-    {
-        LocationPos number_of_locations = 0;
-        LocationId j_first = -1;
-        LocationId j_last = -1;
-        Time time = 0;  // Without depot -> j_first.
-        Time total_completion_time = 0;  // Without depot -> j_first.
-    };
-
     static sequencing::Parameters sequencing_parameters()
     {
         sequencing::Parameters parameters;
@@ -58,7 +43,28 @@ public:
         return parameters;
     }
 
+    /**
+     * Global cost:
+     * - Total completion time
+     */
+    using GlobalCost = std::tuple<Time>;
+
+    struct SequenceData
+    {
+        LocationPos number_of_locations = 0;
+        LocationId j_first = -1;
+        LocationId j_last = -1;
+        Time time = 0;  // Without depot -> j_first.
+        Time total_completion_time = 0;  // Without depot -> j_first.
+    };
+
     SequencingScheme(const Instance& instance): instance_(instance) { }
+
+    inline sequencing::ElementPos number_of_elements() const
+    {
+        // -1 since we don't schedule the depot.
+        return instance_.number_of_locations() - 1;
+    }
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
@@ -72,12 +78,6 @@ public:
     inline GlobalCost global_cost_goal(double value) const
     {
         return {value};
-    }
-
-    inline sequencing::ElementPos number_of_elements() const
-    {
-        // -1 since we don't schedule the depot.
-        return instance_.number_of_locations() - 1;
     }
 
     inline GlobalCost bound(const SequenceData& sequence_data) const

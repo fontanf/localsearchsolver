@@ -26,19 +26,6 @@ class SequencingScheme
 
 public:
 
-    /**
-     * Global cost:
-     * - Total weighted tardiness
-     */
-    using GlobalCost = std::tuple<Weight>;
-
-    struct SequenceData
-    {
-        JobId j_last = -1;
-        Time time = 0;
-        Weight total_weighted_tardiness = 0;
-    };
-
     static sequencing::Parameters sequencing_parameters()
     {
         sequencing::Parameters parameters;
@@ -52,7 +39,22 @@ public:
         return parameters;
     }
 
+    /**
+     * Global cost:
+     * - Total weighted tardiness
+     */
+    using GlobalCost = std::tuple<Weight>;
+
+    struct SequenceData
+    {
+        JobId j_last = -1;
+        Time time = 0;
+        Weight total_weighted_tardiness = 0;
+    };
+
     SequencingScheme(const Instance& instance): instance_(instance) { }
+
+    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
@@ -63,8 +65,6 @@ public:
     {
         return {value};
     }
-
-    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
 
     inline GlobalCost bound(const SequenceData& sequence_data) const
     {

@@ -25,24 +25,6 @@ class SequencingScheme
 
 public:
 
-    /**
-     * Global cost:
-     * - Overcapacity
-     * - Total weighted tardiness
-     */
-    using GlobalCost = std::tuple<Size, Weight>;
-
-    struct SequenceData
-    {
-        std::vector<JobId> current_batch_jobs = {};
-        Time current_batch_start = 0;
-        Time current_batch_duration = 0;
-        Time current_batch_end = 0;
-        Size current_batch_size = 0;
-        Size overcapacity = 0;
-        Weight total_weighted_tardiness = 0;
-    };
-
     static sequencing::Parameters sequencing_parameters()
     {
         sequencing::Parameters parameters;
@@ -62,7 +44,34 @@ public:
         return parameters;
     }
 
+    /**
+     * Global cost:
+     * - Overcapacity
+     * - Total weighted tardiness
+     */
+    using GlobalCost = std::tuple<Size, Weight>;
+
+    struct SequenceData
+    {
+        std::vector<JobId> current_batch_jobs = {};
+        Time current_batch_start = 0;
+        Time current_batch_duration = 0;
+        Time current_batch_end = 0;
+        Size current_batch_size = 0;
+        Size overcapacity = 0;
+        Weight total_weighted_tardiness = 0;
+    };
+
     SequencingScheme(const Instance& instance): instance_(instance) { }
+
+    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
+
+    inline sequencing::Mode number_of_modes(sequencing::ElementId) const
+    {
+        // Mode 0: Add next job to the current batch.
+        // Mode 1: Add next job in a new batch.
+        return 2;
+    }
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
@@ -78,15 +87,6 @@ public:
             0,
             value,
         };
-    }
-
-    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
-
-    inline sequencing::Mode number_of_modes(sequencing::ElementId) const
-    {
-        // Mode 0: Add next job to the current batch.
-        // Mode 1: Add next job in a new batch.
-        return 2;
     }
 
     inline GlobalCost bound(const SequenceData& sequence_data) const

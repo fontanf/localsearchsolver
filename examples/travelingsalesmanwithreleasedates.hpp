@@ -25,20 +25,6 @@ class SequencingScheme
 
 public:
 
-    /**
-     * Global cost:
-     * - Total duration
-     */
-    using GlobalCost = std::tuple<Time>;
-
-    struct SequenceData
-    {
-        LocationId j_last = -1;
-        Time current_trip_start = 0;
-        Time current_trip_duration = 0;
-        Time time_full = 0;
-    };
-
     static sequencing::Parameters sequencing_parameters()
     {
         sequencing::Parameters parameters;
@@ -58,17 +44,21 @@ public:
         return parameters;
     }
 
+    /**
+     * Global cost:
+     * - Total duration
+     */
+    using GlobalCost = std::tuple<Time>;
+
+    struct SequenceData
+    {
+        LocationId j_last = -1;
+        Time current_trip_start = 0;
+        Time current_trip_duration = 0;
+        Time time_full = 0;
+    };
+
     SequencingScheme(const Instance& instance): instance_(instance) { }
-
-    inline GlobalCost global_cost(const SequenceData& sequence_data) const
-    {
-        return {sequence_data.time_full};
-    }
-
-    inline GlobalCost global_cost_goal(double value) const
-    {
-        return {value};
-    }
 
     inline sequencing::ElementPos number_of_elements() const
     {
@@ -82,6 +72,16 @@ public:
         //         The last departure might be delayed.
         // Mode 1: Return to the depot before visiting next location.
         return 2;
+    }
+
+    inline GlobalCost global_cost(const SequenceData& sequence_data) const
+    {
+        return {sequence_data.time_full};
+    }
+
+    inline GlobalCost global_cost_goal(double value) const
+    {
+        return {value};
     }
 
     inline GlobalCost bound(const SequenceData& sequence_data) const
