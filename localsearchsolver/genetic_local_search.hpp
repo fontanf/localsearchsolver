@@ -19,8 +19,8 @@ using GeneticLocalSearchCallback = std::function<void(const typename LocalScheme
 template <typename LocalScheme>
 struct GeneticLocalSearchOptionalParameters
 {
-    typedef typename LocalScheme::Solution Solution;
-    typedef typename LocalScheme::GlobalCost GlobalCost;
+    using Solution = typename LocalScheme::Solution;
+    using GlobalCost = typename LocalScheme::GlobalCost;
 
     /** Number of threads. */
     Counter number_of_threads = 1;
@@ -80,8 +80,8 @@ inline GeneticLocalSearchOutput<LocalScheme> genetic_local_search(
 template <typename LocalScheme>
 class Population
 {
-    typedef typename LocalScheme::Solution Solution;
-    typedef typename LocalScheme::GlobalCost GlobalCost;
+    using Solution = typename LocalScheme::Solution;
+    using GlobalCost = typename LocalScheme::GlobalCost;
 
     struct PopulationSolution
     {

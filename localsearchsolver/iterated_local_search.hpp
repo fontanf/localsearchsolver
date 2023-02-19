@@ -14,8 +14,8 @@ using IteratedLocalSearchCallback = std::function<void(const typename LocalSchem
 template <typename LocalScheme>
 struct IteratedLocalSearchOptionalParameters
 {
-    typedef typename LocalScheme::Solution Solution;
-    typedef typename LocalScheme::GlobalCost GlobalCost;
+    using Solution = typename LocalScheme::Solution;
+    using GlobalCost = typename LocalScheme::GlobalCost;
 
     /** Maximum number of iterations. */
     Counter maximum_number_of_iterations = -1;
@@ -86,8 +86,8 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
         LocalScheme& local_scheme,
         IteratedLocalSearchOptionalParameters<LocalScheme> parameters)
 {
-    typedef typename LocalScheme::Solution Solution;
-    typedef typename LocalScheme::Perturbation Perturbation;
+    using Solution = typename LocalScheme::Solution;
+    using Perturbation = typename LocalScheme::Perturbation;
 
     // Initial display.
     parameters.info.os()

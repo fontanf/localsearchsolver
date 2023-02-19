@@ -364,7 +364,7 @@ std::string to_string(
 template <typename Scheme>
 struct SolutionPoolComparator
 {
-    typedef typename Scheme::Solution Solution;
+    using Solution = typename Scheme::Solution;
 
     SolutionPoolComparator(const Scheme& local_scheme):
         local_scheme(local_scheme) { }
@@ -384,8 +384,8 @@ struct SolutionPoolComparator
 template <typename Scheme>
 class SolutionPool
 {
-    typedef typename Scheme::Solution Solution;
-    typedef typename Scheme::GlobalCost GlobalCost;
+    using Solution = typename Scheme::Solution;
+    using GlobalCost = typename Scheme::GlobalCost;
 
 public:
 
@@ -559,7 +559,7 @@ typename LocalScheme::GlobalCost global_cost_goal(
         const LocalScheme& local_scheme,
         double value)
 {
-    typedef typename LocalScheme::GlobalCost GlobalCost;
+    using GlobalCost = typename LocalScheme::GlobalCost;
 
     return global_cost_goal(
             local_scheme,

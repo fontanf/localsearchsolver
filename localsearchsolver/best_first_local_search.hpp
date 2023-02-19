@@ -14,8 +14,8 @@ using BestFirstLocalSearchCallback = std::function<void(const typename LocalSche
 template <typename LocalScheme>
 struct BestFirstLocalSearchOptionalParameters
 {
-    typedef typename LocalScheme::Solution Solution;
-    typedef typename LocalScheme::GlobalCost GlobalCost;
+    using Solution = typename LocalScheme::Solution;
+    using GlobalCost = typename LocalScheme::GlobalCost;
 
     /** Maximum number of nodes. */
     Counter maximum_number_of_nodes = -1;
@@ -71,8 +71,8 @@ inline BestFirstLocalSearchOutput<LocalScheme> best_first_local_search(
 template <typename LocalScheme>
 struct BestFirstLocalSearchNode
 {
-    typedef typename LocalScheme::CompactSolution CompactSolution;
-    typedef typename LocalScheme::Perturbation Perturbation;
+    using CompactSolution = typename LocalScheme::CompactSolution;
+    using Perturbation = typename LocalScheme::Perturbation;
 
     std::shared_ptr<CompactSolution> compact_solution;
     std::vector<Perturbation> perturbations;
@@ -122,9 +122,9 @@ using PerturbationMap = std::unordered_map<
 template <typename LocalScheme>
 struct BestFirstLocalSearchData
 {
-    typedef typename LocalScheme::CompactSolutionHasher CompactSolutionHasher;
-    typedef typename LocalScheme::PerturbationHasher PerturbationHasher;
-    typedef typename LocalScheme::Perturbation Perturbation;
+    using CompactSolutionHasher = typename LocalScheme::CompactSolutionHasher;
+    using PerturbationHasher = typename LocalScheme::PerturbationHasher;
+    using Perturbation = typename LocalScheme::Perturbation;
 
     BestFirstLocalSearchData(
             LocalScheme& local_scheme,
@@ -177,7 +177,7 @@ std::vector<typename LocalScheme::Perturbation> update_children(
         std::mt19937_64& generator,
         Counter next_child_pos = 0)
 {
-    typedef typename LocalScheme::Perturbation Perturbation;
+    using Perturbation = typename LocalScheme::Perturbation;
 
     auto perturbation_compare = [](const Perturbation& perturbation_1, const Perturbation& perturbation_2) -> bool
     {
@@ -204,7 +204,7 @@ inline void best_first_local_search_worker(
         BestFirstLocalSearchData<LocalScheme>& data,
         Counter thread_id)
 {
-    typedef typename LocalScheme::CompactSolution CompactSolution;
+    using CompactSolution = typename LocalScheme::CompactSolution;
     //std::cout << "best_first_local_search_worker start" << std::endl;
 
     LocalScheme local_scheme_tmp(data.local_scheme);

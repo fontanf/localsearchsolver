@@ -14,8 +14,8 @@ using RestartingLocalSearchCallback = std::function<void(const typename LocalSch
 template <typename LocalScheme>
 struct RestartingLocalSearchOptionalParameters
 {
-    typedef typename LocalScheme::Solution Solution;
-    typedef typename LocalScheme::GlobalCost GlobalCost;
+    using Solution = typename LocalScheme::Solution;
+    using GlobalCost = typename LocalScheme::GlobalCost;
 
     /** Maximum number of restarts. */
     Counter maximum_number_of_restarts = -1;
