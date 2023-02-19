@@ -302,14 +302,6 @@ Maximum-Weight Independent Set Problem from [fontanf/stablesolver](https://githu
     * Remove one vertex and add two non-conflicting vertices from its neighbors
   * Perturbation: force vertex `v` in/out of the solution
 
-Graph Coloring Problem from [fontanf/coloringsolver](https://github.com/fontanf/coloringsolver/blob/master/coloringsolver/algorithms/localsearch.cpp)
-* Example of a problem with a granular objective
-* Algorithm:
-  * Local search neighborhood: change the color of a conflicting vertex
-  * Perturbation:
-    * If the solution is feasible, merge two colors
-    * If the solution is infeasible, change the color of a conflicting vertex
-
 ## Usage, running examples from command line
 
 Compile:

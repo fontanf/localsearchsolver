@@ -26,66 +26,6 @@ class LocalScheme
 
 public:
 
-    /** Global cost: <Number of jobs, Makespan>; */
-    using GlobalCost = std::tuple<JobId, Time>;
-
-    inline JobId&       number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Time&              makespan(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline JobId  number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Time         makespan(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
-
-    /*
-     * Solutions.
-     */
-
-    /**
-     * solution[n] is the first job scheduled.
-     * solution[j] is the index of the job scheduled after job j, n if job
-     * j is the last job, or -1 if job j is not in the solution.
-     */
-    using CompactSolution = std::vector<JobId>;
-
-    struct CompactSolutionHasher
-    {
-        std::hash<JobId> hasher;
-
-        inline bool operator()(
-                const std::shared_ptr<CompactSolution>& compact_solution_1,
-                const std::shared_ptr<CompactSolution>& compact_solution_2) const
-        {
-            return *compact_solution_1 == *compact_solution_2;
-        }
-
-        inline std::size_t operator()(
-                const std::shared_ptr<CompactSolution>& compact_solution) const
-        {
-            size_t hash = 0;
-            for (JobId j: *compact_solution)
-                optimizationtools::hash_combine(hash, hasher(j));
-            return hash;
-        }
-    };
-
-    inline CompactSolutionHasher compact_solution_hasher() const { return CompactSolutionHasher(); }
-
-    struct Solution
-    {
-        std::vector<JobId> jobs;
-        Time makespan = 0;
-    };
-
-    CompactSolution solution2compact(const Solution& solution)
-    {
-        return solution.jobs;
-    }
-
-    Solution compact2solution(const CompactSolution& compact_solution)
-    {
-        auto solution = empty_solution();
-        compute(solution, compact_solution);
-        return solution;
-    }
-
     /*
      * Constructors and destructor.
      */
@@ -119,8 +59,26 @@ public:
     }
 
     /*
-     * Initial solutions.
+     * Global cost.
      */
+
+    /** Global cost: <Number of jobs, Makespan>; */
+    using GlobalCost = std::tuple<JobId, Time>;
+
+    inline JobId&       number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline Time&              makespan(GlobalCost& global_cost) { return std::get<1>(global_cost); }
+    inline JobId  number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline Time         makespan(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
+
+    /*
+     * Solutions.
+     */
+
+    struct Solution
+    {
+        std::vector<JobId> jobs;
+        Time makespan = 0;
+    };
 
     inline Solution empty_solution() const
     {
@@ -139,10 +97,6 @@ public:
         return compact2solution(jobs);
     }
 
-    /*
-     * Solution properties.
-     */
-
     inline GlobalCost global_cost(const Solution& solution) const
     {
         return {
@@ -155,69 +109,7 @@ public:
      * Local search.
      */
 
-    struct Perturbation
-    {
-        Perturbation(): pos_1(-1), global_cost(worst<GlobalCost>()) { }
-
-        JobPos pos_1;
-        JobPos pos_2;
-        JobPos pos_3;
-        JobPos pos_4;
-        GlobalCost global_cost;
-    };
-
-    struct PerturbationHasher
-    {
-        inline bool hashable(const Perturbation&) const { return false; }
-        inline bool operator()(const Perturbation&, const Perturbation&) const { return false; }
-        inline std::size_t operator()(const Perturbation&) const { return 0; }
-    };
-
-    inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
-
-    inline std::vector<Perturbation> perturbations(
-            const Solution& solution,
-            std::mt19937_64& generator)
-    {
-        std::vector<Perturbation> perturbations;
-        for (Counter perturbation_id = 0;
-                perturbation_id < parameters_.number_of_perturbations;
-                ++perturbation_id) {
-            std::vector<JobPos> edges = optimizationtools::bob_floyd<JobPos>(
-                    4, solution.jobs.size() + 1, generator);
-            std::sort(edges.begin(), edges.end());
-            Perturbation perturbation;
-            perturbation.pos_1 = edges[0];
-            perturbation.pos_2 = edges[1];
-            perturbation.pos_3 = edges[2];
-            perturbation.pos_4 = edges[3];
-            assert(perturbation.pos_1 >= 0);
-            assert(perturbation.pos_4 <= (JobPos)solution.jobs.size());
-            perturbation.global_cost = global_cost(solution);
-            perturbations.push_back(perturbation);
-        }
-        return perturbations;
-    }
-
-    inline void apply_perturbation(
-            Solution& solution,
-            const Perturbation& perturbation,
-            std::mt19937_64&)
-    {
-        std::vector<JobId> jobs;
-        for (JobPos pos = 0; pos < perturbation.pos_1; ++pos)
-            jobs.push_back(solution.jobs[pos]);
-        for (JobPos pos = perturbation.pos_3; pos < perturbation.pos_4; ++pos)
-            jobs.push_back(solution.jobs[pos]);
-        for (JobPos pos = perturbation.pos_2; pos < perturbation.pos_3; ++pos)
-            jobs.push_back(solution.jobs[pos]);
-        for (JobPos pos = perturbation.pos_1; pos < perturbation.pos_2; ++pos)
-            jobs.push_back(solution.jobs[pos]);
-        for (JobPos pos = perturbation.pos_4; pos < (JobPos)solution.jobs.size(); ++pos)
-            jobs.push_back(solution.jobs[pos]);
-        assert((JobPos)jobs.size() <= instance_.number_of_jobs());
-        compute(solution, jobs);
-    }
+    struct Perturbation;
 
     inline void local_search(
             Solution& solution,
@@ -226,6 +118,7 @@ public:
     {
         MachineId m = instance_.number_of_machines();
         Counter it = 0;
+        (void)it;
         std::vector<Counter> neighborhoods;
         for (JobPos block_size = 1; block_size <= parameters_.block_size_max; ++block_size)
             neighborhoods.push_back(block_size);
@@ -323,6 +216,120 @@ public:
         }
         //print(std::cout, solution);
     }
+
+    /*
+     * Iterated local search.
+     */
+
+    struct Perturbation
+    {
+        Perturbation(): pos_1(-1), global_cost(worst<GlobalCost>()) { }
+
+        JobPos pos_1;
+        JobPos pos_2;
+        JobPos pos_3;
+        JobPos pos_4;
+        GlobalCost global_cost;
+    };
+
+    inline std::vector<Perturbation> perturbations(
+            const Solution& solution,
+            std::mt19937_64& generator)
+    {
+        std::vector<Perturbation> perturbations;
+        for (Counter perturbation_id = 0;
+                perturbation_id < parameters_.number_of_perturbations;
+                ++perturbation_id) {
+            std::vector<JobPos> edges = optimizationtools::bob_floyd<JobPos>(
+                    4, solution.jobs.size() + 1, generator);
+            std::sort(edges.begin(), edges.end());
+            Perturbation perturbation;
+            perturbation.pos_1 = edges[0];
+            perturbation.pos_2 = edges[1];
+            perturbation.pos_3 = edges[2];
+            perturbation.pos_4 = edges[3];
+            assert(perturbation.pos_1 >= 0);
+            assert(perturbation.pos_4 <= (JobPos)solution.jobs.size());
+            perturbation.global_cost = global_cost(solution);
+            perturbations.push_back(perturbation);
+        }
+        return perturbations;
+    }
+
+    inline void apply_perturbation(
+            Solution& solution,
+            const Perturbation& perturbation,
+            std::mt19937_64&)
+    {
+        std::vector<JobId> jobs;
+        for (JobPos pos = 0; pos < perturbation.pos_1; ++pos)
+            jobs.push_back(solution.jobs[pos]);
+        for (JobPos pos = perturbation.pos_3; pos < perturbation.pos_4; ++pos)
+            jobs.push_back(solution.jobs[pos]);
+        for (JobPos pos = perturbation.pos_2; pos < perturbation.pos_3; ++pos)
+            jobs.push_back(solution.jobs[pos]);
+        for (JobPos pos = perturbation.pos_1; pos < perturbation.pos_2; ++pos)
+            jobs.push_back(solution.jobs[pos]);
+        for (JobPos pos = perturbation.pos_4; pos < (JobPos)solution.jobs.size(); ++pos)
+            jobs.push_back(solution.jobs[pos]);
+        assert((JobPos)jobs.size() <= instance_.number_of_jobs());
+        compute(solution, jobs);
+    }
+
+    /*
+     * Best first local search.
+     */
+
+    /**
+     * solution[n] is the first job scheduled.
+     * solution[j] is the index of the job scheduled after job j, n if job
+     * j is the last job, or -1 if job j is not in the solution.
+     */
+    using CompactSolution = std::vector<JobId>;
+
+    struct CompactSolutionHasher
+    {
+        std::hash<JobId> hasher;
+
+        inline bool operator()(
+                const std::shared_ptr<CompactSolution>& compact_solution_1,
+                const std::shared_ptr<CompactSolution>& compact_solution_2) const
+        {
+            return *compact_solution_1 == *compact_solution_2;
+        }
+
+        inline std::size_t operator()(
+                const std::shared_ptr<CompactSolution>& compact_solution) const
+        {
+            size_t hash = 0;
+            for (JobId j: *compact_solution)
+                optimizationtools::hash_combine(hash, hasher(j));
+            return hash;
+        }
+    };
+
+    inline CompactSolutionHasher compact_solution_hasher() const { return CompactSolutionHasher(); }
+
+    CompactSolution solution2compact(const Solution& solution)
+    {
+        return solution.jobs;
+    }
+
+    Solution compact2solution(const CompactSolution& compact_solution)
+    {
+        auto solution = empty_solution();
+        compute(solution, compact_solution);
+        return solution;
+    }
+
+    struct PerturbationHasher
+    {
+        inline bool hashable(const Perturbation&) const { return false; }
+        inline bool operator()(const Perturbation&, const Perturbation&) const { return false; }
+        inline std::size_t operator()(const Perturbation&) const { return 0; }
+    };
+
+    inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
 
     /*
      * Outputs.
@@ -454,15 +461,22 @@ private:
      * Private attributes.
      */
 
+    /** Instance. */
     const Instance& instance_;
+
+    /** Parmaeters. */
     Parameters parameters_;
 
     std::vector<JobPos> positions1_;
+
     std::vector<JobPos> positions2_;
+
     std::vector<Time> times_;
 
     std::vector<std::vector<Time>> heads_;
+
     std::vector<std::vector<Time>> tails_;
+
     std::vector<std::vector<Time>> completion_times_;
 
 };
