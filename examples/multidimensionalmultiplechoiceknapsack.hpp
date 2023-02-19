@@ -3,7 +3,6 @@
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/multidimensionalmultiplechoiceknapsack.hpp
- *
  */
 
 #pragma once
@@ -27,83 +26,12 @@ class LocalScheme
 
 public:
 
-    /** Global cost: <Number of groups, Overweight, Profit>; */
-    using GlobalCost = std::tuple<GroupId, Weight, Profit>;
-
-    inline GroupId&       number_of_groups(GlobalCost& global_cost) const { return std::get<0>(global_cost); }
-    inline Weight&              overweight(GlobalCost& global_cost) const { return std::get<1>(global_cost); }
-    inline Profit&                  profit(GlobalCost& global_cost) const { return std::get<2>(global_cost); }
-    inline GroupId  number_of_groups(const GlobalCost& global_cost) const { return std::get<0>(global_cost); }
-    inline Weight         overweight(const GlobalCost& global_cost) const { return std::get<1>(global_cost); }
-    inline Profit             profit(const GlobalCost& global_cost) const { return std::get<2>(global_cost); }
-
-    /*
-     * Solutions.
-     */
-
-    using CompactSolution = std::vector<ItemId>;
-
-    struct CompactSolutionHasher
-    {
-        std::hash<ItemId> hasher;
-
-        inline bool operator()(
-                const std::shared_ptr<CompactSolution>& compact_solution_1,
-                const std::shared_ptr<CompactSolution>& compact_solution_2) const
-        {
-            return *compact_solution_1 == *compact_solution_2;
-        }
-
-        inline std::size_t operator()(
-                const std::shared_ptr<CompactSolution>& compact_solution) const
-        {
-            size_t hash = 0;
-            for (ItemId j: *compact_solution)
-                optimizationtools::hash_combine(hash, hasher(j));
-            return hash;
-        }
-    };
-
-    inline CompactSolutionHasher compact_solution_hasher() const { return CompactSolutionHasher(); }
-
-    struct Solution
-    {
-        std::vector<ItemId> items;
-        std::vector<Weight> weights;
-        GroupId number_of_groups = 0;
-        Weight overweight = 0;
-        Profit profit = 0;
-    };
-
-    CompactSolution solution2compact(const Solution& solution)
-    {
-        return solution.items;
-    }
-
-    Solution compact2solution(const CompactSolution& compact_solution)
-    {
-        Solution solution = empty_solution();
-        for (GroupId group_id = 0; group_id < instance_.number_of_groups(); ++group_id) {
-            ItemId j = compact_solution[group_id];
-            if (j != -1)
-                add(solution, group_id, j);
-        }
-        return solution;
-    }
-
     /*
      * Constructors and destructor.
      */
 
-    struct Parameters
-    {
-    };
-
-    LocalScheme(
-            const Instance& instance,
-            Parameters parameters):
+    LocalScheme(const Instance& instance):
         instance_(instance),
-        parameters_(parameters),
         groups_(instance.number_of_groups()),
         items_(instance.largest_group_size())
     {
@@ -112,8 +40,28 @@ public:
     }
 
     /*
-     * Initial solutions.
+     * Global cost.
      */
+
+    /** Global cost: <Overweight, Profit>; */
+    using GlobalCost = std::tuple<Weight, Profit>;
+
+    inline Weight&       overweight(GlobalCost& global_cost) const { return std::get<0>(global_cost); }
+    inline Profit&           profit(GlobalCost& global_cost) const { return std::get<1>(global_cost); }
+    inline Weight  overweight(const GlobalCost& global_cost) const { return std::get<0>(global_cost); }
+    inline Profit      profit(const GlobalCost& global_cost) const { return std::get<1>(global_cost); }
+
+    /*
+     * Solution.
+     */
+
+    struct Solution
+    {
+        std::vector<ItemId> items;
+        std::vector<Weight> weights;
+        Weight overweight = 0;
+        Profit profit = 0;
+    };
 
     inline Solution empty_solution() const
     {
@@ -121,6 +69,14 @@ public:
         solution.items.resize(instance_.number_of_groups(), -1);
         solution.weights.resize(instance_.number_of_resources(), 0);
         return solution;
+    }
+
+    inline GlobalCost global_cost(const Solution& solution) const
+    {
+        return {
+            solution.overweight,
+            -solution.profit,
+        };
     }
 
     inline Solution initial_solution(
@@ -136,122 +92,16 @@ public:
         return solution;
     }
 
-    inline Solution crossover(
-            const Solution& solution_parent_1,
-            const Solution& solution_parent_2,
-            std::mt19937_64& generator)
-    {
-        Solution solution = empty_solution();
-        std::uniform_int_distribution<int> distribution(0, 1);
-        for (GroupId group_id = 0; group_id < instance_.number_of_groups(); ++group_id) {
-            if (distribution(generator) == 0) {
-                add(solution, group_id, solution_parent_1.items[group_id]);
-            } else {
-                add(solution, group_id, solution_parent_2.items[group_id]);
-            }
-        }
-        return solution;
-    }
-
-    /*
-     * Solution properties.
-     */
-
-    inline GlobalCost global_cost(const Solution& solution) const
-    {
-        return {
-            -solution.number_of_groups,
-            solution.overweight,
-            -solution.profit,
-        };
-    }
-
-    inline ItemId distance(
-            const Solution& solution_1,
-            const Solution& solution_2) const
-    {
-        ItemId d = 0;
-        for (GroupId group_id = 0; group_id < instance_.number_of_groups(); ++group_id)
-            if (solution_1.items[group_id] != solution_2.items[group_id])
-                d++;
-        return d;
-    }
-
     /*
      * Local search.
      */
 
-    struct Perturbation
-    {
-        Perturbation(): group_id(-1), global_cost(worst<GlobalCost>()) { }
-
-        GroupId group_id;
-        ItemId j;
-        GlobalCost global_cost;
-    };
-
-    struct PerturbationHasher
-    {
-        std::hash<ItemId> hasher;
-
-        inline bool hashable(const Perturbation&) const { return true; }
-
-        inline bool operator()(
-                const Perturbation& perturbation_1,
-                const Perturbation& perturbation_2) const
-        {
-            return perturbation_1.group_id == perturbation_2.group_id
-                && perturbation_1.j == perturbation_2.j;
-        }
-
-        inline std::size_t operator()(
-                const Perturbation& perturbation) const
-        {
-            std::size_t hash = hasher(perturbation.group_id);
-            optimizationtools::hash_combine(hash, perturbation.j);
-            return hash;
-        }
-    };
-
-    inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
-
-    inline std::vector<Perturbation> perturbations(
-            Solution& solution,
-            std::mt19937_64&)
-    {
-        std::vector<Perturbation> perturbations;
-        for (GroupId group_id = 0; group_id < instance_.number_of_groups(); ++group_id) {
-            ItemId j_old = solution.items[group_id];
-            remove(solution, group_id, j_old);
-            for (ItemId j = 0; j < instance_.number_of_items(group_id); ++j) {
-                if (j == j_old)
-                    continue;
-                Perturbation perturbation;
-                perturbation.group_id = group_id;
-                perturbation.j = j;
-                perturbation.global_cost = cost_add(solution, group_id, j);
-                perturbations.push_back(perturbation);
-            }
-            add(solution, group_id, j_old);
-        }
-        return perturbations;
-    }
-
-    inline void apply_perturbation(
-            Solution& solution,
-            const Perturbation& perturbation,
-            std::mt19937_64&) const
-    {
-        remove(solution, perturbation.group_id, solution.items[perturbation.group_id]);
-        add(solution, perturbation.group_id, perturbation.j);
-    }
-
     inline void local_search(
             Solution& solution,
-            std::mt19937_64& generator,
-            const Perturbation& tabu = Perturbation())
+            std::mt19937_64& generator)
     {
         Counter it = 0;
+        (void)it;
         for (;; ++it) {
             //std::cout << "it " << it << " cost " << to_string(global_cost(solution)) << std::endl;
             std::shuffle(items_.begin(), items_.end(), generator);
@@ -260,9 +110,6 @@ public:
             ItemId j_best = -1;
             GlobalCost c_best = global_cost(solution);
             for (GroupId group_id: groups_) {
-                if (tabu.group_id != -1
-                        && group_id == tabu.group_id)
-                    continue;
                 ItemId j_old = solution.items[group_id];
                 remove(solution, group_id, j_old);
                 for (ItemId j: items_) {
@@ -289,24 +136,50 @@ public:
     }
 
     /*
+     * Genetic local search.
+     */
+
+    inline Solution crossover(
+            const Solution& solution_parent_1,
+            const Solution& solution_parent_2,
+            std::mt19937_64& generator)
+    {
+        Solution solution = empty_solution();
+        std::uniform_int_distribution<int> distribution(0, 1);
+        for (GroupId group_id = 0; group_id < instance_.number_of_groups(); ++group_id) {
+            if (distribution(generator) == 0) {
+                add(solution, group_id, solution_parent_1.items[group_id]);
+            } else {
+                add(solution, group_id, solution_parent_2.items[group_id]);
+            }
+        }
+        return solution;
+    }
+
+    inline ItemId distance(
+            const Solution& solution_1,
+            const Solution& solution_2) const
+    {
+        ItemId d = 0;
+        for (GroupId group_id = 0; group_id < instance_.number_of_groups(); ++group_id)
+            if (solution_1.items[group_id] != solution_2.items[group_id])
+                d++;
+        return d;
+    }
+
+    /*
      * Outputs.
      */
 
     std::ostream& print(
             std::ostream &os,
-            const Solution& solution) const
+            const Solution& solution,
+            int verbosity_level)
     {
-        os << "number of groups: " << solution.number_of_groups << std::endl;
-        os << "items:";
-        for (ItemId j: solution.items)
-            os << " " << j;
-        os << std::endl;
-        os << "weights:";
-        for (Weight w: solution.weights)
-            os << " " << w;
-        os << std::endl;
-        os << "overweight: " << solution.overweight << std::endl;
-        os << "profit: " << solution.profit << std::endl;
+        if (verbosity_level >= 1) {
+            os << "Overweight:        " << solution.overweight << std::endl;
+            os << "Profit:            " << solution.profit << std::endl;
+        }
         return os;
     }
 
@@ -338,8 +211,6 @@ private:
             ItemId j) const
     {
         assert(solution.items[group_id] == -1);
-        // Update number_of_groups.
-        solution.number_of_groups++;
         // Update weights.
         for (ResourceId r = 0; r < instance_.number_of_resources(); ++r) {
             Weight w_max = instance_.capacity(r);
@@ -364,8 +235,6 @@ private:
             ItemId j) const
     {
         assert(solution.items[group_id] == j);
-        // Update number_of_groups.
-        solution.number_of_groups--;
         // Update weights.
         for (ResourceId r = 0; r < instance_.number_of_resources(); ++r) {
             Weight w_max = instance_.capacity(r);
@@ -395,8 +264,6 @@ private:
     {
         GlobalCost gc = global_cost(solution);
         assert(solution.items[group_id] == -1);
-        // Update number_of_groups.
-        number_of_groups(gc)--;
         // Update overweigt.
         for (ResourceId r = 0; r < instance_.number_of_resources(); ++r) {
             Weight w_max = instance_.capacity(r);
@@ -417,10 +284,11 @@ private:
      * Private attributes.
      */
 
+    /** Instance. */
     const Instance& instance_;
-    Parameters parameters_;
 
     std::vector<GroupId> groups_;
+
     std::vector<ItemId> items_;
 
 };

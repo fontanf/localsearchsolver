@@ -338,6 +338,7 @@ public:
         }
 
         Counter it = 0;
+        (void)it;
         for (;; ++it) {
             //std::cout << "it " << it
             //    << " c " << to_string(global_cost(solution))

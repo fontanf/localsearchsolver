@@ -192,14 +192,11 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/flowshopsc
 
 Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orproblems)
 
-### Packing
-
 [Multidimensional Multiple-choice Knapsack Problem](examples/multidimensionalmultiplechoiceknapsack.hpp)
-* Straightforward example: single neighborhood, simple perturbation, basic operators
+* Straightforward example for a genetic local search: single neighborhood, basic operators
 * Algorithm:
   * Local search neighborhoods:
     * Add item `j` in the knapsack
-  * Perturbation: force item `j` in the knapsack
   * Crossover algorithm
 
 <details><summary>Benchmarks</summary>
@@ -264,10 +261,6 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
   * Local search neighborhoods: shift item `j` to agent `i`
   * Perturbation: shift 8 random jobs
 
-### Scheduling
-
-#### Flow shop scheduling
-
 [Permutation flow shop scheduling problem, Makespan](examples/permutationflowshopschedulingmakespan.hpp)
 * This one is not considered as a sequencing problem since the dedicated acceleration strategy makes it possible to explore the neighborhoods more efficiently
 * Algorithm:
@@ -285,8 +278,6 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/permutatio
 </p>
 </details>
 
-#### Resource constrained scheduling
-
 [ROADEF/EURO Challenge 2020: Maintenance Planning Problem](examples/roadef2020.hpp)
 * Example of a problem with expensive move evaluations
 * Algorithm:
@@ -303,8 +294,6 @@ python3 ../optimizationtools/scripts/bench_process.py -b heuristiclong --csv ../
 
 </p>
 </details>
-
-### Graphs
 
 Maximum-Weight Independent Set Problem from [fontanf/stablesolver](https://github.com/fontanf/stablesolver/blob/master/stablesolver/algorithms/localsearch.cpp)
 * Algorithm:
