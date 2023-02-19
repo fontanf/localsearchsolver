@@ -31,15 +31,9 @@ public:
      * Constructors and destructor.
      */
 
-    struct Parameters
-    {
-    };
-
     LocalScheme(
-            const Instance& instance,
-            Parameters parameters):
+            const Instance& instance):
         instance_(instance),
-        parameters_(parameters),
         interventions_(instance.number_of_interventions()),
         times_(instance.horizon())
     {
@@ -68,18 +62,16 @@ public:
      * - Underwork
      * - Cost
      */
-    using GlobalCost = std::tuple<InterventionId, ExclusionId, Workload, Workload, Cost>;
+    using GlobalCost = std::tuple<ExclusionId, Workload, Workload, Cost>;
 
-    inline InterventionId&       number_of_interventions(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline ExclusionId&              number_of_conflicts(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline Workload&                            overwork(GlobalCost& global_cost) { return std::get<2>(global_cost); }
-    inline Workload&                           underwork(GlobalCost& global_cost) { return std::get<3>(global_cost); }
-    inline Cost&                                    cost(GlobalCost& global_cost) { return std::get<4>(global_cost); }
-    inline InterventionId  number_of_interventions(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline ExclusionId         number_of_conflicts(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline Workload                       overwork(const GlobalCost& global_cost) { return std::get<2>(global_cost); }
-    inline Workload                      underwork(const GlobalCost& global_cost) { return std::get<3>(global_cost); }
-    inline Cost                               cost(const GlobalCost& global_cost) { return std::get<4>(global_cost); }
+    inline ExclusionId&       number_of_conflicts(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline Workload&                     overwork(GlobalCost& global_cost) { return std::get<1>(global_cost); }
+    inline Workload&                    underwork(GlobalCost& global_cost) { return std::get<2>(global_cost); }
+    inline Cost&                             cost(GlobalCost& global_cost) { return std::get<3>(global_cost); }
+    inline ExclusionId  number_of_conflicts(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline Workload                overwork(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
+    inline Workload               underwork(const GlobalCost& global_cost) { return std::get<2>(global_cost); }
+    inline Cost                        cost(const GlobalCost& global_cost) { return std::get<3>(global_cost); }
 
     /*
      * Solutions.
@@ -89,10 +81,13 @@ public:
     {
         /** Workload for each resource, workloads[r]. */
         std::vector<Workload> workloads;
+
         /** Risk for each scenario, risks[scenario]. */
         std::vector<Risk> risks;
+
         /** Scenarios sorted by risk. */
         std::vector<ScenarioId> sorted_scenarios;
+
         /** Sum of risks of all scenarios. */
         Risk risk_sum = 0;
     };
@@ -106,20 +101,24 @@ public:
 
     struct Solution
     {
-        /** Number of interventions. */
-        InterventionId number_of_interventions = 0;
         /** Start date for each intervention, -1 if not in solution. */
         std::vector<Time> intervention_starts;
+
         /** Informations for each time step. */
         std::vector<SolutionTimeStep> time_steps;
+
         /** List of pair of interventions in conflict. */
         std::vector<SolutionConflict> conflicts;
+
         /** Mean cost. */
         Cost mean_cost = 0;
+
         /** Expected excess. */
         Cost expected_excess = 0;
+
         /** Underwork. */
         Workload underwork = 0;
+
         /** Overwork. */
         Workload overwork = 0;
     };
@@ -141,8 +140,7 @@ public:
 
     inline bool feasible(const Solution& solution) const
     {
-        return (solution.number_of_interventions == instance_.number_of_interventions()
-                && solution.conflicts.size() == 0
+        return (solution.conflicts.size() == 0
                 && solution.overwork == 0
                 && solution.underwork == 0);
     }
@@ -150,7 +148,6 @@ public:
     inline GlobalCost global_cost(const Solution& solution) const
     {
         return {
-            -solution.number_of_interventions,
             solution.conflicts.size(),
             solution.overwork,
             solution.underwork,
@@ -335,9 +332,6 @@ private:
 
     /** Instance. */
     const Instance& instance_;
-
-    /** Parameters. */
-    Parameters parameters_;
 
     /*
      * Temporary structures.

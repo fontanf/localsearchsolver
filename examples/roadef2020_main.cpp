@@ -94,8 +94,7 @@ int main(int argc, char *argv[])
     info.os() << instance << std::endl;
 
     // Create LocalScheme.
-    LocalScheme::Parameters parameters_local_scheme;
-    LocalScheme local_scheme(instance, parameters_local_scheme);
+    LocalScheme local_scheme(instance);
 
     // Run A*.
     BestFirstLocalSearchOptionalParameters<LocalScheme> parameters_best_first_local_search;

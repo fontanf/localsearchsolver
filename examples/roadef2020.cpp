@@ -19,7 +19,6 @@ void LocalScheme::add(
     ScenarioId lcm = instance_.least_common_multiple();
 
     // Update intervention_times_.
-    solution.number_of_interventions++;
     solution.intervention_starts[j] = t_start;
 
     for (Time t_cur = t_start; t_cur < t_end; ++t_cur) {
@@ -113,7 +112,6 @@ void LocalScheme::remove(
     ScenarioId lcm = instance_.least_common_multiple();
 
     // Update intervention_times_.
-    solution.number_of_interventions--;
     solution.intervention_starts[j] = -1;
 
     // Update solution.conflicts
@@ -202,7 +200,6 @@ LocalScheme::GlobalCost LocalScheme::cost_add(
 
     Time t_end = t_start + instance_.duration(j, t_start);
     GlobalCost c = global_cost(solution);
-    number_of_interventions(c)--; // because -number_of_interventions
 
     // Check disjonctive constraints.
     for (Time t_cur = t_start; t_cur < t_end; ++t_cur) {
