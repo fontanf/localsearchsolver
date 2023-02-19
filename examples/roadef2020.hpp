@@ -56,7 +56,6 @@ public:
 
     /**
      * Global cost:
-     * - Number of interventions
      * - Number of conflicts
      * - Overwork
      * - Underwork
@@ -94,8 +93,13 @@ public:
 
     struct SolutionConflict
     {
+        /** First intervention of the conflict. */
         InterventionId j1 = -1;
+
+        /** Second intervention of the conflict. */
         InterventionId j2 = -1;
+
+        /** Time of the conflict. */
         Time t_cur = -1;
     };
 
