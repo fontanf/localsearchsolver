@@ -27,6 +27,39 @@ class LocalScheme
 
 public:
 
+    /*
+     * Constructors and destructor.
+     */
+
+    struct Parameters
+    {
+    };
+
+    LocalScheme(
+            const Instance& instance,
+            Parameters parameters):
+        instance_(instance),
+        parameters_(parameters),
+        interventions_(instance.number_of_interventions()),
+        times_(instance.horizon())
+    {
+        // Initialize interventions_.
+        std::iota(interventions_.begin(), interventions_.end(), 0);
+        // Initialize times_.
+        std::iota(times_.begin(), times_.end(), 0);
+        // Initialize risks_ and sorted_scenarios_.
+        ScenarioId s_max = 0;
+        for (Time t_cur = 0; t_cur < instance.horizon(); ++t_cur)
+            if (s_max < instance_.number_of_scenarios(t_cur))
+                s_max = instance_.number_of_scenarios(t_cur);
+        risks_.resize(s_max, 0);
+        sorted_scenarios_.resize(s_max, 0);
+    }
+
+    /*
+     * Glocal cost.
+     */
+
     /**
      * Global cost:
      * - Number of interventions
@@ -51,31 +84,6 @@ public:
     /*
      * Solutions.
      */
-
-    using CompactSolution = std::vector<Time>;
-
-    struct CompactSolutionHasher
-    {
-        std::hash<Time> hasher;
-
-        inline bool operator()(
-                const std::shared_ptr<CompactSolution>& compact_solution_1,
-                const std::shared_ptr<CompactSolution>& compact_solution_2) const
-        {
-            return *compact_solution_1 == *compact_solution_2;
-        }
-
-        inline std::size_t operator()(
-                const std::shared_ptr<CompactSolution>& compact_solution) const
-        {
-            size_t hash = 0;
-            for (Time t: *compact_solution)
-                optimizationtools::hash_combine(hash, hasher(t));
-            return hash;
-        }
-    };
-
-    inline CompactSolutionHasher compact_solution_hasher() const { return CompactSolutionHasher(); }
 
     struct SolutionTimeStep
     {
@@ -116,62 +124,11 @@ public:
         Workload overwork = 0;
     };
 
-    CompactSolution solution2compact(const Solution& solution)
-    {
-        return solution.intervention_starts;
-    }
-
-    Solution compact2solution(const CompactSolution& compact_solution)
-    {
-        auto solution = empty_solution();
-        for (InterventionId j = 0; j < instance_.number_of_interventions(); ++j)
-            if (compact_solution[j] != -1)
-                add(solution, j, compact_solution[j]);
-        return solution;
-    }
-
-    /*
-     * Constructors and destructor.
-     */
-
-    struct Parameters
-    {
-    };
-
-    LocalScheme(
-            const Instance& instance,
-            Parameters parameters):
-        instance_(instance),
-        parameters_(parameters),
-        interventions_(instance.number_of_interventions()),
-        times_(instance.horizon())
-    {
-        // Initialize interventions_.
-        std::iota(interventions_.begin(), interventions_.end(), 0);
-        // Initialize times_.
-        std::iota(times_.begin(), times_.end(), 0);
-        // Initialize risks_ and sorted_scenarios_.
-        ScenarioId s_max = 0;
-        for (Time t_cur = 0; t_cur < instance.horizon(); ++t_cur)
-            if (s_max < instance_.number_of_scenarios(t_cur))
-                s_max = instance_.number_of_scenarios(t_cur);
-        risks_.resize(s_max, 0);
-        sorted_scenarios_.resize(s_max, 0);
-    }
-
-    /*
-     * Initial solutions.
-     */
-
     Solution empty_solution() const;
 
     Solution initial_solution(
             Counter initial_solution_id,
             std::mt19937_64& generator);
-
-    /*
-     * Solution properties.
-     */
 
     inline double real_cost(const Solution& solution) const
     {
@@ -205,6 +162,17 @@ public:
      * Local search.
      */
 
+    struct Perturbation;
+
+    void local_search(
+            Solution& solution,
+            std::mt19937_64& generator,
+            const Perturbation& tabu = Perturbation());
+
+    /*
+     * Iterated local search.
+     */
+
     struct Perturbation
     {
         Perturbation(): j(-1), t_start(-1), global_cost(worst<GlobalCost>()) { }
@@ -213,6 +181,62 @@ public:
         Time t_start;
         GlobalCost global_cost;
     };
+
+    std::vector<Perturbation> perturbations(
+            Solution& solution,
+            std::mt19937_64&);
+
+    inline void apply_perturbation(
+            Solution& solution,
+            const Perturbation& perturbation,
+            std::mt19937_64&) const
+    {
+        remove(solution, perturbation.j);
+        add(solution, perturbation.j, perturbation.t_start);
+    }
+
+    /*
+     * Best first local search.
+     */
+
+    using CompactSolution = std::vector<Time>;
+
+    struct CompactSolutionHasher
+    {
+        std::hash<Time> hasher;
+
+        inline bool operator()(
+                const std::shared_ptr<CompactSolution>& compact_solution_1,
+                const std::shared_ptr<CompactSolution>& compact_solution_2) const
+        {
+            return *compact_solution_1 == *compact_solution_2;
+        }
+
+        inline std::size_t operator()(
+                const std::shared_ptr<CompactSolution>& compact_solution) const
+        {
+            size_t hash = 0;
+            for (Time t: *compact_solution)
+                optimizationtools::hash_combine(hash, hasher(t));
+            return hash;
+        }
+    };
+
+    inline CompactSolutionHasher compact_solution_hasher() const { return CompactSolutionHasher(); }
+
+    CompactSolution solution2compact(const Solution& solution)
+    {
+        return solution.intervention_starts;
+    }
+
+    Solution compact2solution(const CompactSolution& compact_solution)
+    {
+        auto solution = empty_solution();
+        for (InterventionId j = 0; j < instance_.number_of_interventions(); ++j)
+            if (compact_solution[j] != -1)
+                add(solution, j, compact_solution[j]);
+        return solution;
+    }
 
     struct PerturbationHasher
     {
@@ -238,24 +262,6 @@ public:
     };
 
     inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
-
-    std::vector<Perturbation> perturbations(
-            Solution& solution,
-            std::mt19937_64&);
-
-    inline void apply_perturbation(
-            Solution& solution,
-            const Perturbation& perturbation,
-            std::mt19937_64&) const
-    {
-        remove(solution, perturbation.j);
-        add(solution, perturbation.j, perturbation.t_start);
-    }
-
-    void local_search(
-            Solution& solution,
-            std::mt19937_64& generator,
-            const Perturbation& tabu = Perturbation());
 
     /*
      * Outputs.
@@ -338,8 +344,11 @@ private:
      */
 
     std::vector<InterventionId> interventions_;
+
     std::vector<Time> times_;
+
     std::vector<Risk> risks_;
+
     std::vector<ScenarioId> sorted_scenarios_;
 
 };
