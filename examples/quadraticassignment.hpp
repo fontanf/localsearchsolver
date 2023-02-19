@@ -29,80 +29,6 @@ class LocalScheme
 
 public:
 
-    /** Global cost: <Number of facilities, Cost>; */
-    using GlobalCost = std::tuple<FacilityId, Cost>;
-
-    inline FacilityId&       number_of_facilities(GlobalCost& global_cost) const { return std::get<0>(global_cost); }
-    inline Cost&                             cost(GlobalCost& global_cost) const { return std::get<1>(global_cost); }
-    inline FacilityId  number_of_facilities(const GlobalCost& global_cost) const { return std::get<0>(global_cost); }
-    inline Cost                        cost(const GlobalCost& global_cost) const { return std::get<1>(global_cost); }
-
-    /*
-     * Solutions.
-     */
-
-    using CompactSolution = std::vector<LocationId>;
-
-    struct CompactSolutionHasher
-    {
-        std::hash<LocationId> hasher;
-
-        inline bool operator()(
-                const std::shared_ptr<CompactSolution>& compact_solution_1,
-                const std::shared_ptr<CompactSolution>& compact_solution_2) const
-        {
-            return *compact_solution_1 == *compact_solution_2;
-        }
-
-        inline std::size_t operator()(
-                const std::shared_ptr<CompactSolution>& compact_solution) const
-        {
-            size_t hash = 0;
-            for (LocationId location_id: *compact_solution)
-                optimizationtools::hash_combine(hash, hasher(location_id));
-            return hash;
-        }
-    };
-
-    inline CompactSolutionHasher compact_solution_hasher() const { return CompactSolutionHasher(); }
-
-    struct Solution
-    {
-        std::vector<LocationId> locations;
-        FacilityId number_of_facilities = 0;
-        Cost cost = 0;
-    };
-
-    CompactSolution solution2compact(const Solution& solution)
-    {
-        return solution.locations;
-    }
-
-    Solution compact2solution(const CompactSolution& compact_solution)
-    {
-        Solution solution;
-        solution.locations = compact_solution;
-        for (FacilityId facility_id_1 = 0; facility_id_1 < instance_.number_of_facilities(); ++facility_id_1) {
-            LocationId location_id_1 = solution.locations[facility_id_1];
-            if (location_id_1 == -1)
-                continue;
-            solution.number_of_facilities++;
-            solution.cost += instance_.flow(facility_id_1, facility_id_1)
-                * instance_.distance(location_id_1, location_id_1);
-            for (FacilityId facility_id_2 = facility_id_1 + 1;
-                    facility_id_2 < instance_.number_of_facilities(); ++facility_id_2) {
-                LocationId location_id_2 = solution.locations[facility_id_2];
-                if (location_id_2 == -1)
-                    continue;
-                solution.cost += instance_.flow(facility_id_1, facility_id_2)
-                    * instance_.distance(location_id_1, location_id_2);
-                solution.cost += instance_.flow(facility_id_2, facility_id_1)
-                    * instance_.distance(location_id_2, location_id_1);
-            }
-        }
-        return solution;
-    }
-
     /*
      * Constructors and destructor.
      */
@@ -131,8 +57,35 @@ public:
     }
 
     /*
-     * Initial solutions.
+     * Global cost.
      */
+
+    /** Global cost: <Number of facilities, Cost>; */
+    using GlobalCost = std::tuple<FacilityId, Cost>;
+
+    inline FacilityId&       number_of_facilities(GlobalCost& global_cost) const { return std::get<0>(global_cost); }
+    inline Cost&                             cost(GlobalCost& global_cost) const { return std::get<1>(global_cost); }
+    inline FacilityId  number_of_facilities(const GlobalCost& global_cost) const { return std::get<0>(global_cost); }
+    inline Cost                        cost(const GlobalCost& global_cost) const { return std::get<1>(global_cost); }
+
+    inline GlobalCost global_cost_goal(double value) const
+    {
+        return {
+            -instance_.number_of_facilities(),
+            value,
+        };
+    }
+
+    /*
+     * Solutions.
+     */
+
+    struct Solution
+    {
+        std::vector<LocationId> locations;
+        FacilityId number_of_facilities = 0;
+        Cost cost = 0;
+    };
 
     inline Solution empty_solution() const
     {
@@ -153,6 +106,65 @@ public:
             add(solution, facility_id, locations[facility_id]);
         return solution;
     }
+
+    inline GlobalCost global_cost(const Solution& solution) const
+    {
+        return {
+            -solution.number_of_facilities,
+            solution.cost,
+        };
+    }
+
+    /*
+     * Local search.
+     */
+
+    struct Perturbation;
+
+    inline void local_search(
+            Solution& solution,
+            std::mt19937_64& generator,
+            const Perturbation& = Perturbation())
+    {
+        Counter it = 0;
+        (void)it;
+        for (;; ++it) {
+            //std::cout << "it " << it
+            //    << " cost " << to_string(global_cost(solution))
+            //    << std::endl;
+            std::shuffle(facility_pairs_.begin(), facility_pairs_.end(), generator);
+            FacilityId facility_id_1_best = -1;
+            FacilityId facility_id_2_best = -1;
+            GlobalCost c_best = global_cost(solution);
+            for (auto p: facility_pairs_) {
+                FacilityId facility_id_1 = p.first;
+                FacilityId facility_id_2 = p.second;
+                GlobalCost c = cost_swap(
+                        solution,
+                        facility_id_1,
+                        facility_id_2);
+                if (c >= c_best)
+                    continue;
+                if (facility_id_1 != -1 && !dominates(c, c_best))
+                    continue;
+                facility_id_1_best = facility_id_1;
+                facility_id_2_best = facility_id_2;
+                c_best = c;
+            }
+            if (facility_id_1_best == -1)
+                break;
+            LocationId location_id_1 = solution.locations[facility_id_1_best];
+            LocationId location_id_2 = solution.locations[facility_id_2_best];
+            remove(solution, facility_id_1_best);
+            remove(solution, facility_id_2_best);
+            add(solution, facility_id_1_best, location_id_2);
+            add(solution, facility_id_2_best, location_id_1);
+        }
+    }
+
+    /*
+     * Genetic local search.
+     */
 
     inline Solution crossover_ux(
             const Solution& solution_parent_1,
@@ -277,26 +289,6 @@ public:
         }
     }
 
-    /*
-     * Solution properties.
-     */
-
-    inline GlobalCost global_cost(const Solution& solution) const
-    {
-        return {
-            -solution.number_of_facilities,
-            solution.cost,
-        };
-    }
-
-    inline GlobalCost global_cost_goal(double value) const
-    {
-        return {
-            -instance_.number_of_facilities(),
-            value,
-        };
-    }
-
     inline FacilityId distance(
             const Solution& solution_1,
             const Solution& solution_2) const
@@ -313,7 +305,7 @@ public:
     }
 
     /*
-     * Local search.
+     * Iterated local search.
      */
 
     struct Perturbation
@@ -323,29 +315,6 @@ public:
         std::vector<FacilityId> facilities;
         GlobalCost global_cost;
     };
-
-    struct PerturbationHasher
-    {
-        std::hash<FacilityId> hasher;
-
-        inline bool hashable(const Perturbation&) const { return true; }
-
-        inline bool operator()(
-                const Perturbation& perturbation_1,
-                const Perturbation& perturbation_2) const
-        {
-            return perturbation_1.facilities[0] == perturbation_2.facilities[0];
-        }
-
-        inline std::size_t operator()(
-                const Perturbation& perturbation) const
-        {
-            size_t hash = hasher(perturbation.facilities[0]);
-            return hash;
-        }
-    };
-
-    inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
 
     inline std::vector<Perturbation> perturbations(
             const Solution& solution,
@@ -413,45 +382,87 @@ public:
         assert(global_cost(solution) == perturbation.global_cost);
     }
 
-    inline void local_search(
-            Solution& solution,
-            std::mt19937_64& generator,
-            const Perturbation& = Perturbation())
+    /*
+     * Best first local search.
+     */
+
+    using CompactSolution = std::vector<LocationId>;
+
+    struct CompactSolutionHasher
     {
-        Counter it = 0;
-        for (;; ++it) {
-            //std::cout << "it " << it
-            //    << " cost " << to_string(global_cost(solution))
-            //    << std::endl;
-            std::shuffle(facility_pairs_.begin(), facility_pairs_.end(), generator);
-            FacilityId facility_id_1_best = -1;
-            FacilityId facility_id_2_best = -1;
-            GlobalCost c_best = global_cost(solution);
-            for (auto p: facility_pairs_) {
-                FacilityId facility_id_1 = p.first;
-                FacilityId facility_id_2 = p.second;
-                GlobalCost c = cost_swap(
-                        solution,
-                        facility_id_1,
-                        facility_id_2);
-                if (c >= c_best)
-                    continue;
-                if (facility_id_1 != -1 && !dominates(c, c_best))
-                    continue;
-                facility_id_1_best = facility_id_1;
-                facility_id_2_best = facility_id_2;
-                c_best = c;
-            }
-            if (facility_id_1_best == -1)
-                break;
-            LocationId location_id_1 = solution.locations[facility_id_1_best];
-            LocationId location_id_2 = solution.locations[facility_id_2_best];
-            remove(solution, facility_id_1_best);
-            remove(solution, facility_id_2_best);
-            add(solution, facility_id_1_best, location_id_2);
-            add(solution, facility_id_2_best, location_id_1);
+        std::hash<LocationId> hasher;
+
+        inline bool operator()(
+                const std::shared_ptr<CompactSolution>& compact_solution_1,
+                const std::shared_ptr<CompactSolution>& compact_solution_2) const
+        {
+            return *compact_solution_1 == *compact_solution_2;
         }
+
+        inline std::size_t operator()(
+                const std::shared_ptr<CompactSolution>& compact_solution) const
+        {
+            size_t hash = 0;
+            for (LocationId location_id: *compact_solution)
+                optimizationtools::hash_combine(hash, hasher(location_id));
+            return hash;
+        }
+    };
+
+    inline CompactSolutionHasher compact_solution_hasher() const { return CompactSolutionHasher(); }
+
+    CompactSolution solution2compact(const Solution& solution)
+    {
+        return solution.locations;
     }
+
+    Solution compact2solution(const CompactSolution& compact_solution)
+    {
+        Solution solution;
+        solution.locations = compact_solution;
+        for (FacilityId facility_id_1 = 0; facility_id_1 < instance_.number_of_facilities(); ++facility_id_1) {
+            LocationId location_id_1 = solution.locations[facility_id_1];
+            if (location_id_1 == -1)
+                continue;
+            solution.number_of_facilities++;
+            solution.cost += instance_.flow(facility_id_1, facility_id_1)
+                * instance_.distance(location_id_1, location_id_1);
+            for (FacilityId facility_id_2 = facility_id_1 + 1;
+                    facility_id_2 < instance_.number_of_facilities(); ++facility_id_2) {
+                LocationId location_id_2 = solution.locations[facility_id_2];
+                if (location_id_2 == -1)
+                    continue;
+                solution.cost += instance_.flow(facility_id_1, facility_id_2)
+                    * instance_.distance(location_id_1, location_id_2);
+                solution.cost += instance_.flow(facility_id_2, facility_id_1)
+                    * instance_.distance(location_id_2, location_id_1);
+            }
+        }
+        return solution;
+    }
+
+    struct PerturbationHasher
+    {
+        std::hash<FacilityId> hasher;
+
+        inline bool hashable(const Perturbation&) const { return true; }
+
+        inline bool operator()(
+                const Perturbation& perturbation_1,
+                const Perturbation& perturbation_2) const
+        {
+            return perturbation_1.facilities[0] == perturbation_2.facilities[0];
+        }
+
+        inline std::size_t operator()(
+                const Perturbation& perturbation) const
+        {
+            size_t hash = hasher(perturbation.facilities[0]);
+            return hash;
+        }
+    };
+
+    inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
 
     /*
      * Outputs.
@@ -585,10 +596,14 @@ private:
      * Private attributes.
      */
 
+    /** Instance. */
     const Instance& instance_;
+
+    /** Parameters. */
     Parameters parameters_;
 
     std::vector<FacilityId> facilities_;
+
     std::vector<std::pair<FacilityId, FacilityId>> facility_pairs_;
 
 };
