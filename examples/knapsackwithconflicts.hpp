@@ -45,85 +45,6 @@ class LocalScheme
 
 public:
 
-    /** Global cost: <Overweight, Profit, Weight>; */
-    using GlobalCost = std::tuple<Weight, Profit>;
-
-    inline Weight&       overweight(GlobalCost& global_cost) const { return std::get<0>(global_cost); }
-    inline Profit&           profit(GlobalCost& global_cost) const { return std::get<1>(global_cost); }
-    inline Weight  overweight(const GlobalCost& global_cost) const { return std::get<0>(global_cost); }
-    inline Profit      profit(const GlobalCost& global_cost) const { return std::get<1>(global_cost); }
-
-    /*
-     * Solutions.
-     */
-
-    using CompactSolution = std::vector<bool>;
-
-    struct CompactSolutionHasher
-    {
-        std::hash<CompactSolution> hasher;
-
-        inline bool operator()(
-                const std::shared_ptr<CompactSolution>& compact_solution_1,
-                const std::shared_ptr<CompactSolution>& compact_solution_2) const
-        {
-            return *compact_solution_1 == *compact_solution_2;
-        }
-
-        inline std::size_t operator()(
-                const std::shared_ptr<CompactSolution>& compact_solution) const
-        {
-            return hasher(*compact_solution);
-        }
-    };
-
-    inline CompactSolutionHasher compact_solution_hasher() const { return CompactSolutionHasher(); }
-
-    struct SolutionItem
-    {
-        /**
-         * in == true iff item j is in the solution.
-         */
-        bool in = false;
-
-        /**
-         * neighbor_weight = w iff the sum of the weights of the neighbors of j
-         * which are in the solution is equal to w.
-         */
-        Weight neighbor_weight = 0;
-
-        /**
-         * neighbor_profit = p iff the sum of the profits of the neighbors of j
-         * which are in the solution is equal to p.
-         */
-        Profit neighbor_profit = 0;
-    };
-
-    struct Solution
-    {
-        std::vector<SolutionItem> items;
-        Profit profit = 0;
-        Weight weight = 0;
-    };
-
-    CompactSolution solution2compact(const Solution& solution)
-    {
-        std::vector<bool> items(instance_.number_of_items(), false);
-        for (ItemId j = 0; j < instance_.number_of_items(); ++j)
-            if (solution.items[j].in)
-                items[j] = true;
-        return items;
-    }
-
-    Solution compact2solution(const CompactSolution& compact_solution)
-    {
-        auto solution = empty_solution();
-        for (ItemId j = 0; j < instance_.number_of_items(); ++j)
-            if (compact_solution[j])
-                add(solution, j);
-        return solution;
-    }
-
     /*
      * Constructors and destructor.
      */
@@ -153,8 +74,62 @@ public:
     }
 
     /*
-     * Initial solutions.
+     * Global cost.
      */
+
+    /** Global cost: <Overweight, Profit, Weight>; */
+    using GlobalCost = std::tuple<Weight, Profit>;
+
+    inline Weight&       overweight(GlobalCost& global_cost) const { return std::get<0>(global_cost); }
+    inline Profit&           profit(GlobalCost& global_cost) const { return std::get<1>(global_cost); }
+    inline Weight  overweight(const GlobalCost& global_cost) const { return std::get<0>(global_cost); }
+    inline Profit      profit(const GlobalCost& global_cost) const { return std::get<1>(global_cost); }
+
+    inline GlobalCost global_cost_goal(double value) const
+    {
+        return {
+            0,
+            -value,
+        };
+    }
+
+    inline std::string to_string(const GlobalCost& global_cost) const
+    {
+        if (overweight(global_cost) > 0)
+            return "-inf";
+        return std::to_string(-profit(global_cost));
+    }
+
+    /*
+     * Solutions.
+     */
+
+    struct SolutionItem
+    {
+        /**
+         * in == true iff item j is in the solution.
+         */
+        bool in = false;
+
+        /**
+         * neighbor_weight = w iff the sum of the weights of the neighbors of j
+         * which are in the solution is equal to w.
+         */
+        Weight neighbor_weight = 0;
+
+        /**
+         * neighbor_profit = p iff the sum of the profits of the neighbors of j
+         * which are in the solution is equal to p.
+         */
+        Profit neighbor_profit = 0;
+    };
+
+    struct Solution
+    {
+        std::vector<SolutionItem> items;
+        Profit profit = 0;
+        Weight weight = 0;
+    };
 
     inline Solution empty_solution() const
     {
@@ -175,36 +150,6 @@ public:
         return solution;
     }
 
-    inline Solution crossover(
-            const Solution& solution_parent_1,
-            const Solution& solution_parent_2,
-            std::mt19937_64& generator)
-    {
-        Solution solution = empty_solution();
-        std::vector<ItemId> items;
-        for (ItemId j = 0; j < instance_.number_of_items(); ++j) {
-            if (contains(solution_parent_1, j)
-                    && contains(solution_parent_2, j)) {
-                // Add items which are in both parents.
-                add(solution, j);
-            } else if (contains(solution_parent_1, j)
-                    || contains(solution_parent_2, j)) {
-                // Store items which are in one parent.
-                items.push_back(j);
-            }
-        }
-        // Add some of the items which are in one parent.
-        std::shuffle(items.begin(), items.end(), generator);
-        for (ItemId j: items)
-            if (cost_add(solution, j) < global_cost(solution))
-                add(solution, j);
-        return solution;
-    }
-
-    /*
-     * Solution properties.
-     */
-
     inline GlobalCost global_cost(const Solution& solution) const
     {
         return {
@@ -213,102 +158,11 @@ public:
         };
     }
 
-    inline GlobalCost global_cost_goal(double value) const
-    {
-        return {
-            0,
-            -value,
-        };
-    }
-
-    inline std::string to_string(const GlobalCost& global_cost) const
-    {
-        if (overweight(global_cost) > 0)
-            return "-inf";
-        return std::to_string(-profit(global_cost));
-    }
-
-    inline ItemId distance(
-            const Solution& solution_1,
-            const Solution& solution_2) const
-    {
-        ItemId d = 0;
-        for (ItemId j = 0; j < instance_.number_of_items(); ++j)
-            if (contains(solution_1, j) != contains(solution_2, j))
-                d++;
-        return d;
-    }
-
     /*
      * Local search.
      */
 
-    struct Perturbation
-    {
-        Perturbation(): j(-1), global_cost(worst<GlobalCost>()) { }
-
-        ItemId j;
-        bool add;
-        GlobalCost global_cost;
-    };
-
-    struct PerturbationHasher
-    {
-        std::hash<ItemId> hasher;
-        std::hash<bool> hasher_2;
-
-        inline bool hashable(const Perturbation&) const { return true; }
-
-        inline bool operator()(
-                const Perturbation& perturbation_1,
-                const Perturbation& perturbation_2) const
-        {
-            return perturbation_1.j == perturbation_2.j && perturbation_1.add == perturbation_2.add;
-        }
-
-        inline std::size_t operator()(
-                const Perturbation& perturbation) const
-        {
-            size_t hash = hasher(perturbation.j);
-            optimizationtools::hash_combine(hash, hasher_2(perturbation.add));
-            return hash;
-        }
-    };
-
-    inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
-
-    inline std::vector<Perturbation> perturbations(
-            const Solution& solution,
-            std::mt19937_64&)
-    {
-        std::vector<Perturbation> perturbations;
-        for (ItemId j = 0; j < instance_.number_of_items(); ++j) {
-            Perturbation perturbation;
-            perturbation.j = j;
-            if (contains(solution, j)) {
-                perturbation.global_cost = global_cost(solution);
-                perturbation.add = false;
-            } else {
-                perturbation.global_cost = cost_add(solution, j);
-                overweight(perturbation.global_cost) = overweight(solution);
-                perturbation.add = true;
-            }
-            perturbations.push_back(perturbation);
-        }
-        return perturbations;
-    }
-
-    inline void apply_perturbation(
-            Solution& solution,
-            const Perturbation& perturbation,
-            std::mt19937_64&) const
-    {
-        if (perturbation.add) {
-            add(solution, perturbation.j);
-        } else {
-            remove(solution, perturbation.j);
-        }
-    }
+    struct Perturbation;
 
     inline void local_search(
             Solution& solution,
@@ -499,6 +353,162 @@ public:
         }
         //print(std::cout, solution);
     }
+
+    /*
+     * Genetic local search.
+     */
+
+    inline Solution crossover(
+            const Solution& solution_parent_1,
+            const Solution& solution_parent_2,
+            std::mt19937_64& generator)
+    {
+        Solution solution = empty_solution();
+        std::vector<ItemId> items;
+        for (ItemId j = 0; j < instance_.number_of_items(); ++j) {
+            if (contains(solution_parent_1, j)
+                    && contains(solution_parent_2, j)) {
+                // Add items which are in both parents.
+                add(solution, j);
+            } else if (contains(solution_parent_1, j)
+                    || contains(solution_parent_2, j)) {
+                // Store items which are in one parent.
+                items.push_back(j);
+            }
+        }
+        // Add some of the items which are in one parent.
+        std::shuffle(items.begin(), items.end(), generator);
+        for (ItemId j: items)
+            if (cost_add(solution, j) < global_cost(solution))
+                add(solution, j);
+        return solution;
+    }
+
+    inline ItemId distance(
+            const Solution& solution_1,
+            const Solution& solution_2) const
+    {
+        ItemId d = 0;
+        for (ItemId j = 0; j < instance_.number_of_items(); ++j)
+            if (contains(solution_1, j) != contains(solution_2, j))
+                d++;
+        return d;
+    }
+
+    /*
+     * Iterated local search.
+     */
+
+    struct Perturbation
+    {
+        Perturbation(): j(-1), global_cost(worst<GlobalCost>()) { }
+
+        ItemId j;
+        bool add;
+        GlobalCost global_cost;
+    };
+
+    inline std::vector<Perturbation> perturbations(
+            const Solution& solution,
+            std::mt19937_64&)
+    {
+        std::vector<Perturbation> perturbations;
+        for (ItemId j = 0; j < instance_.number_of_items(); ++j) {
+            Perturbation perturbation;
+            perturbation.j = j;
+            if (contains(solution, j)) {
+                perturbation.global_cost = global_cost(solution);
+                perturbation.add = false;
+            } else {
+                perturbation.global_cost = cost_add(solution, j);
+                overweight(perturbation.global_cost) = overweight(solution);
+                perturbation.add = true;
+            }
+            perturbations.push_back(perturbation);
+        }
+        return perturbations;
+    }
+
+    inline void apply_perturbation(
+            Solution& solution,
+            const Perturbation& perturbation,
+            std::mt19937_64&) const
+    {
+        if (perturbation.add) {
+            add(solution, perturbation.j);
+        } else {
+            remove(solution, perturbation.j);
+        }
+    }
+
+    /*
+     * Best first local search.
+     */
+
+    using CompactSolution = std::vector<bool>;
+
+    struct CompactSolutionHasher
+    {
+        std::hash<CompactSolution> hasher;
+
+        inline bool operator()(
+                const std::shared_ptr<CompactSolution>& compact_solution_1,
+                const std::shared_ptr<CompactSolution>& compact_solution_2) const
+        {
+            return *compact_solution_1 == *compact_solution_2;
+        }
+
+        inline std::size_t operator()(
+                const std::shared_ptr<CompactSolution>& compact_solution) const
+        {
+            return hasher(*compact_solution);
+        }
+    };
+
+    inline CompactSolutionHasher compact_solution_hasher() const { return CompactSolutionHasher(); }
+
+    CompactSolution solution2compact(const Solution& solution)
+    {
+        std::vector<bool> items(instance_.number_of_items(), false);
+        for (ItemId j = 0; j < instance_.number_of_items(); ++j)
+            if (solution.items[j].in)
+                items[j] = true;
+        return items;
+    }
+
+    Solution compact2solution(const CompactSolution& compact_solution)
+    {
+        auto solution = empty_solution();
+        for (ItemId j = 0; j < instance_.number_of_items(); ++j)
+            if (compact_solution[j])
+                add(solution, j);
+        return solution;
+    }
+
+    struct PerturbationHasher
+    {
+        std::hash<ItemId> hasher;
+        std::hash<bool> hasher_2;
+
+        inline bool hashable(const Perturbation&) const { return true; }
+
+        inline bool operator()(
+                const Perturbation& perturbation_1,
+                const Perturbation& perturbation_2) const
+        {
+            return perturbation_1.j == perturbation_2.j && perturbation_1.add == perturbation_2.add;
+        }
+
+        inline std::size_t operator()(
+                const Perturbation& perturbation) const
+        {
+            size_t hash = hasher(perturbation.j);
+            optimizationtools::hash_combine(hash, hasher_2(perturbation.add));
+            return hash;
+        }
+    };
+
+    inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
 
     /*
      * Outputs.
@@ -697,15 +707,24 @@ private:
      * Private attributes.
      */
 
+    /** Instance. */
     const Instance& instance_;
+
+    /** Parameters. */
     Parameters parameters_;
 
     std::vector<int8_t> tabu_;
+
     std::vector<ItemId> items_;
+
     std::vector<ItemId> items_in_;
+
     std::vector<ItemId> items_out_;
+
     optimizationtools::IndexedSet neighbors_;
+
     optimizationtools::IndexedSet free_items_;
+
     optimizationtools::IndexedSet free_items_2_;
 
     /*
@@ -713,10 +732,15 @@ private:
      */
 
     Counter toggle_number_of_explorations_ = 0;
+
     Counter toggle_number_of_sucesses_ = 0;
+
     Counter swap_number_of_explorations_ = 0;
+
     Counter swap_number_of_sucesses_ = 0;
+
     Counter swap_2_1_number_of_explorations_ = 0;
+
     Counter swap_2_1_number_of_sucesses_ = 0;
 
 };
