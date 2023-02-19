@@ -1,5 +1,3 @@
-#pragma once
-
 /**
  * Permutation flow shop scheduling problem, Makespan.
  *
@@ -8,6 +6,8 @@
  *
  * TODO
  */
+
+#pragma once
 
 #include "localsearchsolver/common.hpp"
 

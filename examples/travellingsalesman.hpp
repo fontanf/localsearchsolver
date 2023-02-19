@@ -1,5 +1,3 @@
-#pragma once
-
 /**
  * Travelling Salesman Problem.
  *
@@ -9,6 +7,8 @@
  * TODO
  *
  */
+
+#pragma once
 
 #include "localsearchsolver/common.hpp"
 

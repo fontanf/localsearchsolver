@@ -1,5 +1,3 @@
-#pragma once
-
 /**
  * Knapsack Problem with Conflicts.
  *
@@ -27,6 +25,8 @@
  *   https://doi.org/10.1007/s11590-017-1128-7
  *
  */
+
+#pragma once
 
 #include "localsearchsolver/common.hpp"
 

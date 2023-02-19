@@ -1,5 +1,3 @@
-#pragma once
-
 /**
  * Multidimansional Multiple-Choice Knapsack Problem..
  *
@@ -7,6 +5,8 @@
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/multidimensionalmultiplechoiceknapsack.hpp
  *
  */
+
+#pragma once
 
 #include "localsearchsolver/common.hpp"
 
