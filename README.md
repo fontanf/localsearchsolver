@@ -264,29 +264,6 @@ Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https:
   * Local search neighborhoods: shift item `j` to agent `i`
   * Perturbation: shift 8 random jobs
 
-### Routing
-
-[Travelling Salesman Problem](examples/travellingsalesman.hpp)
-* Three field classification: `1 | sᵢⱼ | Cₘₐₓ`
-* Algorithm:
-  * Local search neighborhoods:
-    * Shift a block of `k` consecutive vertices, `k = 1..8` (or-opt)
-    * Swap vertex `j1` with vertex `j2`
-    * Replace edges `(j1, j2)` and `(j3, j4)` by edges `(j1, j3)` and `(j2, j4)` (2-opt)
-  * Perturbation: swap two blocks (double-bridge)
-  * The local search implementation avoids recomputing moves which have not change since the last neighborhood exploration
-
-<details><summary>Benchmarks</summary>
-<p>
-
-```shell
-python3 ../optimizationtools/scripts/bench_run.py --main ./bazel-bin/examples/travellingsalesman_main --csv ../ordata/travellingsalesman/data.csv -l travellingsalesman -t 60
-python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/travellingsalesman/data.csv -l travellingsalesman -b heuristiclong -t 62
-```
-
-</p>
-</details>
-
 ### Scheduling
 
 #### Flow shop scheduling
