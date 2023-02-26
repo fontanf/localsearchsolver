@@ -60,18 +60,15 @@ public:
      * Global cost.
      */
 
-    /** Global cost: <Number of facilities, Cost>; */
-    using GlobalCost = std::tuple<FacilityId, Cost>;
+    /** Global cost: <Cost>; */
+    using GlobalCost = std::tuple<Cost>;
 
-    inline FacilityId&       number_of_facilities(GlobalCost& global_cost) const { return std::get<0>(global_cost); }
-    inline Cost&                             cost(GlobalCost& global_cost) const { return std::get<1>(global_cost); }
-    inline FacilityId  number_of_facilities(const GlobalCost& global_cost) const { return std::get<0>(global_cost); }
-    inline Cost                        cost(const GlobalCost& global_cost) const { return std::get<1>(global_cost); }
+    inline Cost&       cost(GlobalCost& global_cost) const { return std::get<0>(global_cost); }
+    inline Cost  cost(const GlobalCost& global_cost) const { return std::get<0>(global_cost); }
 
     inline GlobalCost global_cost_goal(double value) const
     {
         return {
-            -instance_.number_of_facilities(),
             value,
         };
     }
@@ -83,7 +80,6 @@ public:
     struct Solution
     {
         std::vector<LocationId> locations;
-        FacilityId number_of_facilities = 0;
         Cost cost = 0;
     };
 
@@ -110,7 +106,6 @@ public:
     inline GlobalCost global_cost(const Solution& solution) const
     {
         return {
-            -solution.number_of_facilities,
             solution.cost,
         };
     }
@@ -424,7 +419,6 @@ public:
             LocationId location_id_1 = solution.locations[facility_id_1];
             if (location_id_1 == -1)
                 continue;
-            solution.number_of_facilities++;
             solution.cost += instance_.flow(facility_id_1, facility_id_1)
                 * instance_.distance(location_id_1, location_id_1);
             for (FacilityId facility_id_2 = facility_id_1 + 1;
@@ -518,7 +512,6 @@ private:
             solution.cost += instance_.flow(facility_id_2, facility_id)
                 * instance_.distance(location_id_2, location_id);
         }
-        solution.number_of_facilities++;
     }
 
     inline void remove(Solution& solution, FacilityId facility_id) const
@@ -537,7 +530,6 @@ private:
                 * instance_.distance(location_id_2, location_id);
         }
         solution.locations[facility_id] = -1;
-        solution.number_of_facilities--;
     }
 
     /*

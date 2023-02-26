@@ -97,6 +97,7 @@ public:
 
 private:
 
+    /** Instance. */
     const Instance& instance_;
 
 };
