@@ -1,5 +1,5 @@
 /**
- * Multidimansional Multiple-Choice Knapsack Problem..
+ * Multidimansional Multiple-Choice Knapsack Problem.
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/multidimensionalmultiplechoiceknapsack.hpp

@@ -62,13 +62,11 @@ public:
      * Global cost.
      */
 
-    /** Global cost: <Number of jobs, Makespan>; */
-    using GlobalCost = std::tuple<JobId, Time>;
+    /** Global cost: <Makespan>. */
+    using GlobalCost = std::tuple<Time>;
 
-    inline JobId&       number_of_jobs(GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Time&              makespan(GlobalCost& global_cost) { return std::get<1>(global_cost); }
-    inline JobId  number_of_jobs(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
-    inline Time         makespan(const GlobalCost& global_cost) { return std::get<1>(global_cost); }
+    inline Time&       makespan(GlobalCost& global_cost) { return std::get<0>(global_cost); }
+    inline Time  makespan(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
 
     /*
      * Solutions.
@@ -100,7 +98,6 @@ public:
     inline GlobalCost global_cost(const Solution& solution) const
     {
         return {
-            -solution.jobs.size(),
             solution.makespan,
         };
     }
@@ -150,7 +147,7 @@ public:
                             makespan = std::max(makespan,
                                     completion_times_[pos_new][i]
                                              + tails_[pos_new][i]);
-                        GlobalCost c = {-solution.jobs.size(), makespan};
+                        GlobalCost c = {makespan};
                         if (c >= c_best)
                             continue;
                         if (pos_best != -1 && !dominates(c, c_best))
