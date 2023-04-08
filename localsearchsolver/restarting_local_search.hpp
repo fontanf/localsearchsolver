@@ -19,14 +19,19 @@ struct RestartingLocalSearchOptionalParameters
 
     /** Maximum number of restarts. */
     Counter maximum_number_of_restarts = -1;
+
     /** Ids of generated initial solutions. */
     std::vector<Counter> initial_solution_ids = {0};
+
     /** User-provided initial solutions. */
     std::vector<Solution> initial_solutions;
+
     /** Maximum size of the solution pool. */
     Counter maximum_size_of_the_solution_pool = 1;
+
     /** Seed. */
     Seed seed = 0;
+
     /**
      * Goal.
      *
@@ -34,10 +39,14 @@ struct RestartingLocalSearchOptionalParameters
      * found.
      */
     bool has_goal = false;
+
+    /** Goal. */
     GlobalCost goal;
+
     /** Callback function called when a new best solution is found. */
     RestartingLocalSearchCallback<LocalScheme> new_solution_callback
         = [](const Solution& solution) { (void)solution; };
+
     /** Info structure. */
     optimizationtools::Info info;
 };
@@ -53,6 +62,7 @@ struct RestartingLocalSearchOutput
 
     /** Solution pool. */
     SolutionPool<LocalScheme> solution_pool;
+
     /** Number of restarts. */
     Counter number_of_restarts = 0;
 };

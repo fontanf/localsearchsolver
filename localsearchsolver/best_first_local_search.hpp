@@ -19,18 +19,25 @@ struct BestFirstLocalSearchOptionalParameters
 
     /** Maximum number of nodes. */
     Counter maximum_number_of_nodes = -1;
+
     /** Number of threads running the algorithm independently in parallel. */
     Counter number_of_threads_1 = 1;
+
     /** Number of threads running on the same node pool in parallel. */
     Counter number_of_threads_2 = 1;
+
     /** Ids of generated initial solutions. */
     std::vector<Counter> initial_solution_ids = {0};
+
     /** User-provided initial solutions. */
     std::vector<Solution> initial_solutions;
+
     /** Maximum size of the solution pool. */
     Counter maximum_size_of_the_solution_pool = 1;
+
     /** Seed. */
     Seed seed = 0;
+
     /**
      * Goal.
      *
@@ -38,10 +45,14 @@ struct BestFirstLocalSearchOptionalParameters
      * found.
      */
     bool has_goal = false;
+
+    /** Goal. */
     GlobalCost goal;
+
     /** Callback function called when a new best solution is found. */
     BestFirstLocalSearchCallback<LocalScheme> new_solution_callback
         = [](const Solution& solution) { (void)solution; };
+
     /** Info structure. */
     optimizationtools::Info info;
 };

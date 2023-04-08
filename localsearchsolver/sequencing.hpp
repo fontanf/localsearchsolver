@@ -169,6 +169,7 @@ struct Parameters
      *   https://doi.org/10.1016/j.eswa.2017.10.050
      */
     Counter adjacent_swaps_number_of_perturbations = 0;
+
     /**
      * Perturbation "random adjacent swaps", number of random adjacent swaps
      * performed.
@@ -183,9 +184,13 @@ struct Parameters
      * Perturbation "ruin-and-recreate".
      */
     Counter ruin_and_recreate_number_of_perturbations = 0;
+
     ElementPos ruin_number_of_elements_removed = 4;
+
     double ruin_random_weight = 1.0;
+
     double ruin_nearest_weight = 0.0;
+
     /**
      * Ruin method "adjacent string removal".
      *
@@ -195,10 +200,15 @@ struct Parameters
      *   https://doi.org/10.1287/trsc.2019.0914
      */
     double ruin_adjacent_string_removal_weight = 0.0;
+
     ElementPos ruin_adjacent_string_removal_maximum_string_cardinality = 10;
+
     double ruin_adjacent_string_removal_split_rate = 0.5;
+
     double ruin_adjacent_string_removal_beta = 0.01;
+
     double recreate_random_weight = 0.0;
+
     double recreate_best_weight = 0.0;
 
     /**
@@ -211,9 +221,13 @@ struct Parameters
      */
 
     double crossover_ox_weight = 0;
+
     double crossover_sjox_weight = 0;
+
     double crossover_sbox_weight = 0;
+
     double crossover_srex1_weight = 0;
+
     double crossover_srex2_weight = 0;
 
 };
@@ -863,6 +877,8 @@ public:
                 }
             }
         }
+        (void)number_of_modified_sequences;
+        (void)number_of_non_empty_sequences;
         //std::cout << "number_of_modified_sequences " << number_of_modified_sequences << std::endl;
         //std::cout << "number_of_non_empty_sequences " << number_of_non_empty_sequences << std::endl;
 

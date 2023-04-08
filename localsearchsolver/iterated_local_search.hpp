@@ -19,8 +19,10 @@ struct IteratedLocalSearchOptionalParameters
 
     /** Maximum number of iterations. */
     Counter maximum_number_of_iterations = -1;
+
     /** Maximum number of restarts. */
     Counter maximum_number_of_restarts = -1;
+
     /**
      * Minimum number of perturbation.
      *
@@ -32,14 +34,19 @@ struct IteratedLocalSearchOptionalParameters
      * https://doi.org/10.1007/978-3-540-75514-2_1
      */
     Counter minimum_number_of_perturbations = 1;
+
     /** Ids of generated initial solutions. */
     std::vector<Counter> initial_solution_ids = {0};
+
     /** User-provided initial solutions. */
     std::vector<Solution> initial_solutions;
+
     /** Maximum size of the solution pool. */
     Counter maximum_size_of_the_solution_pool = 1;
+
     /** Seed. */
     Seed seed = 0;
+
     /**
      * Goal.
      *
@@ -47,10 +54,14 @@ struct IteratedLocalSearchOptionalParameters
      * found.
      */
     bool has_goal = false;
+
+    /** Goal. */
     GlobalCost goal;
+
     /** Callback function called when a new best solution is found. */
     IteratedLocalSearchCallback<LocalScheme> new_solution_callback
         = [](const Solution& solution) { (void)solution; };
+
     /** Info structure. */
     optimizationtools::Info info;
 };
@@ -66,8 +77,10 @@ struct IteratedLocalSearchOutput
 
     /** Solution pool. */
     SolutionPool<LocalScheme> solution_pool;
+
     /** Number of iterations. */
     Counter number_of_iterations = 0;
+
     /** Number of restarts. */
     Counter number_of_restarts = 0;
 };
