@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
                     continue;
                 std::cout << "Route #" << route_id << ":";
                 for (auto se: solution.sequences[sequence_id].elements)
-                    std::cout << " " << se.j + 1;
+                    std::cout << " " << se.element_id + 1;
                 std::cout << std::endl;
                 route_id++;
             }

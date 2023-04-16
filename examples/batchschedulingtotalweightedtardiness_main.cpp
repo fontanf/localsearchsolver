@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
         for (auto se: solution_pool.best().sequences[0].elements) {
             if (solution.empty() || se.mode == 1)
                 solution.push_back({});
-            solution.back().push_back(se.j);
+            solution.back().push_back(se.element_id);
         }
         for (const auto& batch: solution) {
             file << batch.size() << std::endl;

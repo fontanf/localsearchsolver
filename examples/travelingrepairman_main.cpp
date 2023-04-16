@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
         }
         std::vector<std::vector<LocationId>> solution;
         for (auto se: solution_pool.best().sequences[0].elements)
-            file << se.j + 1 << std::endl;
+            file << se.element_id + 1 << std::endl;
     }
 
     if (main_args.print_solution > 0) {
