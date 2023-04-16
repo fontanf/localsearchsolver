@@ -345,9 +345,9 @@ public:
     Solution compact2solution(const CompactSolution& compact_solution)
     {
         auto solution = empty_solution();
-        for (SequenceId i = 0; i < number_of_sequences(); ++i)
-            for (const SequenceElement& se: compact_solution[i])
-                append(solution.sequences[i], se);
+        for (SequenceId sequence_id = 0; sequence_id < number_of_sequences(); ++sequence_id)
+            for (const SequenceElement& se: compact_solution[sequence_id])
+                append(solution.sequences[sequence_id], se);
         compute_global_cost(solution);
         return solution;
     }
@@ -355,8 +355,8 @@ public:
     CompactSolution solution2compact(const Solution& solution)
     {
         CompactSolution compact_solution(number_of_sequences());
-        for (SequenceId i = 0; i < number_of_sequences(); ++i)
-            compact_solution[i] = solution.sequences[i].elements;
+        for (SequenceId sequence_id = 0; sequence_id < number_of_sequences(); ++sequence_id)
+            compact_solution[sequence_id] = solution.sequences[sequence_id].elements;
         return compact_solution;
     }
 
@@ -479,8 +479,8 @@ public:
     inline Solution empty_solution() const
     {
         Solution solution;
-        for (SequenceId i = 0; i < number_of_sequences(); ++i)
-            solution.sequences.push_back(empty_sequence(i));
+        for (SequenceId sequence_id = 0; sequence_id < number_of_sequences(); ++sequence_id)
+            solution.sequences.push_back(empty_sequence(sequence_id));
         return solution;
     }
 
@@ -507,14 +507,14 @@ public:
         //std::cout << std::endl;
 
         std::uniform_int_distribution<SequenceId> d_i(0, m - 1);
-        SequenceId i = d_i(generator);
+        SequenceId sequence_id = d_i(generator);
 
         // Compute edge costs.
         std::vector<std::vector<GlobalCost>> edges(n + 1);
         for (ElementPos pos = 0; pos <= n; ++pos)
             edges[pos] = std::vector<GlobalCost>(pos);
         for (ElementPos pos_1 = 0; pos_1 < seq_size; ++pos_1) {
-            Sequence sequence = empty_sequence(i);
+            Sequence sequence = empty_sequence(sequence_id);
             for (ElementPos pos_2 = pos_1 + 1; pos_2 <= seq_size; ++pos_2) {
                 append(sequence, elements[pos_2 - 1]);
                 edges[pos_2][pos_1] = sequencing_scheme_.global_cost(sequence.data);
@@ -528,15 +528,15 @@ public:
                 m + 1, std::vector<int8_t>(n + 1, false));
         std::vector<std::vector<GlobalCost>> distance(
                 m + 1, std::vector<GlobalCost>(n + 1, GlobalCost()));
-        distance[0][0] = sequencing_scheme_.global_cost(empty_sequence_data(i));
+        distance[0][0] = sequencing_scheme_.global_cost(empty_sequence_data(sequence_id));
         for (SequenceId sequence_id = 0; sequence_id < m; ++sequence_id) {
             for (ElementPos pos_1 = 0; pos_1 < seq_size; ++pos_1) {
                 for (ElementPos pos_2 = pos_1 + 1; pos_2 <= seq_size; ++pos_2) {
                     GlobalCost d = merge(
-                            distance[i][pos_1],
+                            distance[sequence_id][pos_1],
                             edges[pos_2][pos_1]);
-                    if (!distance_init[i + 1][pos_2]
-                            || strictly_better(d, distance[i + 1][pos_2])) {
+                    if (!distance_init[sequence_id + 1][pos_2]
+                            || strictly_better(d, distance[sequence_id + 1][pos_2])) {
                         //std::cout << "Update " << i
                         //    << " pos_2 " << pos_2
                         //    << " from pos_1 " << pos_1
@@ -545,9 +545,9 @@ public:
                         //    << " uv " << to_string(edges[pos_2][pos_1])
                         //    << " du+uv " << to_string(distance[i][pos_1] + edges[pos_2][pos_1])
                         //    << std::endl;
-                        distance_init[i + 1][pos_2] = true;
-                        distance[i + 1][pos_2] = d;
-                        prev[i + 1][pos_2] = pos_1;
+                        distance_init[sequence_id + 1][pos_2] = true;
+                        distance[sequence_id + 1][pos_2] = d;
+                        prev[sequence_id + 1][pos_2] = pos_1;
                     }
                 }
             }
@@ -725,8 +725,8 @@ public:
             for (ElementId j: elements) {
                 std::uniform_int_distribution<SequenceId> d_mode(0, number_of_modes(j) - 1);
                 Mode mode = d_mode(generator);
-                SequenceId i = di(generator);
-                append(solution.sequences[i], {j, mode});
+                SequenceId sequence_id = di(generator);
+                append(solution.sequences[sequence_id], {j, mode});
             }
             compute_global_cost(solution);
             return solution;
@@ -1150,11 +1150,11 @@ public:
             std::shuffle(seqs_1.begin(), seqs_1.end(), generator);
             for (auto it = seqs_1.begin();
                     it != seqs_1.begin() + number_of_sequences_to_remove; ++it) {
-                SequenceId i = *it;
+                SequenceId sequence_id = *it;
                 // Remove the sequence containing j2 from the child solution.
-                for (const auto& se: solution.sequences[i].elements)
+                for (const auto& se: solution.sequences[sequence_id].elements)
                     elts.remove(se.element_id);
-                solution.sequences[i] = empty_sequence(i);
+                solution.sequences[sequence_id] = empty_sequence(sequence_id);
             }
 
         } else {
@@ -1311,11 +1311,11 @@ public:
             std::shuffle(seqs_1.begin(), seqs_1.end(), generator);
             for (auto it = seqs_1.begin();
                     it != seqs_1.begin() + number_of_sequences_to_remove; ++it) {
-                SequenceId i = *it;
+                SequenceId sequence_id = *it;
                 // Remove the sequence containing j2 from the child solution.
-                for (const auto& se: solution.sequences[i].elements)
+                for (const auto& se: solution.sequences[sequence_id].elements)
                     elts.remove(se.element_id);
-                solution.sequences[i] = empty_sequence(i);
+                solution.sequences[sequence_id] = empty_sequence(sequence_id);
             }
 
         } else {
@@ -1574,8 +1574,8 @@ public:
         // Force-add.
         if (parameters_.force_add) {
             std::vector<uint8_t> contains(sequencing_scheme_.number_of_elements(), 0);
-            for (SequenceId i = 0; i < number_of_sequences(); ++i)
-                for (SequenceElement se: solution.sequences[i].elements)
+            for (SequenceId sequence_id = 0; sequence_id < number_of_sequences(); ++sequence_id)
+                for (SequenceElement se: solution.sequences[sequence_id].elements)
                     contains[se.element_id] = 1;
             for (ElementId element_id = 0;
                     element_id < sequencing_scheme_.number_of_elements();
@@ -1607,17 +1607,17 @@ public:
 
         } case Perturbations::DoubleBridge: {
             std::uniform_int_distribution<SequenceId> distribution(0, m - 1);
-            SequenceId i = distribution(generator);
+            SequenceId sequence_id = distribution(generator);
             auto positions = optimizationtools::bob_floyd<ElementPos>(
                     4,
-                    solution.sequences[i].elements.size() + 1,
+                    solution.sequences[sequence_id].elements.size() + 1,
                     generator);
             std::sort(positions.begin(), positions.end());
 
-            const auto& elements = solution.sequences[i].elements;
+            const auto& elements = solution.sequences[sequence_id].elements;
             SequencePos seq_size = elements.size();
-            Sequence& sequence_tmp = solution_tmp_.sequences[i];
-            sequence_tmp = empty_sequence(i);
+            Sequence& sequence_tmp = solution_tmp_.sequences[sequence_id];
+            sequence_tmp = empty_sequence(sequence_id);
             for (ElementPos pos = 0; pos < positions[0]; ++pos)
                 append(sequence_tmp, elements[pos]);
             for (ElementPos pos = positions[2]; pos < positions[3]; ++pos)
@@ -1864,9 +1864,9 @@ public:
                     ElementId element_id = *it;
                     // Draw sequence.
                     std::uniform_int_distribution<SequenceId> d_i(0, m - 1);
-                    SequenceId i = d_i(generator);
+                    SequenceId sequence_id = d_i(generator);
                     // Draw position in sequence.
-                    const auto& elements = solution_cur_.sequences[i].elements;
+                    const auto& elements = solution_cur_.sequences[sequence_id].elements;
                     SequencePos seq_size = elements.size();
                     std::uniform_int_distribution<SequenceId> d_pos(0, seq_size);
                     ElementPos pos = d_pos(generator);
@@ -1876,12 +1876,12 @@ public:
                     // Apply move.
                     Move move;
                     move.type = Neighborhoods::Add;
-                    move.sequence_id_1 = i;
+                    move.sequence_id_1 = sequence_id;
                     move.element_id = element_id;
                     move.mode = mode;
                     move.pos_1 = pos;
                     apply_move(solution_cur_, move);
-                    solution_cur_.modified_sequences[i] = true;
+                    solution_cur_.modified_sequences[sequence_id] = true;
                 }
                 break;
             } case 1: {  // Best.
@@ -1929,9 +1929,9 @@ public:
             ElementId element_id = perturbation.force_add_element_id;
             // Draw sequence.
             std::uniform_int_distribution<SequenceId> d_i(0, m - 1);
-            SequenceId i = d_i(generator);
+            SequenceId sequence_id = d_i(generator);
             // Draw position in sequence.
-            const auto& elements = solution.sequences[i].elements;
+            const auto& elements = solution.sequences[sequence_id].elements;
             SequencePos seq_size = elements.size();
             std::uniform_int_distribution<SequenceId> d_pos(0, seq_size);
             ElementPos pos = d_pos(generator);
@@ -1941,7 +1941,7 @@ public:
             // Apply move.
             Move move;
             move.type = Neighborhoods::Add;
-            move.sequence_id_1 = i;
+            move.sequence_id_1 = sequence_id;
             move.element_id = element_id;
             move.mode = mode;
             move.pos_1 = pos;
@@ -2209,8 +2209,8 @@ public:
                         std::cout
                             << "k1 " << move_best.k1
                             << " k2 " << move_best.k2
-                            << " i1 " << move_best.sequence_id_1
-                            << " i2 " << move_best.sequence_id_2
+                            << " sequence_id_1 " << move_best.sequence_id_1
+                            << " sequence_id_2 " << move_best.sequence_id_2
                             << " pos_1 " << move_best.pos_1
                             << " pos_2 " << move_best.pos_2
                             << " pos_3 " << move_best.pos_3
@@ -2269,9 +2269,9 @@ public:
             std::ostream &os,
             const Solution& solution) const
     {
-        for (SequenceId i = 0; i < number_of_sequences(); ++i) {
-            os << "Sequence " << i << ":";
-            for (SequenceElement se: solution.sequences[i].elements) {
+        for (SequenceId sequence_id = 0; sequence_id < number_of_sequences(); ++sequence_id) {
+            os << "Sequence " << sequence_id << ":";
+            for (SequenceElement se: solution.sequences[sequence_id].elements) {
                 if (maximum_number_of_modes_ == 1) {
                     os << " " << se.element_id;
                 } else {
@@ -2279,7 +2279,7 @@ public:
                 }
             }
             os << std::endl;
-            os << "    Cost: " << to_string(sequencing_scheme_.global_cost(solution.sequences[i].data)) << std::endl;
+            os << "    Cost: " << to_string(sequencing_scheme_.global_cost(solution.sequences[sequence_id].data)) << std::endl;
         }
         os << "Total cost: " << to_string(solution.global_cost) << std::endl;
         return os;
@@ -2712,16 +2712,16 @@ private:
     }
 
     SequenceData empty_sequence_data(
-            SequenceId i,
+            SequenceId sequence_id,
             std::true_type) const
     {
-        return sequencing_scheme_.empty_sequence_data(i);;
+        return sequencing_scheme_.empty_sequence_data(sequence_id);;
     }
 
-    SequenceData empty_sequence_data(SequenceId i) const
+    SequenceData empty_sequence_data(SequenceId sequence_id) const
     {
         return empty_sequence_data(
-                i,
+                sequence_id,
                 std::integral_constant<
                     bool,
                     HasEmptySequenceDataMethod<SequencingScheme, SequenceData(SequenceId)>::value>());
@@ -3319,13 +3319,13 @@ private:
 
     inline void compute_sequence_datas_cur(
             const Solution& solution,
-            SequenceId i1,
-            SequenceId i2,
+            SequenceId sequence_id_1,
+            SequenceId sequence_id_2,
             std::true_type)
     {
         SequencePos m = number_of_sequences();
         for (SequenceId sequence_id = 0; sequence_id < m; ++sequence_id) {
-            if (i1 != -1 && sequence_id != i1 && sequence_id != i2)
+            if (sequence_id_1 != -1 && sequence_id != sequence_id_1 && sequence_id != sequence_id_2)
                 continue;
             const auto& elements = solution.sequences[sequence_id].elements;
             ElementPos seq_size = (ElementPos)elements.size();
@@ -3357,14 +3357,15 @@ private:
     /**
      * Compute temporary structures.
      *
-     * If 'i1 == -1', the temporary structures for all sequences are computed.
-     * If 'i1 != -1', only the temporary structures of 'i1' and 'i2' are
-     * updated.
+     * If 'sequence_id_1 == -1', the temporary structures for all sequences are
+     * computed.
+     * If 'sequence_id_1 != -1', only the temporary structures of
+     * 'sequence_id_1' and 'sequence_id_2' are updated.
      */
     inline void compute_temporary_structures(
             const Solution& solution,
-            SequenceId i1 = -1,
-            SequenceId i2 = -1)
+            SequenceId sequence_id_1 = -1,
+            SequenceId sequence_id_2 = -1)
     {
         auto begin = std::chrono::steady_clock::now();
         SequencePos m = number_of_sequences();
@@ -3400,8 +3401,8 @@ private:
         // Update sequence_datas_cur_2_.
         compute_sequence_datas_cur(
                 solution,
-                i1,
-                i2,
+                sequence_id_1,
+                sequence_id_2,
                 std::integral_constant<
                     bool,
                     HasConcatenateMethod<SequencingScheme, bool(SequenceData&, const SequenceData&)>::value>());
@@ -3411,51 +3412,56 @@ private:
             if (m > 1) {
                 std::vector<GlobalCost> front(m);
                 front[0] = global_costs_cur_[0];
-                for (SequenceId i = 1; i < m; ++i)
-                    front[i] = merge(front[i - 1], global_costs_cur_[i]);
+                for (SequenceId sequence_id = 1; sequence_id < m; ++sequence_id)
+                    front[sequence_id] = merge(
+                            front[sequence_id - 1],
+                            global_costs_cur_[sequence_id]);
 
                 std::vector<GlobalCost> back(m);
                 back[0] = global_costs_cur_[m - 1];
-                for (SequenceId i = m - 2; i >= 0; --i)
-                    back[i] = merge(back[i + 1], global_costs_cur_[i]);
+                for (SequenceId sequence_id = m - 2; sequence_id >= 0; --sequence_id)
+                    back[sequence_id] = merge(
+                            back[sequence_id + 1],
+                            global_costs_cur_[sequence_id]);
 
                 partial_global_costs_cur_1_[0] = back[1];
                 partial_global_costs_cur_1_[m - 1] = front[m - 2];
-                for (SequenceId i = 1; i < m - 1; ++i) {
-                    partial_global_costs_cur_1_[i]
-                        = merge(front[i - 1], back[i + 1]);
+                for (SequenceId sequence_id = 1; sequence_id < m - 1; ++sequence_id) {
+                    partial_global_costs_cur_1_[sequence_id] = merge(
+                            front[sequence_id - 1],
+                            back[sequence_id + 1]);
                 }
 
                 // Update partial_global_costs_2_.
                 if (m > 2) {
 
                     partial_global_costs_cur_2_[0][2] = global_costs_cur_[1];
-                    for (SequenceId i2 = 3; i2 < m; ++i2) {
-                        partial_global_costs_cur_2_[0][i2] = merge(
-                                partial_global_costs_cur_2_[0][i2 - 1],
-                                global_costs_cur_[i2 - 1]);
+                    for (SequenceId sequence_id_2 = 3; sequence_id_2 < m; ++sequence_id_2) {
+                        partial_global_costs_cur_2_[0][sequence_id_2] = merge(
+                                partial_global_costs_cur_2_[0][sequence_id_2 - 1],
+                                global_costs_cur_[sequence_id_2 - 1]);
                     }
-                    for (SequenceId i1 = 1; i1 < m - 1; ++i1) {
-                        partial_global_costs_cur_2_[i1][i1 + 1] = front[i1 - 1];
-                        for (SequenceId i2 = i1 + 2; i2 < m; ++i2) {
-                            partial_global_costs_cur_2_[i1][i2] = merge(
-                                    partial_global_costs_cur_2_[i1][i2 - 1],
-                                    global_costs_cur_[i2 - 1]);
+                    for (SequenceId sequence_id_1 = 1; sequence_id_1 < m - 1; ++sequence_id_1) {
+                        partial_global_costs_cur_2_[sequence_id_1][sequence_id_1 + 1] = front[sequence_id_1 - 1];
+                        for (SequenceId sequence_id_2 = sequence_id_1 + 2; sequence_id_2 < m; ++sequence_id_2) {
+                            partial_global_costs_cur_2_[sequence_id_1][sequence_id_2] = merge(
+                                    partial_global_costs_cur_2_[sequence_id_1][sequence_id_2 - 1],
+                                    global_costs_cur_[sequence_id_2 - 1]);
                         }
                     }
 
                     // partial_global_costs_cur_2_[i1][m - 1] already have the
                     // right values.
                     for (SequenceId sequence_id_1 = 0; sequence_id_1 < m; ++sequence_id_1) {
-                        for (SequenceId i2 = i1 + 1; i2 < m - 1; ++i2) {
-                            if (i1 == 0 && i2 == 1) {
-                                partial_global_costs_cur_2_[i1][i2] = back[2];
+                        for (SequenceId sequence_id_2 = sequence_id_1 + 1; sequence_id_2 < m - 1; ++sequence_id_2) {
+                            if (sequence_id_1 == 0 && sequence_id_2 == 1) {
+                                partial_global_costs_cur_2_[sequence_id_1][sequence_id_2] = back[2];
                             } else {
-                                partial_global_costs_cur_2_[i1][i2] = merge(
-                                        partial_global_costs_cur_2_[i1][i2],
-                                        back[i2 + 1]);
-                                partial_global_costs_cur_2_[i2][i1]
-                                    = partial_global_costs_cur_2_[i1][i2];
+                                partial_global_costs_cur_2_[sequence_id_1][sequence_id_2] = merge(
+                                        partial_global_costs_cur_2_[sequence_id_1][sequence_id_2],
+                                        back[sequence_id_2 + 1]);
+                                partial_global_costs_cur_2_[sequence_id_2][sequence_id_1]
+                                    = partial_global_costs_cur_2_[sequence_id_1][sequence_id_2];
                             }
                         }
                     }
@@ -3475,10 +3481,10 @@ private:
             Solution& solution) const
     {
         solution.global_cost = sequencing_scheme_.global_cost(solution.sequences[0].data);
-        for (SequenceId i = 1; i < number_of_sequences(); ++i) {
+        for (SequenceId sequence_id = 1; sequence_id < number_of_sequences(); ++sequence_id) {
             solution.global_cost = merge(
                     solution.global_cost,
-                    sequencing_scheme_.global_cost(solution.sequences[i].data));
+                    sequencing_scheme_.global_cost(solution.sequences[sequence_id].data));
         }
     }
 
@@ -3990,32 +3996,32 @@ private:
 
                 for (auto it = it_begin; it != it_end; ++it) {
                     ElementId j2 = *it;
-                    SequenceId i2 = elements_cur_[j2].sequence_id;
+                    SequenceId sequence_id_2 = elements_cur_[j2].sequence_id;
                     ElementPos pos_2 = elements_cur_[j2].pos;
                     if (j2 == j1)
                         continue;
-                    if (i2 == -1)
+                    if (sequence_id_2 == -1)
                         continue;
                     if (!neighborhood.modified_sequences[sequence_id_1]
-                            && !neighborhood.modified_sequences[i2])
+                            && !neighborhood.modified_sequences[sequence_id_2])
                         continue;
-                    if (sequence_id_1 == i2)
+                    if (sequence_id_1 == sequence_id_2)
                         continue;
 
-                    const auto& sequence_2 = solution.sequences[i2];
+                    const auto& sequence_2 = solution.sequences[sequence_id_2];
                     SequencePos seq_2_size = sequence_2.elements.size();
 
                     if (!(parameters_.linking_constraints && m > 1))
                         gc = merge(
                                 global_costs_cur_[sequence_id_1],
-                                global_costs_cur_[i2]);
+                                global_costs_cur_[sequence_id_2]);
                     GlobalCost gcm = (parameters_.linking_constraints && m > 2)?
                         merge(
                             gc_tmp_1,
-                            partial_global_costs_cur_2_[sequence_id_1][i2]):
+                            partial_global_costs_cur_2_[sequence_id_1][sequence_id_2]):
                         gc_tmp_1;
 
-                    SequenceData sequence_data_2 = sequence_datas_cur_1_[i2][pos_2 + 1];
+                    SequenceData sequence_data_2 = sequence_datas_cur_1_[sequence_id_2][pos_2 + 1];
                     bool ok = concatenate(
                             sequence_data_2, false,
                             sequence_1, pos_1, pos_1 + block_size - 1, reverse,
@@ -4039,7 +4045,7 @@ private:
                             Neighborhoods::InterShiftReverse;
                         move.k1 = block_size;
                         move.sequence_id_1 = sequence_id_1;
-                        move.sequence_id_2 = i2;
+                        move.sequence_id_2 = sequence_id_2;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2 + 1;
                         move.global_cost = diff(gc_tmp, gc);
@@ -4049,7 +4055,7 @@ private:
                     // If j2 is the first element of its sequence, we also try
                     // to insert the block before j2.
                     if (pos_2 == 0) {
-                        SequenceData sequence_data_2 = sequence_datas_cur_1_[i2][pos_2];
+                        SequenceData sequence_data_2 = sequence_datas_cur_1_[sequence_id_2][pos_2];
                         bool ok = concatenate(
                                 sequence_data_2, true,
                                 sequence_1, pos_1, pos_1 + block_size - 1, reverse,
@@ -4073,7 +4079,7 @@ private:
                                 Neighborhoods::InterShiftReverse;
                             move.k1 = block_size;
                             move.sequence_id_1 = sequence_id_1;
-                            move.sequence_id_2 = i2;
+                            move.sequence_id_2 = sequence_id_2;
                             move.pos_1 = pos_1;
                             move.pos_2 = pos_2;
                             move.global_cost = diff(gc_tmp, gc);
@@ -4199,29 +4205,29 @@ private:
 
                 for (auto it = it_begin; it != it_end; ++it) {
                     ElementId j2 = *it;
-                    SequenceId i2 = elements_cur_[j2].sequence_id;
+                    SequenceId sequence_id_2 = elements_cur_[j2].sequence_id;
                     ElementPos pos_2 = elements_cur_[j2].pos;
                     if (j2 == j1)
                         continue;
-                    if (i2 == -1)
+                    if (sequence_id_2 == -1)
                         continue;
                     if (!neighborhood.modified_sequences[sequence_id_1]
-                            && !neighborhood.modified_sequences[i2])
+                            && !neighborhood.modified_sequences[sequence_id_2])
                         continue;
-                    if (sequence_id_1 == i2)
+                    if (sequence_id_1 == sequence_id_2)
                         continue;
                     //if (j1 > j2)
                     //    continue;
 
-                    const auto& sequence_2 = solution.sequences[i2];
+                    const auto& sequence_2 = solution.sequences[sequence_id_2];
                     SequencePos seq_2_size = sequence_2.elements.size();
 
                     if (!(parameters_.linking_constraints && m > 2))
                         gc = merge(
                                 global_costs_cur_[sequence_id_1],
-                                global_costs_cur_[i2]);
+                                global_costs_cur_[sequence_id_2]);
                     GlobalCost* gcm = (parameters_.linking_constraints && m > 2)?
-                        &partial_global_costs_cur_2_[sequence_id_1][i2]: nullptr;
+                        &partial_global_costs_cur_2_[sequence_id_1][sequence_id_2]: nullptr;
 
                     SequenceData sequence_data_1 = sequence_datas_cur_1_[sequence_id_1][pos_1 + 1];
                     bool ok = concatenate(
@@ -4233,10 +4239,10 @@ private:
                     GlobalCost gc_tmp_1 = (parameters_.linking_constraints && m > 2)?
                         merge(
                                 sequencing_scheme_.global_cost(sequence_data_1),
-                                partial_global_costs_cur_2_[sequence_id_1][i2]):
+                                partial_global_costs_cur_2_[sequence_id_1][sequence_id_2]):
                         sequencing_scheme_.global_cost(sequence_data_1);
 
-                    SequenceData sequence_data_2 = sequence_datas_cur_1_[i2][pos_2 + 1];
+                    SequenceData sequence_data_2 = sequence_datas_cur_1_[sequence_id_2][pos_2 + 1];
                     ok = concatenate(
                             sequence_data_2, false,
                             sequence_1, pos_1 + 1, seq_1_size - 1, false,
@@ -4251,7 +4257,7 @@ private:
                         Move move;
                         move.type = Neighborhoods::SwapTails;
                         move.sequence_id_1 = sequence_id_1;
-                        move.sequence_id_2 = i2;
+                        move.sequence_id_2 = sequence_id_2;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2;
                         move.global_cost = diff(gc_tmp, gc);
@@ -4284,29 +4290,29 @@ private:
 
                 for (auto it = it_begin; it != it_end; ++it) {
                     ElementId j2 = *it;
-                    SequenceId i2 = elements_cur_[j2].sequence_id;
+                    SequenceId sequence_id_2 = elements_cur_[j2].sequence_id;
                     ElementPos pos_2 = elements_cur_[j2].pos;
                     if (j2 == j1)
                         continue;
-                    if (i2 == -1)
+                    if (sequence_id_2 == -1)
                         continue;
                     if (!neighborhood.modified_sequences[sequence_id_1]
-                            && !neighborhood.modified_sequences[i2])
+                            && !neighborhood.modified_sequences[sequence_id_2])
                         continue;
-                    if (sequence_id_1 == i2)
+                    if (sequence_id_1 == sequence_id_2)
                         continue;
                     //if (j1 > j2)
                     //    continue;
 
-                    const auto& sequence_2 = solution.sequences[i2];
+                    const auto& sequence_2 = solution.sequences[sequence_id_2];
                     SequencePos seq_2_size = sequence_2.elements.size();
 
                     if (!(parameters_.linking_constraints && m > 1))
                         gc = merge(
                                 global_costs_cur_[sequence_id_1],
-                                global_costs_cur_[i2]);
+                                global_costs_cur_[sequence_id_2]);
                     GlobalCost* gcm = (parameters_.linking_constraints && m > 2)?
-                        &partial_global_costs_cur_2_[sequence_id_1][i2]: nullptr;
+                        &partial_global_costs_cur_2_[sequence_id_1][sequence_id_2]: nullptr;
 
                     SequenceData sequence_data_1 = sequence_datas_cur_1_[sequence_id_1][pos_1 + 1];
                     bool ok = concatenate(
@@ -4318,10 +4324,10 @@ private:
                     GlobalCost gc_tmp_1 = (parameters_.linking_constraints && m > 2)?
                         merge(
                                 sequencing_scheme_.global_cost(sequence_data_1),
-                                partial_global_costs_cur_2_[sequence_id_1][i2]):
+                                partial_global_costs_cur_2_[sequence_id_1][sequence_id_2]):
                         sequencing_scheme_.global_cost(sequence_data_1);
 
-                    SequenceData sequence_data_2 = sequence_datas_cur_1_[i2][0];
+                    SequenceData sequence_data_2 = sequence_datas_cur_1_[sequence_id_2][0];
                     ok = concatenate(
                             sequence_data_2, true,
                             sequence_1, pos_1 + 1, seq_1_size - 1, true,
@@ -4342,7 +4348,7 @@ private:
                         Move move;
                         move.type = Neighborhoods::Split;
                         move.sequence_id_1 = sequence_id_1;
-                        move.sequence_id_2 = i2;
+                        move.sequence_id_2 = sequence_id_2;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2;
                         move.global_cost = diff(gc_tmp, gc);
@@ -4379,21 +4385,21 @@ private:
 
                 for (auto it = it_begin; it != it_end; ++it) {
                     ElementId j2 = *it;
-                    SequenceId i2 = elements_cur_[j2].sequence_id;
+                    SequenceId sequence_id_2 = elements_cur_[j2].sequence_id;
                     ElementPos pos_2 = elements_cur_[j2].pos;
                     if (j2 == j1)
                         continue;
-                    if (i2 == -1)
+                    if (sequence_id_2 == -1)
                         continue;
                     if (!neighborhood.modified_sequences[sequence_id_1]
-                            && !neighborhood.modified_sequences[i2])
+                            && !neighborhood.modified_sequences[sequence_id_2])
                         continue;
-                    if (sequence_id_1 == i2)
+                    if (sequence_id_1 == sequence_id_2)
                         continue;
                     //if (block_size_1 == block_size_2 && j1 > j2)
                     //    continue;
 
-                    const auto& sequence_2 = solution.sequences[i2];
+                    const auto& sequence_2 = solution.sequences[sequence_id_2];
                     SequencePos seq_2_size = sequence_2.elements.size();
                     if (pos_2 + block_size_2 >= seq_2_size)
                         continue;
@@ -4401,15 +4407,15 @@ private:
                     if (!(parameters_.linking_constraints && m > 1))
                         gc = merge(
                                 global_costs_cur_[sequence_id_1],
-                                global_costs_cur_[i2]);
+                                global_costs_cur_[sequence_id_2]);
 
                     SequenceData sequence_data_1 = sequence_datas_cur_1_[sequence_id_1][pos_1];
-                    SequenceData sequence_data_2 = sequence_datas_cur_1_[i2][pos_2 + 1];
+                    SequenceData sequence_data_2 = sequence_datas_cur_1_[sequence_id_2][pos_2 + 1];
 
                     GlobalCost gcm = (parameters_.linking_constraints && m > 2)?
                         merge(
                             bound(sequence_data_2),
-                            partial_global_costs_cur_2_[sequence_id_1][i2]):
+                            partial_global_costs_cur_2_[sequence_id_1][sequence_id_2]):
                         bound(sequence_data_2);
 
                     bool ok = concatenate(
@@ -4427,7 +4433,7 @@ private:
                     GlobalCost gc_tmp_1 = (parameters_.linking_constraints && m > 2)?
                         merge(
                                 sequencing_scheme_.global_cost(sequence_data_1),
-                                partial_global_costs_cur_2_[sequence_id_1][i2]):
+                                partial_global_costs_cur_2_[sequence_id_1][sequence_id_2]):
                         sequencing_scheme_.global_cost(sequence_data_1);
 
                     ok = concatenate(
@@ -4452,7 +4458,7 @@ private:
                         move.k1 = block_size_1;
                         move.k2 = block_size_2;
                         move.sequence_id_1 = sequence_id_1;
-                        move.sequence_id_2 = i2;
+                        move.sequence_id_2 = sequence_id_2;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2 + 1;
                         move.global_cost = diff(gc_tmp, gc);
