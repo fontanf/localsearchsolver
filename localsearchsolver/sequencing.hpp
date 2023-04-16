@@ -1495,7 +1495,7 @@ public:
         /** Type of perturbation. */
         Perturbations type;
         /** ForceAdd: element to add. */
-        ElementId force_add_j = -1;
+        ElementId force_add_element_id = -1;
         /** Global cost of the perturbation. */
         GlobalCost global_cost;
     };
@@ -1517,7 +1517,7 @@ public:
         {
             if (perturbation_1.type == Perturbations::ForceAdd
                     && perturbation_2.type == Perturbations::ForceAdd
-                    && perturbation_1.force_add_j == perturbation_2.force_add_j)
+                    && perturbation_1.force_add_element_id == perturbation_2.force_add_element_id)
                 return true;
             return false;
         }
@@ -1525,7 +1525,7 @@ public:
         inline std::size_t operator()(
                 const Perturbation& perturbation) const
         {
-            return hasher(perturbation.force_add_j);
+            return hasher(perturbation.force_add_element_id);
         }
     };
 
@@ -1584,7 +1584,7 @@ public:
                     continue;
                 Perturbation perturbation;
                 perturbation.type = Perturbations::ForceAdd;
-                perturbation.force_add_j = element_id;
+                perturbation.force_add_element_id = element_id;
                 perturbation.global_cost = global_cost(solution);
                 perturbations.push_back(perturbation);
             }
@@ -1926,7 +1926,7 @@ public:
             break;
 
         } case Perturbations::ForceAdd: {
-            ElementId element_id = perturbation.force_add_j;
+            ElementId element_id = perturbation.force_add_element_id;
             // Draw sequence.
             std::uniform_int_distribution<SequenceId> d_i(0, m - 1);
             SequenceId i = d_i(generator);
@@ -3861,7 +3861,7 @@ private:
 
                 ElementId element_id = sequence.elements[pos].element_id;
                 if (perturbation.type == Perturbations::ForceAdd
-                        && element_id == perturbation.force_add_j)
+                        && element_id == perturbation.force_add_element_id)
                     continue;
 
                 SequenceData sequence_data = sequence_datas_cur_1_[sequence_id][pos];
@@ -3910,7 +3910,7 @@ private:
             for (ElementPos pos = 0; pos < seq_size; ++pos) {
 
                 if (perturbation.type == Perturbations::ForceAdd
-                        && sequence.elements[pos].element_id == perturbation.force_add_j)
+                        && sequence.elements[pos].element_id == perturbation.force_add_element_id)
                     continue;
 
                 for (ElementId element_id = 0; element_id < n; ++element_id) {
