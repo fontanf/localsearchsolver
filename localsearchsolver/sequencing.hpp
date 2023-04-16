@@ -733,10 +733,10 @@ public:
         } case 4: {
             // Random sequence splitted.
             std::vector<SequenceElement> elements(n);
-            for (ElementId j = 0; j < n; ++j) {
-                std::uniform_int_distribution<SequenceId> d_mode(0, number_of_modes(j) - 1);
+            for (ElementId element_id = 0; element_id < n; ++element_id) {
+                std::uniform_int_distribution<SequenceId> d_mode(0, number_of_modes(element_id) - 1);
                 Mode mode = d_mode(generator);
-                elements[j] = {j, mode};
+                elements[element_id] = {element_id, mode};
             }
             std::shuffle(elements.begin(), elements.end(), generator);
             Solution solution = split(elements, generator);
@@ -1255,10 +1255,10 @@ public:
 
         // Add remaining elements at random positions.
         compute_temporary_structures(solution);
-        for (ElementId j = 0; j < n; ++j) {
-            if (elts.contains(j))
+        for (ElementId element_id = 0; element_id < n; ++element_id) {
+            if (elts.contains(element_id))
                 continue;
-            auto improving_moves = explore_add(solution, j);
+            auto improving_moves = explore_add(solution, element_id);
             if (!improving_moves.empty()) {
                 std::shuffle(
                         improving_moves.begin(),
@@ -1391,10 +1391,10 @@ public:
         }
 
         // Add remaining elements at random positions.
-        for (ElementId j = 0; j < n; ++j) {
-            if (elts.contains(j))
+        for (ElementId element_id = 0; element_id < n; ++element_id) {
+            if (elts.contains(element_id))
                 continue;
-            auto improving_moves = explore_add(solution, j);
+            auto improving_moves = explore_add(solution, element_id);
             if (!improving_moves.empty()) {
                 std::shuffle(
                         improving_moves.begin(),
@@ -2101,10 +2101,10 @@ public:
 
         if (parameters_.inter_swap_star) {
             for (SequenceId sequence_id = 0; sequence_id < m; ++sequence_id) {
-                for (ElementId j = 0; j < n; ++j) {
+                for (ElementId element_id = 0; element_id < n; ++element_id) {
                     std::fill(
-                            inter_swap_star_best_positions_[sequence_id][j].begin(),
-                            inter_swap_star_best_positions_[sequence_id][j].end(),
+                            inter_swap_star_best_positions_[sequence_id][element_id].begin(),
+                            inter_swap_star_best_positions_[sequence_id][element_id].end(),
                             -2);
                 }
             }
@@ -3288,26 +3288,26 @@ private:
         sorted_successors_ = std::vector<std::vector<ElementId>>(n);
         std::vector<ElementId> neighbors(n);
         std::iota(neighbors.begin(), neighbors.end(), 0);
-        for (ElementId j = 0; j < n; ++j) {
+        for (ElementId element_id = 0; element_id < n; ++element_id) {
             // Successors.
-            sorted_successors_[j] = neighbors;
+            sorted_successors_[element_id] = neighbors;
             std::sort(
-                    sorted_successors_[j].begin(),
-                    sorted_successors_[j].end(),
-                    [this, j](ElementId j1, ElementId j2) -> bool
+                    sorted_successors_[element_id].begin(),
+                    sorted_successors_[element_id].end(),
+                    [this, element_id](ElementId j1, ElementId j2) -> bool
                     {
-                        return sequencing_scheme_.distance(j, j1)
-                            < sequencing_scheme_.distance(j, j2);
+                        return sequencing_scheme_.distance(element_id, j1)
+                            < sequencing_scheme_.distance(element_id, j2);
                     });
             // Predecessors.
-            sorted_predecessors_[j] = neighbors;
+            sorted_predecessors_[element_id] = neighbors;
             std::sort(
-                    sorted_predecessors_[j].begin(),
-                    sorted_predecessors_[j].end(),
-                    [this, j](ElementId j1, ElementId j2) -> bool
+                    sorted_predecessors_[element_id].begin(),
+                    sorted_predecessors_[element_id].end(),
+                    [this, element_id](ElementId j1, ElementId j2) -> bool
                     {
-                        return sequencing_scheme_.distance(j1, j)
-                            < sequencing_scheme_.distance(j2, j);
+                        return sequencing_scheme_.distance(j1, element_id)
+                            < sequencing_scheme_.distance(j2, element_id);
                     });
 
             //std::cout << "Closest neighbors of " << j << ":";
@@ -3822,18 +3822,18 @@ private:
             // Loop through all new positions.
             for (ElementPos pos = 0; pos <= seq_size; ++pos) {
 
-                for (ElementId j = 0; j < n; ++j) {
-                    if (elements_cur_[j].mode != -1)
+                for (ElementId element_id = 0; element_id < n; ++element_id) {
+                    if (elements_cur_[element_id].mode != -1)
                         continue;
 
-                    for (Mode mode = 0; mode < number_of_modes(j); ++mode) {
+                    for (Mode mode = 0; mode < number_of_modes(element_id); ++mode) {
 
                         GlobalCost* gcm = (parameters_.linking_constraints && m > 1)?
                             &partial_global_costs_cur_1_[sequence_id]: nullptr;
                         SequenceData sequence_data = sequence_datas_cur_1_[sequence_id][pos];
                         bool ok = append(
                                 sequence_data, (pos == 0),
-                                {j, mode},
+                                {element_id, mode},
                                 gc, gcm);
                         if (!ok)
                             continue;
@@ -3853,7 +3853,7 @@ private:
                             Move move;
                             move.type = Neighborhoods::Add;
                             move.sequence_id_1 = sequence_id;
-                            move.element_id = j;
+                            move.element_id = element_id;
                             move.mode = mode;
                             move.pos_1 = pos;
                             move.global_cost = diff(gc_tmp, gc);
@@ -3937,18 +3937,18 @@ private:
                         && sequence.elements[pos].element_id == perturbation.force_add_j)
                     continue;
 
-                for (ElementId j = 0; j < n; ++j) {
-                    if (elements_cur_[j].mode != -1)
+                for (ElementId element_id = 0; element_id < n; ++element_id) {
+                    if (elements_cur_[element_id].mode != -1)
                         continue;
 
-                    for (Mode mode = 0; mode < number_of_modes(j); ++mode) {
+                    for (Mode mode = 0; mode < number_of_modes(element_id); ++mode) {
 
                         GlobalCost* gcm = (parameters_.linking_constraints && m > 1)?
                             &partial_global_costs_cur_1_[sequence_id]: nullptr;
                         SequenceData sequence_data = sequence_datas_cur_1_[sequence_id][pos];
                         bool ok = append(
                                 sequence_data, (pos == 0),
-                                {j, mode},
+                                {element_id, mode},
                                 gc, gcm);
                         if (!ok)
                             continue;
@@ -3968,7 +3968,7 @@ private:
                             Move move;
                             move.type = Neighborhoods::Replace;
                             move.sequence_id_1 = sequence_id;
-                            move.element_id = j;
+                            move.element_id = element_id;
                             move.mode = mode;
                             move.pos_1 = pos;
                             move.global_cost = diff(gc_tmp, gc);
@@ -4504,10 +4504,10 @@ private:
         for (SequenceId sequence_id = 0; sequence_id < m; ++sequence_id) {
             if (!neighborhood.modified_sequences[sequence_id])
                 continue;
-            for (ElementId j = 0; j < n; ++j) {
+            for (ElementId element_id = 0; element_id < n; ++element_id) {
                 std::fill(
-                        inter_swap_star_best_positions_[sequence_id][j].begin(),
-                        inter_swap_star_best_positions_[sequence_id][j].end(),
+                        inter_swap_star_best_positions_[sequence_id][element_id].begin(),
+                        inter_swap_star_best_positions_[sequence_id][element_id].end(),
                         -2);
             }
         }
@@ -5074,18 +5074,18 @@ private:
             // Loop through all new positions.
             for (ElementPos pos = 0; pos <= seq_size; ++pos) {
 
-                for (ElementId j = 0; j < n; ++j) {
-                    if (elements_cur_[j].mode != -1)
+                for (ElementId element_id = 0; element_id < n; ++element_id) {
+                    if (elements_cur_[element_id].mode != -1)
                         continue;
 
-                    for (Mode mode = 0; mode < number_of_modes(j); ++mode) {
+                    for (Mode mode = 0; mode < number_of_modes(element_id); ++mode) {
                         GlobalCost gc_tmp;
                         bool accept = false;
                         if (!parameters_.add_remove) {
                             SequenceData sequence_data = sequence_datas_cur_1_[sequence_id][pos];
                             append(
                                     sequence_data, (pos == 0),
-                                    {j, mode});
+                                    {element_id, mode});
                             concatenate(
                                     sequence_data, false,
                                     sequence, pos, seq_size - 1, false);
@@ -5101,7 +5101,7 @@ private:
                             SequenceData sequence_data = sequence_datas_cur_1_[sequence_id][pos];
                             bool ok = append(
                                     sequence_data, (pos == 0),
-                                    {j, mode},
+                                    {element_id, mode},
                                     gc, gcm);
                             if (!ok)
                                 continue;
@@ -5123,7 +5123,7 @@ private:
                             Move move;
                             move.type = Neighborhoods::Add;
                             move.sequence_id_1 = sequence_id;
-                            move.element_id = j;
+                            move.element_id = element_id;
                             move.mode = mode;
                             move.pos_1 = pos;
                             move.global_cost = diff(gc_tmp, gc);
@@ -5240,18 +5240,18 @@ private:
                 gc = global_costs_cur_[sequence_id];
 
             // Loop through all new positions.
-            for (ElementId j = 0; j < n; ++j) {
-                if (elements_cur_[j].mode != -1)
+            for (ElementId element_id = 0; element_id < n; ++element_id) {
+                if (elements_cur_[element_id].mode != -1)
                     continue;
 
-                for (Mode mode = 0; mode < number_of_modes(j); ++mode) {
+                for (Mode mode = 0; mode < number_of_modes(element_id); ++mode) {
                     GlobalCost gc_tmp;
                     bool accept = false;
                     if (!parameters_.add_remove) {
                         SequenceData sequence_data = sequence_datas_cur_1_[sequence_id][seq_size];
                         append(
                                 sequence_data, (seq_size == 0),
-                                {j, mode});
+                                {element_id, mode});
                         gc_tmp = (parameters_.linking_constraints && m > 1)?
                             merge(
                                     sequencing_scheme_.global_cost(sequence_data),
@@ -5264,7 +5264,7 @@ private:
                         SequenceData sequence_data = sequence_datas_cur_1_[sequence_id][seq_size];
                         bool ok = append(
                                 sequence_data, (seq_size == 0),
-                                {j, mode},
+                                {element_id, mode},
                                 gc, gcm);
                         if (!ok)
                             continue;
@@ -5280,7 +5280,7 @@ private:
                         Move move;
                         move.type = Neighborhoods::Add;
                         move.sequence_id_1 = sequence_id;
-                        move.element_id = j;
+                        move.element_id = element_id;
                         move.mode = mode;
                         move.pos_1 = seq_size;
                         move.global_cost = diff(gc_tmp, gc);
