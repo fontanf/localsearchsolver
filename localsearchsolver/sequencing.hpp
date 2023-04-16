@@ -249,7 +249,7 @@ public:
 
     struct SolutionElement
     {
-        SequenceId i = -1;
+        SequenceId sequence_id = -1;
         ElementPos pos = -1;
         Mode mode = -1;
     };
@@ -267,7 +267,7 @@ public:
 
     struct Sequence
     {
-        SequenceId i = -1;
+        SequenceId sequence_id = -1;
         std::vector<SequenceElement> elements;
         SequenceData data;
     };
@@ -494,11 +494,11 @@ public:
 
     virtual ~LocalScheme() { }
 
-    inline Sequence empty_sequence(SequenceId i) const
+    inline Sequence empty_sequence(SequenceId sequence_id) const
     {
         Sequence sequence;
-        sequence.i = i;
-        sequence.data = empty_sequence_data(i);
+        sequence.sequence_id = sequence_id;
+        sequence.data = empty_sequence_data(sequence_id);
         return sequence;
     }
 
@@ -3049,8 +3049,8 @@ private:
             bool reverse) const
     {
         return (!reverse)?
-            sequence_datas_cur_2_[sequence.i][pos_1][pos_2]:
-            sequence_datas_cur_2_[sequence.i][pos_2][pos_1];
+            sequence_datas_cur_2_[sequence.sequence_id][pos_1][pos_2]:
+            sequence_datas_cur_2_[sequence.sequence_id][pos_2][pos_1];
     }
 
     inline void concatenate(
@@ -3402,7 +3402,7 @@ private:
             ElementPos seq_size = elements.size();
             for (ElementPos pos = 0; pos < seq_size; ++pos) {
                 ElementId j = elements[pos].element_id;
-                elements_cur_[j].i = i;
+                elements_cur_[j].sequence_id = i;
                 elements_cur_[j].pos = pos;
                 elements_cur_[j].mode = elements[pos].mode;
             }
@@ -4014,7 +4014,7 @@ private:
 
                 for (auto it = it_begin; it != it_end; ++it) {
                     ElementId j2 = *it;
-                    SequenceId i2 = elements_cur_[j2].i;
+                    SequenceId i2 = elements_cur_[j2].sequence_id;
                     ElementPos pos_2 = elements_cur_[j2].pos;
                     if (j2 == j1)
                         continue;
@@ -4223,7 +4223,7 @@ private:
 
                 for (auto it = it_begin; it != it_end; ++it) {
                     ElementId j2 = *it;
-                    SequenceId i2 = elements_cur_[j2].i;
+                    SequenceId i2 = elements_cur_[j2].sequence_id;
                     ElementPos pos_2 = elements_cur_[j2].pos;
                     if (j2 == j1)
                         continue;
@@ -4308,7 +4308,7 @@ private:
 
                 for (auto it = it_begin; it != it_end; ++it) {
                     ElementId j2 = *it;
-                    SequenceId i2 = elements_cur_[j2].i;
+                    SequenceId i2 = elements_cur_[j2].sequence_id;
                     ElementPos pos_2 = elements_cur_[j2].pos;
                     if (j2 == j1)
                         continue;
@@ -4403,7 +4403,7 @@ private:
 
                 for (auto it = it_begin; it != it_end; ++it) {
                     ElementId j2 = *it;
-                    SequenceId i2 = elements_cur_[j2].i;
+                    SequenceId i2 = elements_cur_[j2].sequence_id;
                     ElementPos pos_2 = elements_cur_[j2].pos;
                     if (j2 == j1)
                         continue;
