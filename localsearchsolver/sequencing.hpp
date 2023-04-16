@@ -272,32 +272,6 @@ public:
         SequenceData data;
     };
 
-    struct SubSequence
-    {
-        SubSequence(
-                const Sequence& sequence,
-                ElementPos pos_1,
-                ElementPos pos_2,
-                bool reverse = false):
-            sequence(&sequence),
-            pos_1(pos_1),
-            pos_2(pos_2),
-            reverse(reverse) { }
-
-        SubSequence(
-                ElementId j,
-                Mode mode):
-            j(j),
-            mode(mode) { }
-
-        const Sequence* sequence = nullptr;
-        ElementPos pos_1 = -1;
-        ElementPos pos_2 = -1;
-        bool reverse = false;
-        ElementId j = -1;
-        Mode mode = -1;
-    };
-
     struct Move
     {
         Neighborhoods type;
@@ -937,8 +911,8 @@ public:
 
         std::vector<uint8_t> in_substring(seq_1_size, false);
         for (ElementPos pos = pos_1; pos < pos_2; ++pos) {
-            ElementId j = elements_parent_1[pos].element_id;
-            in_substring[j] = true;
+            ElementId element_id = elements_parent_1[pos].element_id;
+            in_substring[element_id] = true;
         }
 
         std::vector<SequenceElement> elements;
@@ -947,8 +921,8 @@ public:
             if ((ElementPos)elements.size() == pos_1)
                 for (ElementPos p = pos_1; p < pos_2; ++p)
                     elements.push_back(elements_parent_1[p]);
-            ElementId j = elements_parent_2[pos].element_id;
-            if (in_substring[j])
+            ElementId element_id = elements_parent_2[pos].element_id;
+            if (in_substring[element_id])
                 continue;
             elements.push_back(elements_parent_2[pos]);
         }
@@ -999,8 +973,8 @@ public:
         std::uniform_int_distribution<ElementPos> d_point(1, seq_1_size);
         ElementPos pos_0 = d_point(generator);
         for (ElementPos pos = 0; pos < pos_0; ++pos) {
-            ElementId j = elements_parent_1[pos].element_id;
-            positions[j] = pos;
+            ElementId element_id = elements_parent_1[pos].element_id;
+            positions[element_id] = pos;
             elements.push_back(elements_parent_1[pos]);
         }
 
@@ -1020,10 +994,10 @@ public:
                 }
                 break;
             }
-            ElementId j = elements_parent_2[pos].element_id;
-            if (positions[j] != -1)
+            ElementId element_id = elements_parent_2[pos].element_id;
+            if (positions[element_id] != -1)
                 continue;
-            positions[j] = elements.size();
+            positions[element_id] = elements.size();
             elements.push_back(elements_parent_2[pos]);
         }
 
@@ -1070,8 +1044,8 @@ public:
         std::uniform_int_distribution<ElementPos> d_point(1, seq_1_size);
         ElementPos pos_0 = d_point(generator);
         for (ElementPos pos = 0; pos < pos_0; ++pos) {
-            ElementId j = elements_parent_1[pos].element_id;
-            positions[j] = pos;
+            ElementId element_id = elements_parent_1[pos].element_id;
+            positions[element_id] = pos;
             elements.push_back(elements_parent_1[pos]);
         }
 
@@ -1104,10 +1078,10 @@ public:
                 }
                 break;
             }
-            ElementId j = elements_parent_2[pos].element_id;
-            if (positions[j] != -1)
+            ElementId element_id = elements_parent_2[pos].element_id;
+            if (positions[element_id] != -1)
                 continue;
-            positions[j] = elements.size();
+            positions[element_id] = elements.size();
             elements.push_back(elements_parent_2[pos]);
         }
 
@@ -1159,9 +1133,9 @@ public:
             const auto& elements = solution_parent_1.sequences[sequence_id].elements;
             ElementPos seq_size = (ElementPos)elements.size();
             for (ElementPos pos = 0; pos < seq_size; ++pos) {
-                ElementId j = elements[pos].element_id;
-                elts.add(j);
-                sequences[j] = sequence_id;
+                ElementId element_id = elements[pos].element_id;
+                elts.add(element_id);
+                sequences[element_id] = sequence_id;
             }
         }
 
@@ -1188,11 +1162,11 @@ public:
             // Draw seed element.
             std::uniform_int_distribution<ElementPos> d(0, elts.size() - 1);
             ElementPos pos = d(generator);
-            ElementId j = *(elts.begin() + pos);
+            ElementId element_id = *(elts.begin() + pos);
 
             // Remove sequence containing the seed element from the child solution..
             SequencePos number_of_removed_sequences = 1;
-            SequenceId i_j = sequences[j];
+            SequenceId i_j = sequences[element_id];
             for (const auto& se: solution.sequences[i_j].elements)
                 elts.remove(se.element_id);
             solution.sequences[i_j] = empty_sequence(i_j);
@@ -1201,8 +1175,8 @@ public:
             for (ElementPos p = 0;
                     number_of_removed_sequences < number_of_sequences_to_remove; ++p) {
                 ElementId j2 = (p % 2 == 0)?
-                    sorted_successors_[j][p / 2]:
-                    sorted_predecessors_[j][p / 2];
+                    sorted_successors_[element_id][p / 2]:
+                    sorted_predecessors_[element_id][p / 2];
                 SequenceId i_j2 = sequences[j2];
                 // If j2 still belongs to the child solution.
                 if (elts.contains(j2)) {
@@ -1320,9 +1294,9 @@ public:
             const auto& elements = solution_parent_1.sequences[sequence_id].elements;
             ElementPos seq_size = (ElementPos)elements.size();
             for (ElementPos pos = 0; pos < seq_size; ++pos) {
-                ElementId j = elements[pos].element_id;
-                elts.add(j);
-                sequences[j] = sequence_id;
+                ElementId element_id = elements[pos].element_id;
+                elts.add(element_id);
+                sequences[element_id] = sequence_id;
             }
         }
 
@@ -1349,11 +1323,11 @@ public:
             // Draw seed element.
             std::uniform_int_distribution<ElementPos> d(0, elts.size() - 1);
             ElementPos pos = d(generator);
-            ElementId j = *(elts.begin() + pos);
+            ElementId element_id = *(elts.begin() + pos);
 
             // Remove sequence containing the seed element from the child solution..
             SequencePos number_of_removed_sequences = 1;
-            SequenceId i_j = sequences[j];
+            SequenceId i_j = sequences[element_id];
             for (const auto& se: solution.sequences[i_j].elements)
                 elts.remove(se.element_id);
             solution.sequences[i_j] = empty_sequence(i_j);
@@ -1362,8 +1336,8 @@ public:
             for (ElementPos p = 0;
                     number_of_removed_sequences < number_of_sequences_to_remove; ++p) {
                 ElementId j2 = (p % 2 == 0)?
-                    sorted_successors_[j][p / 2]:
-                    sorted_predecessors_[j][p / 2];
+                    sorted_successors_[element_id][p / 2]:
+                    sorted_predecessors_[element_id][p / 2];
                 SequenceId i_j2 = sequences[j2];
                 // If j2 still belongs to the child solution.
                 if (elts.contains(j2)) {
@@ -1489,9 +1463,9 @@ public:
             const auto& elements = solution_1.sequences[sequence_id].elements;
             ElementPos seq_size = elements.size();
             for (ElementPos pos = 0; pos < seq_size - 1; ++pos) {
-                ElementId j = elements[pos].element_id;
+                ElementId element_id = elements[pos].element_id;
                 ElementId j_next = elements[pos + 1].element_id;
-                next_1[j] = j_next;
+                next_1[element_id] = j_next;
             }
         }
 
@@ -1501,9 +1475,9 @@ public:
             const auto& elements = solution_2.sequences[sequence_id].elements;
             ElementPos seq_size = elements.size();
             for (ElementPos pos = 0; pos < seq_size - 1; ++pos) {
-                ElementId j = elements[pos].element_id;
+                ElementId element_id = elements[pos].element_id;
                 ElementId j_next = elements[pos + 1].element_id;
-                if (j_next != next_1[j])
+                if (j_next != next_1[element_id])
                     d++;
             }
         }
@@ -1603,12 +1577,14 @@ public:
             for (SequenceId i = 0; i < number_of_sequences(); ++i)
                 for (SequenceElement se: solution.sequences[i].elements)
                     contains[se.element_id] = 1;
-            for (ElementId j = 0; j < sequencing_scheme_.number_of_elements(); ++j) {
-                if (contains[j])
+            for (ElementId element_id = 0;
+                    element_id < sequencing_scheme_.number_of_elements();
+                    ++element_id) {
+                if (contains[element_id])
                     continue;
                 Perturbation perturbation;
                 perturbation.type = Perturbations::ForceAdd;
-                perturbation.force_add_j = j;
+                perturbation.force_add_j = element_id;
                 perturbation.global_cost = global_cost(solution);
                 perturbations.push_back(perturbation);
             }
@@ -1686,11 +1662,11 @@ public:
                 const auto& elements = solution.sequences[sequence_id].elements;
                 ElementPos seq_size = (ElementPos)elements.size();
                 for (ElementPos pos = 0; pos < seq_size; ++pos) {
-                    ElementId j = elements[pos].element_id;
-                    elts.add(j);
-                    sequences[j] = sequence_id;
-                    modes[j] = elements[pos].mode;
-                    positions[j] = pos;
+                    ElementId element_id = elements[pos].element_id;
+                    elts.add(element_id);
+                    sequences[element_id] = sequence_id;
+                    modes[element_id] = elements[pos].mode;
+                    positions[element_id] = pos;
                 }
             }
 
@@ -1705,24 +1681,24 @@ public:
             case 0: {  // Random.
                 elts.shuffle_in(generator);
                 while (number_of_elements_removed < number_of_elements_to_remove) {
-                    ElementId j = *(elts.begin());
-                    elts.remove(j);
-                    solution_cur_.modified_sequences[sequences[j]] = true;
+                    ElementId element_id = *(elts.begin());
+                    elts.remove(element_id);
+                    solution_cur_.modified_sequences[sequences[element_id]] = true;
                     number_of_elements_removed++;
                 }
                 break;
             } case 1: {  // Nearest.
                 std::uniform_int_distribution<ElementPos> d(0, elts.size() - 1);
                 ElementPos pos = d(generator);
-                ElementId j = *(elts.begin() + pos);
-                elts.remove(j);
-                solution_cur_.modified_sequences[sequences[j]] = true;
+                ElementId element_id = *(elts.begin() + pos);
+                elts.remove(element_id);
+                solution_cur_.modified_sequences[sequences[element_id]] = true;
                 number_of_elements_removed++;
                 for (ElementPos p = 0;
                         number_of_elements_removed < number_of_elements_to_remove; ++p) {
                     ElementId j2 = (p % 2 == 0)?
-                        sorted_successors_[j][p / 2]:
-                        sorted_predecessors_[j][p / 2];
+                        sorted_successors_[element_id][p / 2]:
+                        sorted_predecessors_[element_id][p / 2];
                     if (elts.contains(j2)) {
                         elts.remove(j2);
                         solution_cur_.modified_sequences[sequences[j2]] = true;
@@ -1762,14 +1738,14 @@ public:
                 // Draw seed element.
                 std::uniform_int_distribution<ElementPos> d(0, elts.size() - 1);
                 ElementPos pos = d(generator);
-                ElementId j = *(elts.begin() + pos);
+                ElementId element_id = *(elts.begin() + pos);
                 std::vector<int> ruined_sequences(m, 0);
                 SequencePos number_of_sequences_ruined = 0;
                 for (ElementPos p = 0;
                         number_of_sequences_ruined < number_of_strings_to_remove; ++p) {
                     ElementId j2 = (p % 2 == 0)?
-                        sorted_successors_[j][p / 2]:
-                        sorted_predecessors_[j][p / 2];
+                        sorted_successors_[element_id][p / 2]:
+                        sorted_predecessors_[element_id][p / 2];
                     SequenceId i_j2 = sequences[j2];
                     if (elts.contains(j2) && ruined_sequences[i_j2] == 0) {
                         // Compute the cardinality of the string to remove.
@@ -1872,8 +1848,8 @@ public:
                 SequencePos seq_size = elements.size();
                 Sequence& sequence_cur = solution_cur_.sequences[sequence_id];
                 for (ElementPos pos = 0; pos < seq_size; ++pos) {
-                    ElementId j = elements[pos].element_id;
-                    if (elts.contains(j))
+                    ElementId element_id = elements[pos].element_id;
+                    if (elts.contains(element_id))
                         append(sequence_cur, elements[pos]);
                 }
             }
@@ -1885,7 +1861,7 @@ public:
             switch (x_recreate) {
             case 0: {  // Random.
                 for (auto it = elts.out_begin(); it != elts.out_end(); ++it) {
-                    ElementId j = *it;
+                    ElementId element_id = *it;
                     // Draw sequence.
                     std::uniform_int_distribution<SequenceId> d_i(0, m - 1);
                     SequenceId i = d_i(generator);
@@ -1895,13 +1871,13 @@ public:
                     std::uniform_int_distribution<SequenceId> d_pos(0, seq_size);
                     ElementPos pos = d_pos(generator);
                     // Draw mode.
-                    std::uniform_int_distribution<SequenceId> d_mode(0, number_of_modes(j) - 1);
+                    std::uniform_int_distribution<SequenceId> d_mode(0, number_of_modes(element_id) - 1);
                     Mode mode = d_mode(generator);
                     // Apply move.
                     Move move;
                     move.type = Neighborhoods::Add;
                     move.sequence_id_1 = i;
-                    move.element_id = j;
+                    move.element_id = element_id;
                     move.mode = mode;
                     move.pos_1 = pos;
                     apply_move(solution_cur_, move);
@@ -1910,19 +1886,19 @@ public:
                 break;
             } case 1: {  // Best.
                 for (auto it = elts.out_begin(); it != elts.out_end(); ++it) {
-                    ElementId j = *it;
+                    ElementId element_id = *it;
                     //std::cout << to_string(solution_cur_.global_cost) << std::endl;
                     ElementId j_prec_old = -1;
-                    if (positions[j] > 0) {
-                        const auto& elements = solution.sequences[sequences[j]].elements;
-                        j_prec_old = elements[positions[j] - 1].element_id;
+                    if (positions[element_id] > 0) {
+                        const auto& elements = solution.sequences[sequences[element_id]].elements;
+                        j_prec_old = elements[positions[element_id] - 1].element_id;
                     }
                     auto improving_moves = explore_add(
                             solution_cur_,
-                            j,
-                            sequences[j],
+                            element_id,
+                            sequences[element_id],
                             j_prec_old,
-                            modes[j]);
+                            modes[element_id]);
                     //std::cout << "improving_moves.size() " << improving_moves.size() << std::endl;
                     if (!improving_moves.empty()) {
                         std::shuffle(
@@ -1950,7 +1926,7 @@ public:
             break;
 
         } case Perturbations::ForceAdd: {
-            ElementId j = perturbation.force_add_j;
+            ElementId element_id = perturbation.force_add_j;
             // Draw sequence.
             std::uniform_int_distribution<SequenceId> d_i(0, m - 1);
             SequenceId i = d_i(generator);
@@ -1960,13 +1936,13 @@ public:
             std::uniform_int_distribution<SequenceId> d_pos(0, seq_size);
             ElementPos pos = d_pos(generator);
             // Draw mode.
-            std::uniform_int_distribution<SequenceId> d_mode(0, number_of_modes(j) - 1);
+            std::uniform_int_distribution<SequenceId> d_mode(0, number_of_modes(element_id) - 1);
             Mode mode = d_mode(generator);
             // Apply move.
             Move move;
             move.type = Neighborhoods::Add;
             move.sequence_id_1 = i;
-            move.element_id = j;
+            move.element_id = element_id;
             move.mode = mode;
             move.pos_1 = pos;
             apply_move(solution, move);
@@ -3401,10 +3377,10 @@ private:
             const auto& elements = solution.sequences[sequence_id].elements;
             ElementPos seq_size = elements.size();
             for (ElementPos pos = 0; pos < seq_size; ++pos) {
-                ElementId j = elements[pos].element_id;
-                elements_cur_[j].sequence_id = sequence_id;
-                elements_cur_[j].pos = pos;
-                elements_cur_[j].mode = elements[pos].mode;
+                ElementId element_id = elements[pos].element_id;
+                elements_cur_[element_id].sequence_id = sequence_id;
+                elements_cur_[element_id].pos = pos;
+                elements_cur_[element_id].mode = elements[pos].mode;
             }
         }
         // Update sequence_datas_cur_1_.
@@ -3883,9 +3859,9 @@ private:
             // Loop through all new positions.
             for (ElementPos pos = 0; pos < seq_size; ++pos) {
 
-                ElementId j = sequence.elements[pos].element_id;
+                ElementId element_id = sequence.elements[pos].element_id;
                 if (perturbation.type == Perturbations::ForceAdd
-                        && j == perturbation.force_add_j)
+                        && element_id == perturbation.force_add_j)
                     continue;
 
                 SequenceData sequence_data = sequence_datas_cur_1_[sequence_id][pos];
@@ -4136,7 +4112,7 @@ private:
             SequencePos seq_1_size = sequence_1.elements.size();
 
             for (ElementPos pos_1 = 0; pos_1 < seq_1_size; ++pos_1) {
-                ElementId j = sequence_1.elements[pos_1].element_id;
+                ElementId element_id = sequence_1.elements[pos_1].element_id;
 
                 SequenceData sequence_data_1 = sequence_datas_cur_1_[i1][pos_1];
                 concatenate(
@@ -4158,7 +4134,7 @@ private:
                             global_costs_cur_[i1],
                             global_costs_cur_[i2]);
 
-                    if (inter_shift_1_best_positions_[i2][j].first == -2) {
+                    if (inter_shift_1_best_positions_[i2][element_id].first == -2) {
                         ElementPos pos_2_best = -1;
                         GlobalCost gc_best;
                         for (ElementPos pos_2 = 0; pos_2 <= seq_2_size; ++pos_2) {
@@ -4178,11 +4154,11 @@ private:
                         //std::cout << "pos_2_best " << pos_2_best
                         //    << " gc_best " << to_string(gc_best)
                         //    << std::endl;
-                        inter_shift_1_best_positions_[i2][j] = {pos_2_best, gc_best};
+                        inter_shift_1_best_positions_[i2][element_id] = {pos_2_best, gc_best};
                     }
 
                     GlobalCost gc_tmp = merge(
-                            inter_shift_1_best_positions_[i2][j].second,
+                            inter_shift_1_best_positions_[i2][element_id].second,
                             gc_tmp_1);
                     if (strictly_better(gc_tmp, gc)) {
                         Move move;
@@ -4191,7 +4167,7 @@ private:
                         move.sequence_id_1 = i1;
                         move.sequence_id_2 = i2;
                         move.pos_1 = pos_1;
-                        move.pos_2 = inter_shift_1_best_positions_[i2][j].first;
+                        move.pos_2 = inter_shift_1_best_positions_[i2][element_id].first;
                         move.global_cost = diff(gc_tmp, gc);
                         neighborhood.improving_moves.push_back(move);
                     }
@@ -4531,8 +4507,8 @@ private:
                 // Compute the 3 best position of the elements from the first
                 // sequence into the second sequence.
                 for (ElementPos pos_1 = 0; pos_1 <= seq_1_size - 1; ++pos_1) {
-                    ElementId j = sequence_1.elements[pos_1].element_id;
-                    if (inter_swap_star_best_positions_[i2][j][0] == -2) {
+                    ElementId element_id = sequence_1.elements[pos_1].element_id;
+                    if (inter_swap_star_best_positions_[i2][element_id][0] == -2) {
                         ElementPos pos_best_1 = -1;
                         ElementPos pos_best_2 = -1;
                         ElementPos pos_best_3 = -1;
@@ -4579,7 +4555,7 @@ private:
                         //    << " pos_best_3 " << pos_best_3
                         //    << " gc_best_3 " << to_string(gc_best_3)
                         //    << std::endl;
-                        inter_swap_star_best_positions_[i2][j]
+                        inter_swap_star_best_positions_[i2][element_id]
                             = {pos_best_1, pos_best_2, pos_best_3};
                     }
                 }
@@ -4587,8 +4563,8 @@ private:
                 // Calcul the 3 best position of the elements from the second
                 // sequence into the first sequence.
                 for (ElementPos pos_2 = 0; pos_2 <= seq_2_size - 1; ++pos_2) {
-                    ElementId j = sequence_2.elements[pos_2].element_id;
-                    if (inter_swap_star_best_positions_[i1][j][0] == -2) {
+                    ElementId element_id = sequence_2.elements[pos_2].element_id;
+                    if (inter_swap_star_best_positions_[i1][element_id][0] == -2) {
                         ElementPos pos_best_1 = -1;
                         ElementPos pos_best_2 = -1;
                         ElementPos pos_best_3 = -1;
@@ -4635,7 +4611,7 @@ private:
                         //    << " pos_best_3 " << pos_best_3
                         //    << " gc_best_3 " << to_string(gc_best_3)
                         //    << std::endl;
-                        inter_swap_star_best_positions_[i1][j]
+                        inter_swap_star_best_positions_[i1][element_id]
                             = {pos_best_1, pos_best_2, pos_best_3};
                     }
                 }
@@ -4825,7 +4801,7 @@ private:
                 gc = global_costs_cur_[sequence_id];
 
             for (ElementPos block_pos = 0; block_pos <= seq_size - 1; ++block_pos) {
-                ElementId j = sequence.elements[block_pos].element_id;
+                ElementId element_id = sequence.elements[block_pos].element_id;
                 // Loop through all new positions.
                 ElementPos pos_min = std::max(
                         (ElementPos)0,
@@ -4834,7 +4810,7 @@ private:
                         seq_size - 1,
                         block_pos + parameters_.shift_maximum_distance);
                 for (ElementPos pos_new = pos_min; pos_new <= pos_max; ++pos_new) {
-                    for (Mode mode = 0; mode < number_of_modes(j); ++mode) {
+                    for (Mode mode = 0; mode < number_of_modes(element_id); ++mode) {
 
                         GlobalCost* gcm = (parameters_.linking_constraints && m > 1)?
                             &partial_global_costs_cur_1_[sequence_id]: nullptr;
@@ -4843,7 +4819,7 @@ private:
                             SequenceData sequence_data = sequence_datas_cur_1_[sequence_id][pos_new];
                             bool ok = append(
                                     sequence_data, (pos_new == 0),
-                                    {j, mode},
+                                    {element_id, mode},
                                     gc, gcm);
                             if (!ok)
                                 continue;
@@ -4874,7 +4850,7 @@ private:
                                 continue;
                             ok = append(
                                     sequence_data, false,
-                                    {j, mode},
+                                    {element_id, mode},
                                     gc, gcm);
                             if (!ok)
                                 continue;
