@@ -60,8 +60,8 @@ public:
 
     struct SequenceData
     {
-        LocationId j_first = -1;
-        LocationId j_last = -1;
+        sequencing::ElementId element_id_first = -1;
+        sequencing::ElementId element_id_last = -1;
         Demand demand = 0;
 
         Time duration = 0;
@@ -69,7 +69,7 @@ public:
         Time latest_start = 0;
         Time reversed_time = 0;
 
-        Time total_travel_time = 0;  // Without depot -> j_first.
+        Time total_travel_time = 0;  // Without depot -> element_id_first.
     };
 
     SequencingScheme(const Instance& instance): instance_(instance) { }
@@ -97,7 +97,7 @@ public:
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
-        if (sequence_data.j_first == -1)
+        if (sequence_data.element_id_first == -1)
             return {0, 0, 0};
         SequenceData sd = sequence_data_init(-1);
         concatenate(sd, sequence_data);
@@ -124,24 +124,24 @@ public:
             sequence_data.reversed_time,
             std::max((Demand)0, sequence_data.demand - instance_.capacity()),
             sequence_data.total_travel_time
-                + instance_.travel_time(0, sequence_data.j_first + 1),
+                + instance_.travel_time(0, sequence_data.element_id_first + 1),
         };
     }
 
     inline SequenceData sequence_data_init(
-            sequencing::ElementId j) const
+            sequencing::ElementId element_id) const
     {
         SequenceData sequence_data;
-        // Uppdate j_first.
-        sequence_data.j_first = j;
+        // Uppdate element_id_first.
+        sequence_data.element_id_first = element_id;
         // Update time windows.
-        sequence_data.duration = instance_.location(j + 1).service_time;
-        sequence_data.earliest_start = instance_.location(j + 1).release_date;
-        sequence_data.latest_start = instance_.location(j + 1).deadline;
+        sequence_data.duration = instance_.location(element_id + 1).service_time;
+        sequence_data.earliest_start = instance_.location(element_id + 1).release_date;
+        sequence_data.latest_start = instance_.location(element_id + 1).deadline;
         // Update demand.
-        sequence_data.demand += instance_.location(j + 1).demand;
-        // Update j_last.
-        sequence_data.j_last = j;
+        sequence_data.demand += instance_.location(element_id + 1).demand;
+        // Update element_id_last.
+        sequence_data.element_id_last = element_id;
         return sequence_data;
     }
 
@@ -149,7 +149,9 @@ public:
             SequenceData& sequence_data,
             const SequenceData& sequence_data_2) const
     {
-        Time tij = instance_.travel_time(sequence_data.j_last + 1, sequence_data_2.j_first + 1);
+        Time tij = instance_.travel_time(
+                sequence_data.element_id_last + 1,
+                sequence_data_2.element_id_first + 1);
         // Update time windows.
         Time delta = sequence_data.duration - sequence_data.reversed_time + tij;
         Time delta_wt = std::max(sequence_data_2.earliest_start - delta - sequence_data.latest_start, (Time)0);
@@ -166,8 +168,8 @@ public:
         sequence_data.total_travel_time += tij + sequence_data_2.total_travel_time;
         // Update demand.
         sequence_data.demand += sequence_data_2.demand;
-        // Update j_last.
-        sequence_data.j_last = sequence_data_2.j_last;
+        // Update element_id_last.
+        sequence_data.element_id_last = sequence_data_2.element_id_last;
         return true;
     }
 

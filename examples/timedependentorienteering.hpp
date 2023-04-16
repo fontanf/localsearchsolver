@@ -51,7 +51,7 @@ public:
 
     struct SequenceData
     {
-        LocationId j_last = -1;
+        sequencing::ElementId element_id_last = -1;
         Time time_cur = 0;
         Time time_full = 0;
         Profit profit = 0;
@@ -81,18 +81,22 @@ public:
 
     inline void append(
             SequenceData& sequence_data,
-            sequencing::ElementId j) const
+            sequencing::ElementId element_id) const
     {
         // Update time_cur.
         sequence_data.time_cur = instance_.arrival_time(
-                sequence_data.j_last + 1, j + 1, sequence_data.time_cur);
+                sequence_data.element_id_last + 1,
+                element_id + 1,
+                sequence_data.time_cur);
         // Update profit.
-        sequence_data.profit += instance_.location(j + 1).profit;
+        sequence_data.profit += instance_.location(element_id + 1).profit;
         // Update time_full.
-        LocationId jn = instance_.number_of_locations() - 1;
-        sequence_data.time_full = instance_.arrival_time(j + 1, jn, sequence_data.time_cur);
+        sequence_data.time_full = instance_.arrival_time(
+                element_id + 1,
+                instance_.number_of_locations() - 1,
+                sequence_data.time_cur);
         // Update j_last.
-        sequence_data.j_last = j;
+        sequence_data.element_id_last = element_id;
     }
 
 private:

@@ -144,9 +144,9 @@ public:
     {
         Solution solution = empty_solution();
         std::shuffle(items_.begin(), items_.end(), generator);
-        for (ItemId j: items_)
-            if (cost_add(solution, j) < global_cost(solution))
-                add(solution, j);
+        for (ItemId item_id: items_)
+            if (cost_add(solution, item_id) < global_cost(solution))
+                add(solution, item_id);
         return solution;
     }
 
@@ -184,11 +184,11 @@ public:
         // has been forced into the solution, we also need to forbid to add a
         // neighbor of tabu.j.
         std::fill(tabu_.begin(), tabu_.end(), 0);
-        if (tabu.j != -1) {
-            tabu_[tabu.j] = 1;
-            if (contains(solution, tabu.j))
-                for (ItemId j_neighbor: instance_.item(tabu.j).neighbors)
-                    tabu_[j_neighbor] = 1;
+        if (tabu.item_id != -1) {
+            tabu_[tabu.item_id] = 1;
+            if (contains(solution, tabu.item_id))
+                for (ItemId item_id_neighbor: instance_.item(tabu.item_id).neighbors)
+                    tabu_[item_id_neighbor] = 1;
         }
 
         Counter it = 0;
@@ -208,28 +208,28 @@ public:
                 switch (neighborhood) {
                 case 0: { // Toggle neighborhood.
                     std::shuffle(items_.begin(), items_.end(), generator);
-                    ItemId j_best = -1;
+                    ItemId item_id_best = -1;
                     GlobalCost c_best = global_cost(solution);
-                    for (ItemId j: items_) {
-                        if (tabu_[j] == 1)
+                    for (ItemId item_id: items_) {
+                        if (tabu_[item_id] == 1)
                             continue;
-                        GlobalCost c = (contains(solution, j))?
-                            cost_remove(solution, j):
-                            cost_add(solution, j);
+                        GlobalCost c = (contains(solution, item_id))?
+                            cost_remove(solution, item_id):
+                            cost_add(solution, item_id);
                         if (c >= c_best)
                             continue;
-                        if (j_best != -1 && !dominates(c, c_best))
+                        if (item_id_best != -1 && !dominates(c, c_best))
                             continue;
-                        j_best = j;
+                        item_id_best = item_id;
                         c_best = c;
                     }
-                    if (j_best != -1) {
+                    if (item_id_best != -1) {
                         improved = true;
                         // Apply perturbation.
-                        if (contains(solution, j_best)) {
-                            remove(solution, j_best);
+                        if (contains(solution, item_id_best)) {
+                            remove(solution, item_id_best);
                         } else {
-                            add(solution, j_best);
+                            add(solution, item_id_best);
                         }
                         toggle_number_of_sucesses_++;
                     }
@@ -239,43 +239,47 @@ public:
                     std::shuffle(items_.begin(), items_.end(), generator);
                     items_in_.clear();
                     items_out_.clear();
-                    for (ItemId j: items_) {
-                        if (contains(solution, j)) {
-                            items_in_.push_back(j);
+                    for (ItemId item_id: items_) {
+                        if (contains(solution, item_id)) {
+                            items_in_.push_back(item_id);
                         } else {
-                            items_out_.push_back(j);
+                            items_out_.push_back(item_id);
                         }
                     }
 
-                    ItemId j_in_best = -1;
-                    ItemId j_out_best = -1;
+                    ItemId item_id_in_best = -1;
+                    ItemId item_id_out_best = -1;
                     GlobalCost c_best = global_cost(solution);
-                    for (ItemId j_in: items_in_) {
-                        if (tabu_[j_in] == 1)
+                    for (ItemId item_id_in: items_in_) {
+                        if (tabu_[item_id_in] == 1)
                             continue;
                         neighbors_.clear();
-                        for (ItemId j_neighbor: instance_.item(j_in).neighbors)
-                            neighbors_.add(j_neighbor);
-                        for (ItemId j_out: items_out_) {
-                            if (tabu_[j_out] == 1)
+                        for (ItemId item_id_neighbor: instance_.item(item_id_in).neighbors)
+                            neighbors_.add(item_id_neighbor);
+                        for (ItemId item_id_out: items_out_) {
+                            if (tabu_[item_id_out] == 1)
                                 continue;
-                            if (neighbors_.contains(j_out))
+                            if (neighbors_.contains(item_id_out))
                                 continue;
-                            GlobalCost c = cost_swap(solution, j_in, j_out, c_best);
+                            GlobalCost c = cost_swap(
+                                    solution,
+                                    item_id_in,
+                                    item_id_out,
+                                    c_best);
                             if (c >= c_best)
                                 continue;
-                            if (j_in_best != -1 && !dominates(c, c_best))
+                            if (item_id_in_best != -1 && !dominates(c, c_best))
                                 continue;
-                            j_in_best = j_in;
-                            j_out_best = j_out;
+                            item_id_in_best = item_id_in;
+                            item_id_out_best = item_id_out;
                             c_best = c;
                         }
                     }
-                    if (j_in_best != -1) {
+                    if (item_id_in_best != -1) {
                         improved = true;
                         // Apply perturbation.
-                        remove(solution, j_in_best);
-                        add(solution, j_out_best);
+                        remove(solution, item_id_in_best);
+                        add(solution, item_id_out_best);
                         swap_number_of_sucesses_++;
                     }
                     swap_number_of_explorations_++;
@@ -284,61 +288,61 @@ public:
                     std::shuffle(items_.begin(), items_.end(), generator);
                     // Get items inside the knapsack.
                     items_in_.clear();
-                    for (ItemId j: items_)
-                        if (contains(solution, j))
-                            items_in_.push_back(j);
+                    for (ItemId item_id: items_)
+                        if (contains(solution, item_id))
+                            items_in_.push_back(item_id);
 
-                    ItemId j_in_best = -1;
-                    ItemId j_out_1_best = -1;
-                    ItemId j_out_2_best = -1;
+                    ItemId item_id_in_best = -1;
+                    ItemId item_id_out_1_best = -1;
+                    ItemId item_id_out_2_best = -1;
                     GlobalCost c_best = global_cost(solution);
-                    for (ItemId j_in: items_in_) {
-                        if (tabu_[j_in] == 1)
+                    for (ItemId item_id_in: items_in_) {
+                        if (tabu_[item_id_in] == 1)
                             continue;
                         // Update free_items_
                         free_items_.clear();
-                        for (ItemId j_neighbor: instance_.item(j_in).neighbors)
-                            if (tabu_[j_neighbor] == 0
-                                    && solution.items[j_neighbor].neighbor_profit
-                                    == instance_.item(j_in).profit)
-                                free_items_.add(j_neighbor);
+                        for (ItemId item_id_neighbor: instance_.item(item_id_in).neighbors)
+                            if (tabu_[item_id_neighbor] == 0
+                                    && solution.items[item_id_neighbor].neighbor_profit
+                                    == instance_.item(item_id_in).profit)
+                                free_items_.add(item_id_neighbor);
                         if (free_items_.size() <= 2)
                             continue;
                         free_items_.shuffle_in(generator);
-                        remove(solution, j_in);
-                        for (ItemId j_out_1: free_items_) {
+                        remove(solution, item_id_in);
+                        for (ItemId item_id_out_1: free_items_) {
                             free_items_2_.clear();
                             for (ItemId j: free_items_)
                                 free_items_2_.add(j);
-                            free_items_2_.remove(j_out_1);
-                            for (ItemId j_neighbor: instance_.item(j_out_1).neighbors)
-                                if (free_items_2_.contains(j_neighbor))
-                                    free_items_2_.remove(j_neighbor);
+                            free_items_2_.remove(item_id_out_1);
+                            for (ItemId item_id_neighbor: instance_.item(item_id_out_1).neighbors)
+                                if (free_items_2_.contains(item_id_neighbor))
+                                    free_items_2_.remove(item_id_neighbor);
                             if (free_items_2_.empty())
                                 continue;
                             free_items_2_.shuffle_in(generator);
-                            add(solution, j_out_1);
-                            for (ItemId j_out_2: free_items_2_) {
-                                GlobalCost c = cost_add(solution, j_out_2);
+                            add(solution, item_id_out_1);
+                            for (ItemId item_id_out_2: free_items_2_) {
+                                GlobalCost c = cost_add(solution, item_id_out_2);
                                 if (c >= c_best)
                                     continue;
-                                if (j_in_best != -1 && !dominates(c, c_best))
+                                if (item_id_in_best != -1 && !dominates(c, c_best))
                                     continue;
-                                j_in_best = j_in;
-                                j_out_1_best = j_out_1;
-                                j_out_2_best = j_out_2;
+                                item_id_in_best = item_id_in;
+                                item_id_out_1_best = item_id_out_1;
+                                item_id_out_2_best = item_id_out_2;
                                 c_best = c;
                             }
-                            remove(solution, j_out_1);
+                            remove(solution, item_id_out_1);
                         }
-                        add(solution, j_in);
+                        add(solution, item_id_in);
                     }
-                    if (j_in_best != -1) {
+                    if (item_id_in_best != -1) {
                         improved = true;
                         // Apply perturbation.
-                        remove(solution, j_in_best);
-                        add(solution, j_out_1_best);
-                        add(solution, j_out_2_best);
+                        remove(solution, item_id_in_best);
+                        add(solution, item_id_out_1_best);
+                        add(solution, item_id_out_2_best);
                         swap_2_1_number_of_sucesses_++;
                     }
                     swap_2_1_number_of_explorations_++;
@@ -365,22 +369,24 @@ public:
     {
         Solution solution = empty_solution();
         std::vector<ItemId> items;
-        for (ItemId j = 0; j < instance_.number_of_items(); ++j) {
-            if (contains(solution_parent_1, j)
-                    && contains(solution_parent_2, j)) {
+        for (ItemId item_id = 0;
+                item_id < instance_.number_of_items();
+                ++item_id) {
+            if (contains(solution_parent_1, item_id)
+                    && contains(solution_parent_2, item_id)) {
                 // Add items which are in both parents.
-                add(solution, j);
-            } else if (contains(solution_parent_1, j)
-                    || contains(solution_parent_2, j)) {
+                add(solution, item_id);
+            } else if (contains(solution_parent_1, item_id)
+                    || contains(solution_parent_2, item_id)) {
                 // Store items which are in one parent.
-                items.push_back(j);
+                items.push_back(item_id);
             }
         }
         // Add some of the items which are in one parent.
         std::shuffle(items.begin(), items.end(), generator);
-        for (ItemId j: items)
-            if (cost_add(solution, j) < global_cost(solution))
-                add(solution, j);
+        for (ItemId item_id: items)
+            if (cost_add(solution, item_id) < global_cost(solution))
+                add(solution, item_id);
         return solution;
     }
 
@@ -389,9 +395,12 @@ public:
             const Solution& solution_2) const
     {
         ItemId d = 0;
-        for (ItemId j = 0; j < instance_.number_of_items(); ++j)
-            if (contains(solution_1, j) != contains(solution_2, j))
+        for (ItemId item_id = 0;
+                item_id < instance_.number_of_items();
+                ++item_id) {
+            if (contains(solution_1, item_id) != contains(solution_2, item_id))
                 d++;
+        }
         return d;
     }
 
@@ -401,9 +410,9 @@ public:
 
     struct Perturbation
     {
-        Perturbation(): j(-1), global_cost(worst<GlobalCost>()) { }
+        Perturbation(): item_id(-1), global_cost(worst<GlobalCost>()) { }
 
-        ItemId j;
+        ItemId item_id;
         bool add;
         GlobalCost global_cost;
     };
@@ -413,14 +422,16 @@ public:
             std::mt19937_64&)
     {
         std::vector<Perturbation> perturbations;
-        for (ItemId j = 0; j < instance_.number_of_items(); ++j) {
+        for (ItemId item_id = 0;
+                item_id < instance_.number_of_items();
+                ++item_id) {
             Perturbation perturbation;
-            perturbation.j = j;
-            if (contains(solution, j)) {
+            perturbation.item_id = item_id;
+            if (contains(solution, item_id)) {
                 perturbation.global_cost = global_cost(solution);
                 perturbation.add = false;
             } else {
-                perturbation.global_cost = cost_add(solution, j);
+                perturbation.global_cost = cost_add(solution, item_id);
                 overweight(perturbation.global_cost) = overweight(solution);
                 perturbation.add = true;
             }
@@ -435,9 +446,9 @@ public:
             std::mt19937_64&) const
     {
         if (perturbation.add) {
-            add(solution, perturbation.j);
+            add(solution, perturbation.item_id);
         } else {
-            remove(solution, perturbation.j);
+            remove(solution, perturbation.item_id);
         }
     }
 
@@ -470,18 +481,24 @@ public:
     CompactSolution solution2compact(const Solution& solution)
     {
         std::vector<bool> items(instance_.number_of_items(), false);
-        for (ItemId j = 0; j < instance_.number_of_items(); ++j)
-            if (solution.items[j].in)
-                items[j] = true;
+        for (ItemId item_id = 0;
+                item_id < instance_.number_of_items();
+                ++item_id) {
+            if (solution.items[item_id].in)
+                items[item_id] = true;
+        }
         return items;
     }
 
     Solution compact2solution(const CompactSolution& compact_solution)
     {
         auto solution = empty_solution();
-        for (ItemId j = 0; j < instance_.number_of_items(); ++j)
-            if (compact_solution[j])
-                add(solution, j);
+        for (ItemId item_id = 0;
+                item_id < instance_.number_of_items();
+                ++item_id) {
+            if (compact_solution[item_id])
+                add(solution, item_id);
+        }
         return solution;
     }
 
@@ -496,13 +513,14 @@ public:
                 const Perturbation& perturbation_1,
                 const Perturbation& perturbation_2) const
         {
-            return perturbation_1.j == perturbation_2.j && perturbation_1.add == perturbation_2.add;
+            return perturbation_1.item_id == perturbation_2.item_id
+                && perturbation_1.add == perturbation_2.add;
         }
 
         inline std::size_t operator()(
                 const Perturbation& perturbation) const
         {
-            size_t hash = hasher(perturbation.j);
+            size_t hash = hasher(perturbation.item_id);
             optimizationtools::hash_combine(hash, hasher_2(perturbation.add));
             return hash;
         }
@@ -521,9 +539,12 @@ public:
     {
         if (verbosity_level >= 1) {
             ItemId number_of_items = 0;
-            for (ItemId j = 0; j < instance_.number_of_items(); ++j)
-                if (contains(solution, j))
+            for (ItemId item_id = 0;
+                    item_id < instance_.number_of_items();
+                    ++item_id) {
+                if (contains(solution, item_id))
                     number_of_items++;
+            }
             os << "Profit:            " << solution.profit << std::endl;
             os << "Weight:            " << solution.weight << " / " << instance_.capacity() << std::endl;
             os << "Number of items:   " << number_of_items << " / " << instance_.number_of_items() << std::endl;
@@ -542,14 +563,17 @@ public:
                 << std::setw(12) << "----------"
                 << std::setw(12) << "-----------"
                 << std::endl;
-            for (ItemId j = 0; j < instance_.number_of_items(); ++j) {
-                if (!contains(solution, j))
+            for (ItemId item_id = 0;
+                    item_id < instance_.number_of_items();
+                    ++item_id) {
+                if (!contains(solution, item_id))
                     continue;
-                os << std::setw(12) << j
-                    << std::setw(12) << instance_.item(j).profit
-                    << std::setw(12) << instance_.item(j).weight
-                    << std::setw(12) << (double)instance_.item(j).profit / instance_.item(j).weight
-                    << std::setw(12) << instance_.item(j).neighbors.size()
+                os
+                    << std::setw(12) << item_id
+                    << std::setw(12) << instance_.item(item_id).profit
+                    << std::setw(12) << instance_.item(item_id).weight
+                    << std::setw(12) << (double)instance_.item(item_id).profit / instance_.item(item_id).weight
+                    << std::setw(12) << instance_.item(item_id).neighbors.size()
                     << std::endl;
             }
         }
@@ -626,9 +650,11 @@ private:
      * Manipulate solutions.
      */
 
-    inline bool contains(const Solution& solution, ItemId j) const
+    inline bool contains(
+            const Solution& solution,
+            ItemId item_id) const
     {
-        return solution.items[j].in;
+        return solution.items[item_id].in;
     }
 
     inline Weight overweight(const Solution& solution) const
@@ -636,31 +662,33 @@ private:
         return std::max((Weight)0, solution.weight - instance_.capacity());
     }
 
-    inline void add(Solution& solution, ItemId j) const
+    inline void add(Solution& solution, ItemId item_id) const
     {
-        solution.items[j].in = true;
-        Weight w = instance_.item(j).weight;
-        Profit p = instance_.item(j).profit;
+        solution.items[item_id].in = true;
+        Weight w = instance_.item(item_id).weight;
+        Profit p = instance_.item(item_id).profit;
         solution.weight += w;
         solution.profit += p;
-        for (ItemId j_neighbor: instance_.item(j).neighbors) {
-            if (contains(solution, j_neighbor))
-                remove(solution, j_neighbor);
-            solution.items[j_neighbor].neighbor_weight += w;
-            solution.items[j_neighbor].neighbor_profit += p;
+        for (ItemId item_id_neighbor: instance_.item(item_id).neighbors) {
+            if (contains(solution, item_id_neighbor))
+                remove(solution, item_id_neighbor);
+            solution.items[item_id_neighbor].neighbor_weight += w;
+            solution.items[item_id_neighbor].neighbor_profit += p;
         }
     }
 
-    inline void remove(Solution& solution, ItemId j) const
+    inline void remove(
+            Solution& solution,
+            ItemId item_id) const
     {
-        solution.items[j].in = false;
-        Weight w = instance_.item(j).weight;
-        Profit p = instance_.item(j).profit;
+        solution.items[item_id].in = false;
+        Weight w = instance_.item(item_id).weight;
+        Profit p = instance_.item(item_id).profit;
         solution.weight -= w;
         solution.profit -= p;
-        for (ItemId j_neighbor: instance_.item(j).neighbors) {
-            solution.items[j_neighbor].neighbor_weight -= w;
-            solution.items[j_neighbor].neighbor_profit -= p;
+        for (ItemId item_id_neighbor: instance_.item(item_id).neighbors) {
+            solution.items[item_id_neighbor].neighbor_weight -= w;
+            solution.items[item_id_neighbor].neighbor_profit -= p;
         }
     }
 
@@ -668,38 +696,42 @@ private:
      * Evaluate moves.
      */
 
-    inline GlobalCost cost_remove(const Solution& solution, ItemId j) const
+    inline GlobalCost cost_remove(
+            const Solution& solution,
+            ItemId item_id) const
     {
-        Weight w = solution.weight - instance_.item(j).weight;
-        Profit p = solution.profit - instance_.item(j).profit;
+        Weight w = solution.weight - instance_.item(item_id).weight;
+        Profit p = solution.profit - instance_.item(item_id).profit;
         return {std::max((Weight)0, w - instance_.capacity()), -p};
     }
 
-    inline GlobalCost cost_add(const Solution& solution, ItemId j) const
+    inline GlobalCost cost_add(
+            const Solution& solution,
+            ItemId item_id) const
     {
         Weight w = solution.weight
-            + instance_.item(j).weight
-            - solution.items[j].neighbor_weight;
+            + instance_.item(item_id).weight
+            - solution.items[item_id].neighbor_weight;
         Profit p = solution.profit
-            + instance_.item(j).profit
-            - solution.items[j].neighbor_profit;
+            + instance_.item(item_id).profit
+            - solution.items[item_id].neighbor_profit;
         return {std::max((Weight)0, w - instance_.capacity()), -p};
     }
 
     inline GlobalCost cost_swap(
             const Solution& solution,
-            ItemId j_in,
-            ItemId j_out,
+            ItemId item_id_in,
+            ItemId item_id_out,
             GlobalCost) const
     {
         Weight w = solution.weight
-                    - instance_.item(j_in).weight
-                    + instance_.item(j_out).weight
-                    - solution.items[j_out].neighbor_weight;
+                    - instance_.item(item_id_in).weight
+                    + instance_.item(item_id_out).weight
+                    - solution.items[item_id_out].neighbor_weight;
         Profit p = solution.profit
-                    - instance_.item(j_in).profit
-                    + instance_.item(j_out).profit
-                    - solution.items[j_out].neighbor_profit;
+                    - instance_.item(item_id_in).profit
+                    + instance_.item(item_id_out).profit
+                    - solution.items[item_id_out].neighbor_profit;
         return {std::max((Weight)0, w - instance_.capacity()), -p};
     }
 

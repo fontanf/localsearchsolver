@@ -61,10 +61,10 @@ public:
 
     struct SequenceData
     {
-        LocationId j_first = -1;
-        LocationId j_last = -1;
+        sequencing::ElementId element_id_first = -1;
+        sequencing::ElementId element_id_last = -1;
         Demand demand = 0;
-        Distance total_distance = 0;  // Without depot -> j_first.
+        Distance total_distance = 0;  // Without depot -> element_id_first.
     };
 
     SequencingScheme(const Instance& instance): instance_(instance) { }
@@ -88,13 +88,13 @@ public:
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
     {
-        if (sequence_data.j_first == -1)
+        if (sequence_data.element_id_first == -1)
             return {0, 0};
         return {
             std::max((Demand)0, sequence_data.demand - instance_.capacity()),
-            instance_.distance(0, sequence_data.j_first + 1)
+            instance_.distance(0, sequence_data.element_id_first + 1)
                 + sequence_data.total_distance
-                + instance_.distance(sequence_data.j_last + 1, 0),
+                + instance_.distance(sequence_data.element_id_last + 1, 0),
         };
     }
 
@@ -111,20 +111,20 @@ public:
         return {
             std::max((Demand)0, sequence_data.demand - instance_.capacity()),
             sequence_data.total_distance
-                + instance_.distance(0, sequence_data.j_first + 1),
+                + instance_.distance(0, sequence_data.element_id_first + 1),
         };
     }
 
     inline SequenceData sequence_data_init(
-            sequencing::ElementId j) const
+            sequencing::ElementId element_id) const
     {
         SequenceData sequence_data;
-        // Uppdate j_first.
-        sequence_data.j_first = j;
+        // Uppdate element_id_first.
+        sequence_data.element_id_first = element_id;
         // Update demand.
-        sequence_data.demand = instance_.demand(j + 1);
-        // Update j_last.
-        sequence_data.j_last = j;
+        sequence_data.demand = instance_.demand(element_id + 1);
+        // Update element_id_last.
+        sequence_data.element_id_last = element_id;
         return sequence_data;
     }
 
@@ -135,13 +135,13 @@ public:
         // Update total_completion_time.
         sequence_data.total_distance
             += instance_.distance(
-                    sequence_data.j_last + 1,
-                    sequence_data_2.j_first + 1)
+                    sequence_data.element_id_last + 1,
+                    sequence_data_2.element_id_first + 1)
             + sequence_data_2.total_distance;
         // Update demand.
         sequence_data.demand += sequence_data_2.demand;
-        // Update j_last.
-        sequence_data.j_last = sequence_data_2.j_last;
+        // Update element_id_last.
+        sequence_data.element_id_last = sequence_data_2.element_id_last;
         return true;
     }
 

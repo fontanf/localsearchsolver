@@ -52,10 +52,10 @@ public:
     struct SequenceData
     {
         LocationPos number_of_locations = 0;
-        LocationId j_first = -1;
-        LocationId j_last = -1;
-        Time time = 0;  // Without depot -> j_first.
-        Time total_completion_time = 0;  // Without depot -> j_first.
+        sequencing::ElementId element_id_first = -1;
+        sequencing::ElementId element_id_last = -1;
+        Time time = 0;  // Without depot -> element_id_first.
+        Time total_completion_time = 0;  // Without depot -> element_id_first.
     };
 
     SequencingScheme(const Instance& instance): instance_(instance) { }
@@ -71,7 +71,7 @@ public:
         return {
             sequence_data.total_completion_time
                 + sequence_data.number_of_locations
-                * instance_.travel_time(0, sequence_data.j_first + 1),
+                * instance_.travel_time(0, sequence_data.element_id_first + 1),
         };
     }
 
@@ -85,17 +85,17 @@ public:
         return {
             sequence_data.total_completion_time
                 + sequence_data.number_of_locations
-                * instance_.travel_time(0, sequence_data.j_first + 1),
+                * instance_.travel_time(0, sequence_data.element_id_first + 1),
         };
     }
 
-    inline SequenceData sequence_data_init(LocationId j) const
+    inline SequenceData sequence_data_init(sequencing::ElementId element_id) const
     {
         SequenceData sequence_data;
-        // Uppdate j_first.
-        sequence_data.j_first = j;
-        // Update j_last.
-        sequence_data.j_last = j;
+        // Uppdate element_id_first.
+        sequence_data.element_id_first = element_id;
+        // Update element_id_last.
+        sequence_data.element_id_last = element_id;
         // Update number_of_locations.
         sequence_data.number_of_locations = 1;
         return sequence_data;
@@ -105,7 +105,7 @@ public:
             SequenceData& sequence_data,
             const SequenceData& sequence_data_2) const
     {
-        Time sij = instance_.travel_time(sequence_data.j_last + 1, sequence_data_2.j_first + 1);
+        Time sij = instance_.travel_time(sequence_data.element_id_last + 1, sequence_data_2.element_id_first + 1);
         // Update total_completion_time.
         sequence_data.total_completion_time
             += (sequence_data_2.total_completion_time
@@ -113,8 +113,8 @@ public:
                     * (sequence_data.time + sij));
         // Update time.
         sequence_data.time += (sij + sequence_data_2.time);
-        // Update j_last.
-        sequence_data.j_last = sequence_data_2.j_last;
+        // Update element_id_last.
+        sequence_data.element_id_last = sequence_data_2.element_id_last;
         // Update number_of_locations.
         sequence_data.number_of_locations += sequence_data_2.number_of_locations;
         return true;

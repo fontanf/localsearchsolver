@@ -51,7 +51,7 @@ public:
 
     struct SequenceData
     {
-        JobId j_last = -1;
+        sequencing::ElementId element_id_last = -1;
         Time time = 0;
         Time reversed_time_curr = 0;
         Time reversed_time_full = 0;
@@ -90,27 +90,29 @@ public:
 
     inline void append(
             SequenceData& sequence_data,
-            sequencing::ElementId j) const
+            sequencing::ElementId element_id) const
     {
         // Update time.
-        Time rj = instance_.job(j + 1).release_date;
+        Time rj = instance_.job(element_id + 1).release_date;
         if (sequence_data.time < rj)
             sequence_data.time = rj;
-        sequence_data.time += instance_.setup_time(sequence_data.j_last + 1, j + 1);
-        sequence_data.time += instance_.job(j + 1).processing_time;
+        sequence_data.time += instance_.setup_time(
+                sequence_data.element_id_last + 1,
+                element_id + 1);
+        sequence_data.time += instance_.job(element_id + 1).processing_time;
         // Update reversed_time.
-        Time dj = instance_.job(j + 1).deadline;
+        Time dj = instance_.job(element_id + 1).deadline;
         if (sequence_data.time > dj) {
             sequence_data.reversed_time_curr += (sequence_data.time - dj);
             sequence_data.time = dj;
         }
         // Update total weighted tardiness.
-        if (sequence_data.time > instance_.job(j + 1).due_date)
+        if (sequence_data.time > instance_.job(element_id + 1).due_date)
             sequence_data.total_weighted_tardiness_curr
-                += instance_.job(j + 1).weight
-                * (sequence_data.time - instance_.job(j + 1).due_date);
+                += instance_.job(element_id + 1).weight
+                * (sequence_data.time - instance_.job(element_id + 1).due_date);
         // Update profit.
-        sequence_data.profit += instance_.job(j + 1).profit;
+        sequence_data.profit += instance_.job(element_id + 1).profit;
         // Update reversed_time_full and total_weighted_tardiness_full.
         sequence_data.reversed_time_full = sequence_data.reversed_time_curr;
         sequence_data.total_weighted_tardiness_full = sequence_data.total_weighted_tardiness_curr;
@@ -119,7 +121,7 @@ public:
         Time rjn = instance_.job(jn).release_date;
         if (time_full < rjn)
             time_full = rjn;
-        time_full += instance_.setup_time(j + 1, jn);
+        time_full += instance_.setup_time(element_id + 1, jn);
         time_full += instance_.job(jn).processing_time;
         Time djn = instance_.job(jn).deadline;
         if (time_full > djn) {
@@ -130,8 +132,8 @@ public:
             sequence_data.total_weighted_tardiness_full
                 += instance_.job(jn).weight
                 * (time_full - instance_.job(jn).due_date);
-        // Update j_last.
-        sequence_data.j_last = j;
+        // Update element_id_last.
+        sequence_data.element_id_last = element_id;
     }
 
 private:

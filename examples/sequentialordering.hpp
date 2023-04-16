@@ -48,7 +48,7 @@ public:
 
     struct SequenceData
     {
-        VertexId j_last = -1;
+        sequencing::ElementId element_id_last = -1;
         Distance length = 0;
         VertexPos number_of_precedence_violations = 0;
         std::vector<uint8_t> contains;
@@ -92,23 +92,23 @@ public:
 
     inline void append(
             SequenceData& sequence_data,
-            sequencing::ElementId j) const
+            sequencing::ElementId element_id) const
     {
         // Update number_of_precedence_violations.
-        for (VertexId j: instance_.predecessors(j))
-            if (!sequence_data.contains[j])
+        for (VertexId vertex_id_pred: instance_.predecessors(element_id))
+            if (!sequence_data.contains[vertex_id_pred])
                 sequence_data.number_of_precedence_violations++;
         // Update time.
-        if (sequence_data.j_last != -1) {
-            Distance d = instance_.distance(sequence_data.j_last, j);
+        if (sequence_data.element_id_last != -1) {
+            Distance d = instance_.distance(sequence_data.element_id_last, element_id);
             if (d == std::numeric_limits<Distance>::max())
-                d = instance_.distance(j, sequence_data.j_last);
+                d = instance_.distance(element_id, sequence_data.element_id_last);
             sequence_data.length += d;
         }
         // Update contains.
-        sequence_data.contains[j] = 1;
-        // Update j_last.
-        sequence_data.j_last = j;
+        sequence_data.contains[element_id] = 1;
+        // Update element_id_last.
+        sequence_data.element_id_last = element_id;
     }
 
 private:

@@ -43,9 +43,9 @@ public:
         std::iota(times_.begin(), times_.end(), 0);
         // Initialize risks_ and sorted_scenarios_.
         ScenarioId s_max = 0;
-        for (Time t_cur = 0; t_cur < instance.horizon(); ++t_cur)
-            if (s_max < instance_.number_of_scenarios(t_cur))
-                s_max = instance_.number_of_scenarios(t_cur);
+        for (Time time_cur = 0; time_cur < instance.horizon(); ++time_cur)
+            if (s_max < instance_.number_of_scenarios(time_cur))
+                s_max = instance_.number_of_scenarios(time_cur);
         risks_.resize(s_max, 0);
         sorted_scenarios_.resize(s_max, 0);
     }
@@ -94,13 +94,13 @@ public:
     struct SolutionConflict
     {
         /** First intervention of the conflict. */
-        InterventionId j1 = -1;
+        InterventionId intervention_id_1 = -1;
 
         /** Second intervention of the conflict. */
-        InterventionId j2 = -1;
+        InterventionId intervention_id_2 = -1;
 
         /** Time of the conflict. */
-        Time t_cur = -1;
+        Time time_cur = -1;
     };
 
     struct Solution
@@ -176,10 +176,10 @@ public:
 
     struct Perturbation
     {
-        Perturbation(): j(-1), t_start(-1), global_cost(worst<GlobalCost>()) { }
+        Perturbation(): intervention_id(-1), time_start(-1), global_cost(worst<GlobalCost>()) { }
 
-        InterventionId j;
-        Time t_start;
+        InterventionId intervention_id;
+        Time time_start;
         GlobalCost global_cost;
     };
 
@@ -192,8 +192,8 @@ public:
             const Perturbation& perturbation,
             std::mt19937_64&) const
     {
-        remove(solution, perturbation.j);
-        add(solution, perturbation.j, perturbation.t_start);
+        remove(solution, perturbation.intervention_id);
+        add(solution, perturbation.intervention_id, perturbation.time_start);
     }
 
     /*
@@ -250,14 +250,15 @@ public:
                 const Perturbation& perturbation_1,
                 const Perturbation& perturbation_2) const
         {
-            return perturbation_1.j == perturbation_2.j && perturbation_1.t_start == perturbation_2.t_start;
+            return perturbation_1.intervention_id == perturbation_2.intervention_id
+                && perturbation_1.time_start == perturbation_2.time_start;
         }
 
         inline std::size_t operator()(
                 const Perturbation& perturbation) const
         {
-            size_t hash = hasher_1(perturbation.j);
-            optimizationtools::hash_combine(hash, hasher_2(perturbation.t_start));
+            size_t hash = hasher_1(perturbation.intervention_id);
+            optimizationtools::hash_combine(hash, hasher_2(perturbation.time_start));
             return hash;
         }
     };
@@ -272,13 +273,18 @@ public:
             std::ostream &os,
             const Solution& solution)
     {
-        for (InterventionId j = 0; j < instance_.number_of_interventions(); ++j) {
-            os << "j " << j << " t_start " << solution.intervention_starts[j] << std::endl;
+        for (InterventionId intervention_id = 0;
+                intervention_id < instance_.number_of_interventions();
+                ++intervention_id) {
+            os << "intervention_id " << intervention_id
+                << " time_start " << solution.intervention_starts[intervention_id]
+                << std::endl;
         }
-        for (Time t_cur = 0; t_cur < instance_.horizon(); ++t_cur) {
-            os << "t " << t_cur;
+        for (Time time_cur = 0; time_cur < instance_.horizon(); ++time_cur) {
+            os << "t " << time_cur;
             for (ResourceId r = 0; r < instance_.number_of_resources(); ++r)
-                os << " " << solution.time_steps[t_cur].workloads[r] << "/" << instance_.workload_max(r, t_cur);
+                os << " " << solution.time_steps[time_cur].workloads[r]
+                    << "/" << instance_.workload_max(r, time_cur);
             os << std::endl;
         }
         return os;
@@ -314,10 +320,15 @@ private:
     }
 
     /** Add an intervention to a solution. */
-    void add(Solution& solution, InterventionId j, Time t_start) const;
+    void add(
+            Solution& solution,
+            InterventionId intervention_id,
+            Time time_start) const;
 
     /** Remove an intervention from a solution. */
-    void remove(Solution& solution, InterventionId j) const;
+    void remove(
+            Solution& solution,
+            InterventionId intervention_id) const;
 
     /*
      * Evaluate moves.
@@ -326,8 +337,8 @@ private:
     /** Compute the cost of adding an intervention. */
     GlobalCost cost_add(
             const Solution& solution,
-            InterventionId j,
-            Time t_start,
+            InterventionId intervention_id,
+            Time time_start,
             const GlobalCost& cutoff);
 
     /*

@@ -7,94 +7,106 @@ using namespace localsearchsolver::roadef2020;
 
 void LocalScheme::add(
         Solution& solution,
-        InterventionId j,
-        Time t_start) const
+        InterventionId intervention_id,
+        Time time_start) const
 {
-    assert(t_start >= 0);
-    assert(t_start < instance_.horizon());
-    assert(t_start <= instance_.start_max(j));
-    assert(solution.intervention_starts[j] == -1);
+    assert(time_start >= 0);
+    assert(time_start < instance_.horizon());
+    assert(time_start <= instance_.start_max(intervention_id));
+    assert(solution.intervention_starts[intervention_id] == -1);
 
-    Time t_end = t_start + instance_.duration(j, t_start);
+    Time time_end = time_start + instance_.duration(intervention_id, time_start);
     ScenarioId lcm = instance_.least_common_multiple();
 
     // Update intervention_times_.
-    solution.intervention_starts[j] = t_start;
+    solution.intervention_starts[intervention_id] = time_start;
 
-    for (Time t_cur = t_start; t_cur < t_end; ++t_cur) {
+    for (Time time_cur = time_start; time_cur < time_end; ++time_cur) {
         // Update solution.time_steps.
-        for (ResourcePos r_pos = 0; r_pos < instance_.number_of_resources(j); ++r_pos) {
-            ResourceId r = instance_.resource(j, r_pos);
-            Workload w = instance_.workload(j, r_pos, t_cur, t_start);
-            Workload w_min = instance_.workload_min(r, t_cur);
-            Workload w_max = instance_.workload_max(r, t_cur);
+        for (ResourcePos resource_pos = 0;
+                resource_pos < instance_.number_of_resources(intervention_id);
+                ++resource_pos) {
+            ResourceId resource_id = instance_.resource(intervention_id, resource_pos);
+            Workload w = instance_.workload(
+                    intervention_id,
+                    resource_pos,
+                    time_cur,
+                    time_start);
+            Workload w_min = instance_.workload_min(resource_id, time_cur);
+            Workload w_max = instance_.workload_max(resource_id, time_cur);
             // Update overwork
-            if (solution.time_steps[t_cur].workloads[r] >= w_max) {
+            if (solution.time_steps[time_cur].workloads[resource_id] >= w_max) {
                 solution.overwork += w;
-            } else if (solution.time_steps[t_cur].workloads[r] + w <= w_max) {
+            } else if (solution.time_steps[time_cur].workloads[resource_id] + w <= w_max) {
             } else {
-                solution.overwork += (solution.time_steps[t_cur].workloads[r] + w - w_max);
+                solution.overwork += (solution.time_steps[time_cur].workloads[resource_id] + w - w_max);
             }
             // Update underwork
-            if (solution.time_steps[t_cur].workloads[r] >= w_min) {
-            } else if (solution.time_steps[t_cur].workloads[r] + w_min <= w_min) {
+            if (solution.time_steps[time_cur].workloads[resource_id] >= w_min) {
+            } else if (solution.time_steps[time_cur].workloads[resource_id] + w_min <= w_min) {
                 solution.underwork -= w;
             } else {
-                solution.underwork -= (w_min - solution.time_steps[t_cur].workloads[r]);
+                solution.underwork -= (w_min - solution.time_steps[time_cur].workloads[resource_id]);
             }
             // Update workload
-            solution.time_steps[t_cur].workloads[r] += w;
-            assert(solution.time_steps[t_cur].workloads[r] >= 0);
+            solution.time_steps[time_cur].workloads[resource_id] += w;
+            assert(solution.time_steps[time_cur].workloads[resource_id] >= 0);
         }
 
         // Update conflicts_
-        SeasonId season = instance_.season(t_cur);
+        SeasonId season = instance_.season(time_cur);
         if (season != -1) {
-            for (ExclusionId e: instance_.exclusions(j, season)) {
-                InterventionId j2 = instance_.exclusion(e).j(j);
-                if (solution.intervention_starts[j2] == -1)
+            for (ExclusionId e: instance_.exclusions(intervention_id, season)) {
+                InterventionId intervention_id_2 = instance_.exclusion(e).j(intervention_id);
+                if (solution.intervention_starts[intervention_id_2] == -1)
                     continue;
-                Time t2_start = solution.intervention_starts[j2];
-                if (t2_start <= t_cur && t_cur < t2_start + instance_.duration(j2, t2_start)) {
+                Time t2_start = solution.intervention_starts[intervention_id_2];
+                if (t2_start <= time_cur
+                        && time_cur < t2_start
+                        + instance_.duration(intervention_id_2, t2_start)) {
                     SolutionConflict conflict;
-                    conflict.j1 = j;
-                    conflict.j2 = j2;
-                    conflict.t_cur = t_cur;
+                    conflict.intervention_id_1 = intervention_id;
+                    conflict.intervention_id_2 = intervention_id_2;
+                    conflict.time_cur = time_cur;
                     solution.conflicts.push_back(conflict);
                 }
             }
         }
 
         // Remove previous cost
-        ScenarioId s_pos = std::ceil(instance_.quantile() * instance_.number_of_scenarios(t_cur)) - 1;
-        solution.mean_cost -= lcm / instance_.number_of_scenarios(t_cur) * solution.time_steps[t_cur].risk_sum;
-        Risk ee = lcm * solution.time_steps[t_cur].risks[solution.time_steps[t_cur].sorted_scenarios[s_pos]]
-            - lcm / instance_.number_of_scenarios(t_cur) * solution.time_steps[t_cur].risk_sum;
+        ScenarioId s_pos = std::ceil(instance_.quantile() * instance_.number_of_scenarios(time_cur)) - 1;
+        solution.mean_cost -= lcm / instance_.number_of_scenarios(time_cur) * solution.time_steps[time_cur].risk_sum;
+        Risk ee = lcm * solution.time_steps[time_cur].risks[solution.time_steps[time_cur].sorted_scenarios[s_pos]]
+            - lcm / instance_.number_of_scenarios(time_cur) * solution.time_steps[time_cur].risk_sum;
         if (ee > 0)
             solution.expected_excess -= ee;
         assert(solution.mean_cost >= 0);
         assert(solution.expected_excess >= 0);
 
         // Update risks
-        solution.time_steps[t_cur].risk_sum = 0;
-        for (ScenarioId s = 0; s < instance_.number_of_scenarios(t_cur); ++s) {
-            solution.time_steps[t_cur].risks[s] += instance_.risk(j, t_cur, t_start, s);
-            solution.time_steps[t_cur].risk_sum += solution.time_steps[t_cur].risks[s];
+        solution.time_steps[time_cur].risk_sum = 0;
+        for (ScenarioId scenario_id = 0;
+                scenario_id < instance_.number_of_scenarios(time_cur);
+                ++scenario_id) {
+            solution.time_steps[time_cur].risks[scenario_id]
+                += instance_.risk(intervention_id, time_cur, time_start, scenario_id);
+            solution.time_steps[time_cur].risk_sum
+                += solution.time_steps[time_cur].risks[scenario_id];
         }
         // Update sorted scenarios
         std::nth_element(
-                solution.time_steps[t_cur].sorted_scenarios.begin(),
-                solution.time_steps[t_cur].sorted_scenarios.begin() + s_pos,
-                solution.time_steps[t_cur].sorted_scenarios.end(),
-                [&solution, t_cur](ScenarioId s1, ScenarioId s2)
+                solution.time_steps[time_cur].sorted_scenarios.begin(),
+                solution.time_steps[time_cur].sorted_scenarios.begin() + s_pos,
+                solution.time_steps[time_cur].sorted_scenarios.end(),
+                [&solution, time_cur](ScenarioId s1, ScenarioId s2)
                 {
-                    return solution.time_steps[t_cur].risks[s1]
-                        < solution.time_steps[t_cur].risks[s2];
+                    return solution.time_steps[time_cur].risks[s1]
+                        < solution.time_steps[time_cur].risks[s2];
                 });
         // Update cost
-        solution.mean_cost += lcm / instance_.number_of_scenarios(t_cur) * solution.time_steps[t_cur].risk_sum;
-        ee = lcm * solution.time_steps[t_cur].risks[solution.time_steps[t_cur].sorted_scenarios[s_pos]]
-            - lcm / instance_.number_of_scenarios(t_cur) * solution.time_steps[t_cur].risk_sum;
+        solution.mean_cost += lcm / instance_.number_of_scenarios(time_cur) * solution.time_steps[time_cur].risk_sum;
+        ee = lcm * solution.time_steps[time_cur].risks[solution.time_steps[time_cur].sorted_scenarios[s_pos]]
+            - lcm / instance_.number_of_scenarios(time_cur) * solution.time_steps[time_cur].risk_sum;
         if (ee > 0)
             solution.expected_excess += ee;
         assert(solution.mean_cost >= 0);
@@ -104,19 +116,20 @@ void LocalScheme::add(
 
 void LocalScheme::remove(
         Solution& solution,
-        InterventionId j) const
+        InterventionId intervention_id) const
 {
-    assert(solution.intervention_starts[j] != -1);
-    Time t_start = solution.intervention_starts[j];
-    Time t_end = t_start + instance_.duration(j, t_start);
+    assert(solution.intervention_starts[intervention_id] != -1);
+    Time time_start = solution.intervention_starts[intervention_id];
+    Time time_end = time_start + instance_.duration(intervention_id, time_start);
     ScenarioId lcm = instance_.least_common_multiple();
 
     // Update intervention_times_.
-    solution.intervention_starts[j] = -1;
+    solution.intervention_starts[intervention_id] = -1;
 
     // Update solution.conflicts
     for (auto it = solution.conflicts.begin(); it != solution.conflicts.end();) {
-        if (it->j1 != j && it->j2 != j) {
+        if (it->intervention_id_1 != intervention_id
+                && it->intervention_id_2 != intervention_id) {
             ++it;
         } else {
             *it = solution.conflicts.back();
@@ -125,61 +138,71 @@ void LocalScheme::remove(
     }
 
     // Update solution.time_steps.
-    for (Time t_cur = t_start; t_cur < t_end; ++t_cur) {
+    for (Time time_cur = time_start; time_cur < time_end; ++time_cur) {
         // Update solution.time_steps.
-        for (ResourcePos r_pos = 0; r_pos < instance_.number_of_resources(j); ++r_pos) {
-            ResourceId r = instance_.resource(j, r_pos);
-            Workload w = instance_.workload(j, r_pos, t_cur, t_start);
-            Workload w_min = instance_.workload_min(r, t_cur);
-            Workload w_max = instance_.workload_max(r, t_cur);
+        for (ResourcePos resource_pos = 0;
+                resource_pos < instance_.number_of_resources(intervention_id);
+                ++resource_pos) {
+            ResourceId resource_id = instance_.resource(intervention_id, resource_pos);
+            Workload w = instance_.workload(
+                    intervention_id,
+                    resource_pos,
+                    time_cur,
+                    time_start);
+            Workload w_min = instance_.workload_min(resource_id, time_cur);
+            Workload w_max = instance_.workload_max(resource_id, time_cur);
             // Update overwork
-            if (solution.time_steps[t_cur].workloads[r] - w >= w_max) {
+            if (solution.time_steps[time_cur].workloads[resource_id] - w >= w_max) {
                 solution.overwork -= w;
-            } else if (solution.time_steps[t_cur].workloads[r] <= w_max) {
+            } else if (solution.time_steps[time_cur].workloads[resource_id] <= w_max) {
             } else {
-                solution.overwork -= (solution.time_steps[t_cur].workloads[r] - w_max);
+                solution.overwork -= (solution.time_steps[time_cur].workloads[resource_id] - w_max);
             }
             // Update underwork
-            if (solution.time_steps[t_cur].workloads[r] - w >= w_min) {
-            } else if (solution.time_steps[t_cur].workloads[r] <= w_min) {
+            if (solution.time_steps[time_cur].workloads[resource_id] - w >= w_min) {
+            } else if (solution.time_steps[time_cur].workloads[resource_id] <= w_min) {
                 solution.underwork += w;
             } else {
-                solution.underwork += (solution.time_steps[t_cur].workloads[r] - w_min);
+                solution.underwork += (solution.time_steps[time_cur].workloads[resource_id] - w_min);
             }
             // Update workload
-            solution.time_steps[t_cur].workloads[r] -= w;
+            solution.time_steps[time_cur].workloads[resource_id] -= w;
         }
 
         // Remove previous cost
-        ScenarioId s_pos = std::ceil(instance_.quantile() * instance_.number_of_scenarios(t_cur)) - 1;
-        solution.mean_cost -= lcm / instance_.number_of_scenarios(t_cur) * solution.time_steps[t_cur].risk_sum;
-        Risk ee = lcm * solution.time_steps[t_cur].risks[solution.time_steps[t_cur].sorted_scenarios[s_pos]]
-            - lcm / instance_.number_of_scenarios(t_cur) * solution.time_steps[t_cur].risk_sum;
+        ScenarioId s_pos = std::ceil(instance_.quantile() * instance_.number_of_scenarios(time_cur)) - 1;
+        solution.mean_cost -= lcm / instance_.number_of_scenarios(time_cur) * solution.time_steps[time_cur].risk_sum;
+        Risk ee = lcm * solution.time_steps[time_cur].risks[solution.time_steps[time_cur].sorted_scenarios[s_pos]]
+            - lcm / instance_.number_of_scenarios(time_cur) * solution.time_steps[time_cur].risk_sum;
         if (ee > 0)
             solution.expected_excess -= ee;
         assert(solution.mean_cost >= 0);
         assert(solution.expected_excess >= 0);
 
         // Update risks
-        solution.time_steps[t_cur].risk_sum = 0;
-        for (ScenarioId s = 0; s < instance_.number_of_scenarios(t_cur); ++s) {
-            solution.time_steps[t_cur].risks[s] -= instance_.risk(j, t_cur, t_start, s);
-            solution.time_steps[t_cur].risk_sum += solution.time_steps[t_cur].risks[s];
+        solution.time_steps[time_cur].risk_sum = 0;
+        for (ScenarioId scenario_id = 0;
+                scenario_id < instance_.number_of_scenarios(time_cur);
+                ++scenario_id) {
+            solution.time_steps[time_cur].risks[scenario_id]
+                -= instance_.risk(intervention_id, time_cur, time_start, scenario_id);
+            solution.time_steps[time_cur].risk_sum
+                += solution.time_steps[time_cur].risks[scenario_id];
         }
         // Update sorted scenarios
         std::nth_element(
-                solution.time_steps[t_cur].sorted_scenarios.begin(),
-                solution.time_steps[t_cur].sorted_scenarios.begin() + s_pos,
-                solution.time_steps[t_cur].sorted_scenarios.end(),
-                [&solution, t_cur](ScenarioId s1, ScenarioId s2)
+                solution.time_steps[time_cur].sorted_scenarios.begin(),
+                solution.time_steps[time_cur].sorted_scenarios.begin() + s_pos,
+                solution.time_steps[time_cur].sorted_scenarios.end(),
+                [&solution, time_cur](ScenarioId s1, ScenarioId s2)
                 {
-                    return solution.time_steps[t_cur].risks[s1]
-                        < solution.time_steps[t_cur].risks[s2];
+                    return solution.time_steps[time_cur].risks[s1]
+                        < solution.time_steps[time_cur].risks[s2];
                 });
         // Update cost
-        solution.mean_cost += lcm / instance_.number_of_scenarios(t_cur) * solution.time_steps[t_cur].risk_sum;
-        ee = lcm * solution.time_steps[t_cur].risks[solution.time_steps[t_cur].sorted_scenarios[s_pos]]
-            - lcm / instance_.number_of_scenarios(t_cur) * solution.time_steps[t_cur].risk_sum;
+        solution.mean_cost += lcm / instance_.number_of_scenarios(time_cur) * solution.time_steps[time_cur].risk_sum;
+        ee = lcm * solution.time_steps[time_cur].risks[solution.time_steps[time_cur].sorted_scenarios[s_pos]]
+            - lcm / instance_.number_of_scenarios(time_cur) * solution.time_steps[time_cur].risk_sum;
         if (ee > 0)
             solution.expected_excess += ee;
         assert(solution.mean_cost >= 0);
@@ -189,28 +212,30 @@ void LocalScheme::remove(
 
 LocalScheme::GlobalCost LocalScheme::cost_add(
         const Solution& solution,
-        InterventionId j,
-        Time t_start,
+        InterventionId intervention_id,
+        Time time_start,
         const GlobalCost& cutoff)
 {
-    assert(t_start >= 0);
-    assert(t_start < instance_.horizon());
-    assert(t_start <= instance_.start_max(j));
-    assert(solution.intervention_starts[j] == -1);
+    assert(time_start >= 0);
+    assert(time_start < instance_.horizon());
+    assert(time_start <= instance_.start_max(intervention_id));
+    assert(solution.intervention_starts[intervention_id] == -1);
 
-    Time t_end = t_start + instance_.duration(j, t_start);
+    Time time_end = time_start + instance_.duration(intervention_id, time_start);
     GlobalCost c = global_cost(solution);
 
     // Check disjonctive constraints.
-    for (Time t_cur = t_start; t_cur < t_end; ++t_cur) {
-        SeasonId season = instance_.season(t_cur);
+    for (Time time_cur = time_start; time_cur < time_end; ++time_cur) {
+        SeasonId season = instance_.season(time_cur);
         if (season != -1) {
-            for (ExclusionId e: instance_.exclusions(j, season)) {
-                InterventionId j2 = instance_.exclusion(e).j(j);
-                if (solution.intervention_starts[j2] == -1)
+            for (ExclusionId e: instance_.exclusions(intervention_id, season)) {
+                InterventionId intervention_id_2 = instance_.exclusion(e).j(intervention_id);
+                if (solution.intervention_starts[intervention_id_2] == -1)
                     continue;
-                Time t2_start = solution.intervention_starts[j2];
-                if (t2_start <= t_cur && t_cur < t2_start + instance_.duration(j2, t2_start)) {
+                Time t2_start = solution.intervention_starts[intervention_id_2];
+                if (t2_start <= time_cur
+                        && time_cur < t2_start
+                        + instance_.duration(intervention_id_2, t2_start)) {
                     number_of_conflicts(c)++;
                     if (c >= cutoff)
                         return cutoff;
@@ -220,14 +245,20 @@ LocalScheme::GlobalCost LocalScheme::cost_add(
     }
 
     // Check resource constraint.
-    for (Time t_cur = t_start; t_cur < t_end; ++t_cur) {
-        for (ResourcePos r_pos = 0; r_pos < instance_.number_of_resources(j); ++r_pos) {
-            Workload w = instance_.workload(j, r_pos, t_cur, t_start);
+    for (Time time_cur = time_start; time_cur < time_end; ++time_cur) {
+        for (ResourcePos resource_pos = 0;
+                resource_pos < instance_.number_of_resources(intervention_id);
+                ++resource_pos) {
+            Workload w = instance_.workload(
+                    intervention_id,
+                    resource_pos,
+                    time_cur,
+                    time_start);
             if (w == 0)
                 continue;
-            ResourceId r = instance_.resource(j, r_pos);
-            Workload w_cur = solution.time_steps[t_cur].workloads[r];
-            Workload w_max = instance_.workload_max(r, t_cur);
+            ResourceId resource_id = instance_.resource(intervention_id, resource_pos);
+            Workload w_cur = solution.time_steps[time_cur].workloads[resource_id];
+            Workload w_max = instance_.workload_max(resource_id, time_cur);
             if (w_cur >= w_max) {
                 overwork(c) += w;
                 if (c >= cutoff)
@@ -244,23 +275,24 @@ LocalScheme::GlobalCost LocalScheme::cost_add(
     Cost mean_cost = solution.mean_cost;
     Cost expected_excess = solution.expected_excess;
     ScenarioId lcm = instance_.least_common_multiple();
-    for (Time t_cur = t_start; t_cur < t_end; ++t_cur) {
-        ScenarioId st = instance_.number_of_scenarios(t_cur);
+    for (Time time_cur = time_start; time_cur < time_end; ++time_cur) {
+        ScenarioId st = instance_.number_of_scenarios(time_cur);
         ScenarioId s_pos = std::ceil(instance_.quantile() * st) - 1;
 
         // Remove previous cost
-        mean_cost -= lcm / st * solution.time_steps[t_cur].risk_sum;
-        Risk ee = lcm * solution.time_steps[t_cur].risks[solution.time_steps[t_cur].sorted_scenarios[s_pos]]
-            - lcm / st * solution.time_steps[t_cur].risk_sum;
+        mean_cost -= lcm / st * solution.time_steps[time_cur].risk_sum;
+        Risk ee = lcm * solution.time_steps[time_cur].risks[solution.time_steps[time_cur].sorted_scenarios[s_pos]]
+            - lcm / st * solution.time_steps[time_cur].risk_sum;
         if (ee > 0)
             expected_excess -= ee;
 
         // Update risks
         Risk risk_sum = 0;
-        for (ScenarioId s = 0; s < st; ++s) {
-            sorted_scenarios_[s] = solution.time_steps[t_cur].sorted_scenarios[s];
-            risks_[s] = solution.time_steps[t_cur].risks[s] + instance_.risk(j, t_cur, t_start, s);
-            risk_sum += risks_[s];
+        for (ScenarioId scenario_id = 0; scenario_id < st; ++scenario_id) {
+            sorted_scenarios_[scenario_id] = solution.time_steps[time_cur].sorted_scenarios[scenario_id];
+            risks_[scenario_id] = solution.time_steps[time_cur].risks[scenario_id]
+                + instance_.risk(intervention_id, time_cur, time_start, scenario_id);
+            risk_sum += risks_[scenario_id];
         }
         // Update sorted scenarios
         std::nth_element(
@@ -295,15 +327,18 @@ LocalScheme::Solution LocalScheme::empty_solution() const
     Solution solution;
     solution.intervention_starts.resize(instance_.number_of_interventions(), -1);
     solution.time_steps.resize(instance_.horizon());
-    for (Time t = 0; t < instance_.horizon(); ++t) {
-        solution.time_steps[t].workloads.resize(instance_.number_of_resources(), 0);
-        solution.time_steps[t].risks.resize(instance_.number_of_scenarios(t), 0);
-        solution.time_steps[t].sorted_scenarios.resize(instance_.number_of_scenarios(t));
-        for (ScenarioId s = 0; s < instance_.number_of_scenarios(t); ++s)
-            solution.time_steps[t].sorted_scenarios[s] = s;
+    for (Time time = 0; time < instance_.horizon(); ++time) {
+        solution.time_steps[time].workloads.resize(instance_.number_of_resources(), 0);
+        solution.time_steps[time].risks.resize(instance_.number_of_scenarios(time), 0);
+        solution.time_steps[time].sorted_scenarios.resize(instance_.number_of_scenarios(time));
+        for (ScenarioId scenario_id = 0; scenario_id < instance_.number_of_scenarios(time); ++scenario_id)
+            solution.time_steps[time].sorted_scenarios[scenario_id] = scenario_id;
         // Initialize underwork
-        for (ResourceId r = 0; r < instance_.number_of_resources(); ++r)
-            solution.underwork += instance_.workload_min(r, t);
+        for (ResourceId resource_id = 0;
+                resource_id < instance_.number_of_resources();
+                ++resource_id) {
+            solution.underwork += instance_.workload_min(resource_id, time);
+        }
     }
     return solution;
 }
@@ -314,15 +349,19 @@ LocalScheme::Solution LocalScheme::initial_solution(
 {
     Solution solution = empty_solution();
 
-    for (InterventionId j = 0; j < instance_.number_of_interventions(); ++j) {
+    for (InterventionId intervention_id = 0;
+            intervention_id < instance_.number_of_interventions();
+            ++intervention_id) {
         std::vector<Time> starts;
-        for (Time t_start = 0; t_start <= instance_.start_max(j); ++t_start) {
-            if (instance_.fixed(j, t_start) == 0)
+        for (Time time_start = 0;
+                time_start <= instance_.start_max(intervention_id);
+                ++time_start) {
+            if (instance_.fixed(intervention_id, time_start) == 0)
                 continue;
-            starts.push_back(t_start);
+            starts.push_back(time_start);
         }
         std::shuffle(starts.begin(), starts.end(), generator);
-        add(solution, j, starts.front());
+        add(solution, intervention_id, starts.front());
     }
     return solution;
 }
@@ -332,25 +371,27 @@ std::vector<LocalScheme::Perturbation> LocalScheme::perturbations(
         std::mt19937_64&)
 {
     std::vector<Perturbation> perturbations;
-    for (InterventionId j = 0; j < instance_.number_of_interventions(); ++j) {
-        Time t_start_old = solution.intervention_starts[j];
-        if (instance_.fixed(j, t_start_old) == 1)
+    for (InterventionId intervention_id = 0;
+            intervention_id < instance_.number_of_interventions();
+            ++intervention_id) {
+        Time time_start_old = solution.intervention_starts[intervention_id];
+        if (instance_.fixed(intervention_id, time_start_old) == 1)
             continue;
-        remove(solution, j);
-        for (Time t_start = 0; t_start <= instance_.start_max(j); ++t_start) {
-            if (instance_.fixed(j, t_start) == 0)
+        remove(solution, intervention_id);
+        for (Time time_start = 0; time_start <= instance_.start_max(intervention_id); ++time_start) {
+            if (instance_.fixed(intervention_id, time_start) == 0)
                 continue;
-            auto c = cost_add(solution, j, t_start, worst<GlobalCost>());
+            auto c = cost_add(solution, intervention_id, time_start, worst<GlobalCost>());
             Perturbation perturbation;
-            perturbation.j = j;
-            perturbation.t_start = t_start;
+            perturbation.intervention_id = intervention_id;
+            perturbation.time_start = time_start;
             perturbation.global_cost = c;
             number_of_conflicts(perturbation.global_cost) = number_of_conflicts(global_cost(solution));
             overwork(perturbation.global_cost) = overwork(global_cost(solution));
             underwork(perturbation.global_cost) = underwork(global_cost(solution));
             perturbations.push_back(perturbation);
         }
-        add(solution, j, t_start_old);
+        add(solution, intervention_id, time_start_old);
     }
     return perturbations;
 }
@@ -363,8 +404,8 @@ void LocalScheme::local_search(
     //if (tabu.j != -1)
     //    std::cout << "j " << tabu.j
     //        << " name " << instance_.intervention_name(tabu.j)
-    //        << " t_start " << tabu.t_start
-    //        << " d " << instance_.duration(tabu.j, tabu.t_start)
+    //        << " time_start " << tabu.time_start
+    //        << " d " << instance_.duration(tabu.j, tabu.time_start)
     //        << std::endl;
     //std::cout << to_string(global_cost(solution)) << std::endl;
     //std::cout << real_cost(solution) << std::endl;
@@ -381,39 +422,43 @@ void LocalScheme::local_search(
             case 0: { // Shift neighborhood.
                 std::shuffle(interventions_.begin(), interventions_.end(), generator);
                 std::shuffle(times_.begin(), times_.end(), generator);
-                InterventionId j_best = -1;
-                Time t_start_best = -1;
-                for (InterventionId j: interventions_) {
-                    if (j == tabu.j)
+                InterventionId intervention_id_best = -1;
+                Time time_start_best = -1;
+                for (InterventionId intervention_id: interventions_) {
+                    if (intervention_id == tabu.intervention_id)
                         continue;
-                    Time t_start_old = solution.intervention_starts[j];
-                    assert(t_start_old != -1);
-                    if (instance_.fixed(j, t_start_old) == 1)
+                    Time time_start_old = solution.intervention_starts[intervention_id];
+                    assert(time_start_old != -1);
+                    if (instance_.fixed(intervention_id, time_start_old) == 1)
                         continue;
-                    remove(solution, j);
-                    for (Time t_start: times_) {
-                        if (t_start > instance_.start_max(j))
+                    remove(solution, intervention_id);
+                    for (Time time_start: times_) {
+                        if (time_start > instance_.start_max(intervention_id))
                             continue;
-                        if (t_start == t_start_old)
+                        if (time_start == time_start_old)
                             continue;
-                        if (instance_.fixed(j, t_start) == 0)
+                        if (instance_.fixed(intervention_id, time_start) == 0)
                             continue;
-                        GlobalCost c = cost_add(solution, j, t_start, c_best);
+                        GlobalCost c = cost_add(
+                                solution,
+                                intervention_id,
+                                time_start,
+                                c_best);
                         if (c >= c_best)
                             continue;
-                        if (j_best != -1 && !dominates(c, c_best))
+                        if (intervention_id_best != -1 && !dominates(c, c_best))
                             continue;
-                        j_best = j;
-                        t_start_best = t_start;
+                        intervention_id_best = intervention_id;
+                        time_start_best = time_start;
                         c_best = c;
                     }
-                    add(solution, j, t_start_old);
+                    add(solution, intervention_id, time_start_old);
                 }
-                if (j_best != -1) {
+                if (intervention_id_best != -1) {
                     improved = true;
                     // Apply best move.
-                    remove(solution, j_best);
-                    add(solution, j_best, t_start_best);
+                    remove(solution, intervention_id_best);
+                    add(solution, intervention_id_best, time_start_best);
                 }
                 break;
             } default: {

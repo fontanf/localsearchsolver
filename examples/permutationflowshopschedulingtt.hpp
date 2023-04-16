@@ -80,21 +80,26 @@ public:
 
     inline void append(
             SequenceData& sequence_data,
-            sequencing::ElementId j) const
+            sequencing::ElementId element_id) const
     {
         MachineId m = instance_.number_of_machines();
         // Update times.
-        sequence_data.times[0] = sequence_data.times[0] + instance_.job(j).processing_times[0];
-        for (MachineId i = 1; i < m; ++i) {
-            if (sequence_data.times[i - 1] > sequence_data.times[i]) {
-                sequence_data.times[i] = sequence_data.times[i - 1] + instance_.job(j).processing_times[i];
+        sequence_data.times[0] = sequence_data.times[0]
+            + instance_.job(element_id).processing_times[0];
+        for (MachineId machine_id = 1; machine_id < m; ++machine_id) {
+            if (sequence_data.times[machine_id - 1] > sequence_data.times[machine_id]) {
+                sequence_data.times[machine_id] = sequence_data.times[machine_id - 1]
+                    + instance_.job(element_id).processing_times[machine_id];
             } else {
-                sequence_data.times[i] = sequence_data.times[i] + instance_.job(j).processing_times[i];
+                sequence_data.times[machine_id] = sequence_data.times[machine_id]
+                    + instance_.job(element_id).processing_times[machine_id];
             }
         }
         // Update total tardiness.
-        if (sequence_data.times[m - 1] > instance_.job(j).due_date)
-            sequence_data.total_tardiness += (sequence_data.times[m - 1] - instance_.job(j).due_date);
+        if (sequence_data.times[m - 1] > instance_.job(element_id).due_date) {
+            sequence_data.total_tardiness += (sequence_data.times[m - 1]
+                    - instance_.job(element_id).due_date);
+        }
     }
 
 private:

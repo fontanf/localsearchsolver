@@ -84,16 +84,19 @@ public:
 
     inline void append(
             SequenceData& sequence_data,
-            sequencing::ElementId j) const
+            sequencing::ElementId element_id) const
     {
         MachineId m = instance_.number_of_machines();
         // Update times.
-        sequence_data.times[0] = sequence_data.times[0] + instance_.processing_time(j, 0);
-        for (MachineId i = 1; i < m; ++i) {
-            if (sequence_data.times[i - 1] > sequence_data.times[i]) {
-                sequence_data.times[i] = sequence_data.times[i - 1] + instance_.processing_time(j, i);
+        sequence_data.times[0] = sequence_data.times[0]
+            + instance_.processing_time(element_id, 0);
+        for (MachineId machine_id = 1; machine_id < m; ++machine_id) {
+            if (sequence_data.times[machine_id - 1] > sequence_data.times[machine_id]) {
+                sequence_data.times[machine_id] = sequence_data.times[machine_id - 1]
+                    + instance_.processing_time(element_id, machine_id);
             } else {
-                sequence_data.times[i] = sequence_data.times[i] + instance_.processing_time(j, i);
+                sequence_data.times[machine_id] = sequence_data.times[machine_id]
+                    + instance_.processing_time(element_id, machine_id);
             }
         }
         // Update total completion_time.

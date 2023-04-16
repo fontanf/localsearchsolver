@@ -47,7 +47,7 @@ public:
 
     struct SequenceData
     {
-        JobId j_last = -1;
+        sequencing::ElementId element_id_last = -1;
         Time time = 0;
         Weight total_weighted_tardiness = 0;
     };
@@ -73,21 +73,21 @@ public:
 
     inline void append(
             SequenceData& sequence_data,
-            sequencing::ElementId j) const
+            sequencing::ElementId element_id) const
     {
         // Update time.
-        JobId j_prev = (sequence_data.j_last != -1)?
-            sequence_data.j_last:
+        JobId job_id_prev = (sequence_data.element_id_last != -1)?
+            sequence_data.element_id_last:
             instance_.number_of_jobs();
-        sequence_data.time += instance_.setup_time(j_prev, j);
-        sequence_data.time += instance_.job(j).processing_time;
+        sequence_data.time += instance_.setup_time(job_id_prev, element_id);
+        sequence_data.time += instance_.job(element_id).processing_time;
         // Update total weighted tardiness.
-        if (sequence_data.time > instance_.job(j).due_date)
+        if (sequence_data.time > instance_.job(element_id).due_date)
             sequence_data.total_weighted_tardiness
-                += instance_.job(j).weight
-                * (sequence_data.time - instance_.job(j).due_date);
-        // Update j_prev.
-        sequence_data.j_last = j;
+                += instance_.job(element_id).weight
+                * (sequence_data.time - instance_.job(element_id).due_date);
+        // Update job_id_prev.
+        sequence_data.element_id_last = element_id;
     }
 
 private:

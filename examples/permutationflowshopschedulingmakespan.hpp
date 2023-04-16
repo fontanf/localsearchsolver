@@ -143,10 +143,10 @@ public:
                         if (pos == pos_new || pos_new > (JobPos)solution.jobs.size() - block_size)
                             continue;
                         Time makespan = 0;
-                        for (MachineId i = 0; i < m; ++i)
+                        for (MachineId machine_id = 0; machine_id < m; ++machine_id)
                             makespan = std::max(makespan,
-                                    completion_times_[pos_new][i]
-                                             + tails_[pos_new][i]);
+                                    completion_times_[pos_new][machine_id]
+                                             + tails_[pos_new][machine_id]);
                         GlobalCost c = {makespan};
                         if (c >= c_best)
                             continue;
@@ -194,11 +194,11 @@ public:
                             << std::endl;
                         std::cout << makespan(c_best) << std::endl;
                         std::cout << solution.makespan << std::endl;
-                        for (MachineId i = 0; i < m; ++i) {
-                            std::cout << "i " << i
-                                << " " << heads_[((pos_new_best <= pos_best)? pos_new_best: pos_new_best - block_size)][i]
-                                << " " << completion_times_[((pos_new_best <= pos_best)? pos_new_best: pos_new_best - block_size)][i]
-                                << " " << tails_[((pos_new_best <= pos_best)? pos_new_best: pos_new_best - block_size)][i]
+                        for (MachineId machine_id = 0; machine_id < m; ++machine_id) {
+                            std::cout << "machine_id " << machine_id
+                                << " " << heads_[((pos_new_best <= pos_best)? pos_new_best: pos_new_best - block_size)][machine_id]
+                                << " " << completion_times_[((pos_new_best <= pos_best)? pos_new_best: pos_new_best - block_size)][machine_id]
+                                << " " << tails_[((pos_new_best <= pos_best)? pos_new_best: pos_new_best - block_size)][machine_id]
                                 << std::endl;
                         }
                         print(std::cout, solution);
@@ -373,13 +373,15 @@ private:
         MachineId m = instance_.number_of_machines();
         solution.jobs = jobs;
         std::fill(times_.begin(), times_.end(), 0);
-        for (JobId j: solution.jobs) {
-            times_[0] = times_[0] + instance_.processing_time(j, 0);
-            for (MachineId i = 1; i < m; ++i) {
-                if (times_[i - 1] > times_[i]) {
-                    times_[i] = times_[i - 1] + instance_.processing_time(j, i);
+        for (JobId job_id: solution.jobs) {
+            times_[0] = times_[0] + instance_.processing_time(job_id, 0);
+            for (MachineId machine_id = 1; machine_id < m; ++machine_id) {
+                if (times_[machine_id - 1] > times_[machine_id]) {
+                    times_[machine_id] = times_[machine_id - 1]
+                        + instance_.processing_time(job_id, machine_id);
                 } else {
-                    times_[i] = times_[i] + instance_.processing_time(j, i);
+                    times_[machine_id] = times_[machine_id]
+                        + instance_.processing_time(job_id, machine_id);
                 }
             }
         }
@@ -399,56 +401,56 @@ private:
 
         // Compute heads_.
         for (JobPos pos_new = 0; pos_new < (JobPos)solution.jobs.size() - size; ++pos_new) {
-            JobId j = solution.jobs[((pos_new < pos)? pos_new: pos_new + size)];
+            JobId job_id = solution.jobs[((pos_new < pos)? pos_new: pos_new + size)];
             heads_[pos_new + 1][0] = heads_[pos_new][0]
-                + instance_.processing_time(j, 0);
-            for (MachineId i = 1; i < m; ++i) {
-                if (heads_[pos_new + 1][i - 1] > heads_[pos_new][i]) {
-                    heads_[pos_new + 1][i] = heads_[pos_new + 1][i - 1]
-                        + instance_.processing_time(j, i);
+                + instance_.processing_time(job_id, 0);
+            for (MachineId machine_id = 1; machine_id < m; ++machine_id) {
+                if (heads_[pos_new + 1][machine_id - 1] > heads_[pos_new][machine_id]) {
+                    heads_[pos_new + 1][machine_id] = heads_[pos_new + 1][machine_id - 1]
+                        + instance_.processing_time(job_id, machine_id);
                 } else {
-                    heads_[pos_new + 1][i] = heads_[pos_new][i]
-                        + instance_.processing_time(j, i);
+                    heads_[pos_new + 1][machine_id] = heads_[pos_new][machine_id]
+                        + instance_.processing_time(job_id, machine_id);
                 }
             }
         }
 
         // Compute completion_times_.
         for (JobPos pos_new = 0; pos_new <= (JobPos)solution.jobs.size() - size; ++pos_new) {
-            for (MachineId i = 0; i < m; ++i)
-                completion_times_[pos_new][i] = heads_[pos_new][i];
-            for (JobPos p0 = pos; p0 < pos + size; ++p0) {
-                JobId j0 = solution.jobs[p0];
+            for (MachineId machine_id = 0; machine_id < m; ++machine_id)
+                completion_times_[pos_new][machine_id] = heads_[pos_new][machine_id];
+            for (JobPos pos_0 = pos; pos_0 < pos + size; ++pos_0) {
+                JobId job_id_0 = solution.jobs[pos_0];
                 completion_times_[pos_new][0] = completion_times_[pos_new][0]
-                    + instance_.processing_time(j0, 0);
-                for (MachineId i = 1; i < m; ++i) {
-                    if (completion_times_[pos_new][i] > completion_times_[pos_new][i - 1]) {
-                        completion_times_[pos_new][i] = completion_times_[pos_new][i]
-                            + instance_.processing_time(j0, i);
+                    + instance_.processing_time(job_id_0, 0);
+                for (MachineId machine_id = 1; machine_id < m; ++machine_id) {
+                    if (completion_times_[pos_new][machine_id] > completion_times_[pos_new][machine_id - 1]) {
+                        completion_times_[pos_new][machine_id] = completion_times_[pos_new][machine_id]
+                            + instance_.processing_time(job_id_0, machine_id);
                     } else {
-                        completion_times_[pos_new][i] = completion_times_[pos_new][i - 1]
-                            + instance_.processing_time(j0, i);
+                        completion_times_[pos_new][machine_id] = completion_times_[pos_new][machine_id - 1]
+                            + instance_.processing_time(job_id_0, machine_id);
                     }
                 }
             }
         }
 
         // Update tails_.
-        for (MachineId i = m - 1; i >= 0; --i)
-            tails_[solution.jobs.size() - size][i] = 0;
+        for (MachineId machine_id = m - 1; machine_id >= 0; --machine_id)
+            tails_[solution.jobs.size() - size][machine_id] = 0;
         for (JobPos pos_new = solution.jobs.size() - size - 1; pos_new >= 0; --pos_new) {
-            JobId j = solution.jobs[((pos_new < pos)? pos_new: pos_new + size)];
-            assert(j >= 0);
-            assert(j < instance_.number_of_jobs());
+            JobId job_id = solution.jobs[((pos_new < pos)? pos_new: pos_new + size)];
+            assert(job_id >= 0);
+            assert(job_id < instance_.number_of_jobs());
             tails_[pos_new][m - 1] = tails_[pos_new + 1][m - 1]
-                + instance_.processing_time(j, m - 1);
-            for (MachineId i = m - 2; i >= 0; --i) {
-                if (tails_[pos_new][i + 1] > tails_[pos_new + 1][i]) {
-                    tails_[pos_new][i] = tails_[pos_new][i + 1]
-                        + instance_.processing_time(j, i);
+                + instance_.processing_time(job_id, m - 1);
+            for (MachineId machine_id = m - 2; machine_id >= 0; --machine_id) {
+                if (tails_[pos_new][machine_id + 1] > tails_[pos_new + 1][machine_id]) {
+                    tails_[pos_new][machine_id] = tails_[pos_new][machine_id + 1]
+                        + instance_.processing_time(job_id, machine_id);
                 } else {
-                    tails_[pos_new][i] = tails_[pos_new + 1][i]
-                        + instance_.processing_time(j, i);
+                    tails_[pos_new][machine_id] = tails_[pos_new + 1][machine_id]
+                        + instance_.processing_time(job_id, machine_id);
                 }
             }
         }

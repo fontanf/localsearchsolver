@@ -23,11 +23,13 @@ int main(int argc, char *argv[])
                 const sequencing::LocalScheme<SequencingScheme>::Solution& solution)
         {
             sequencing::SequenceId route_id = 0;
-            for (sequencing::SequenceId i = 0; i < instance.number_of_vehicles(); ++i) {
-                if (solution.sequences[i].elements.size() == 0)
+            for (sequencing::SequenceId sequence_id = 0;
+                   sequence_id < instance.number_of_vehicles();
+                   ++sequence_id) {
+                if (solution.sequences[sequence_id].elements.size() == 0)
                     continue;
                 std::cout << "Route #" << route_id << ":";
-                for (auto se: solution.sequences[i].elements)
+                for (auto se: solution.sequences[sequence_id].elements)
                     std::cout << " " << se.j + 1;
                 std::cout << std::endl;
                 route_id++;
