@@ -99,9 +99,10 @@ public:
 
     inline void append(
             SequenceData& sequence_data,
-            sequencing::ElementId j,
+            sequencing::ElementId element_id,
             sequencing::Mode mode) const
     {
+        const Job& job = instance_.job(element_id);
         if (mode == 1) {  // New batch.
             sequence_data.current_batch_jobs.clear();
             sequence_data.current_batch_start = sequence_data.current_batch_end;
@@ -110,44 +111,45 @@ public:
             sequence_data.current_batch_size = 0;
         }
         // Update current_batch_start.
-        if (sequence_data.current_batch_start < instance_.job(j).release_date)
-            sequence_data.current_batch_start = instance_.job(j).release_date;
+        if (sequence_data.current_batch_start < job.release_date)
+            sequence_data.current_batch_start = job.release_date;
         // Update current_batch_duration.
-        if (sequence_data.current_batch_duration < instance_.job(j).processing_time)
-            sequence_data.current_batch_duration = instance_.job(j).processing_time;
+        if (sequence_data.current_batch_duration < job.processing_time)
+            sequence_data.current_batch_duration = job.processing_time;
         // Update total_weighted_tardiness from jobs of the current batch.
-        Time new_end = sequence_data.current_batch_start + sequence_data.current_batch_duration;
+        Time new_end = sequence_data.current_batch_start
+            + sequence_data.current_batch_duration;
         Time diff = new_end - sequence_data.current_batch_end;
-        for (JobId j2: sequence_data.current_batch_jobs) {
-            Time dj2 = instance_.job(j2).due_date;
-            Weight wj2 = instance_.job(j2).weight;
-            if (sequence_data.current_batch_end >= dj2) {
-                sequence_data.total_weighted_tardiness += wj2 * diff;
-            } else if (new_end <= dj2) {
+        for (JobId job_id_2: sequence_data.current_batch_jobs) {
+            const Job& job_2 = instance_.job(job_id_2);
+            if (sequence_data.current_batch_end >= job_2.due_date) {
+                sequence_data.total_weighted_tardiness
+                    += job_2.weight * diff;
+            } else if (new_end <= job_2.due_date) {
             } else {
-                sequence_data.total_weighted_tardiness += wj2 * (new_end - dj2);
+                sequence_data.total_weighted_tardiness
+                    += job_2.weight * (new_end - job_2.due_date);
             }
         }
         // Update current_batch_end.
         sequence_data.current_batch_end = new_end;
         // Update overcapacity.
-        Size sj = instance_.job(j).size;
         Size c = instance_.capacity();
         if (sequence_data.current_batch_size >= c) {
-            sequence_data.overcapacity += sj;
-        } else if (sequence_data.current_batch_size + sj <= c) {
+            sequence_data.overcapacity += job.size;
+        } else if (sequence_data.current_batch_size + job.size <= c) {
         } else {
-            sequence_data.overcapacity += sequence_data.current_batch_size + sj - c;
+            sequence_data.overcapacity += sequence_data.current_batch_size
+                + job.size - c;
         }
         // Update current_batch_size.
-        sequence_data.current_batch_size += instance_.job(j).size;
+        sequence_data.current_batch_size += job.size;
         // Update total_weighted_tardiness.
-        Time dj = instance_.job(j).due_date;
-        Weight wj = instance_.job(j).weight;
-        if (sequence_data.current_batch_end >= dj)
-            sequence_data.total_weighted_tardiness += wj * (sequence_data.current_batch_end - dj);
+        if (sequence_data.current_batch_end >= job.due_date)
+            sequence_data.total_weighted_tardiness += job.weight
+                * (sequence_data.current_batch_end - job.due_date);
         // Update current_batch_jobs.
-        sequence_data.current_batch_jobs.push_back(j);
+        sequence_data.current_batch_jobs.push_back(element_id);
     }
 
 private:

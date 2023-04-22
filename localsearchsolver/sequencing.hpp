@@ -635,8 +635,8 @@ public:
             std::shuffle(elements.begin(), elements.end(), generator);
             Solution solution = empty_solution();
             compute_temporary_structures(solution);
-            for (ElementId j: elements) {
-                auto improving_moves = explore_add(solution, j);
+            for (ElementId element_id: elements) {
+                auto improving_moves = explore_add(solution, element_id);
                 if (!improving_moves.empty()) {
                     std::shuffle(
                             improving_moves.begin(),
@@ -722,11 +722,11 @@ public:
             std::shuffle(elements.begin(), elements.end(), generator);
             std::uniform_int_distribution<SequenceId> di(0, m - 1);
             Solution solution = empty_solution();
-            for (ElementId j: elements) {
-                std::uniform_int_distribution<SequenceId> d_mode(0, number_of_modes(j) - 1);
+            for (ElementId element_id: elements) {
+                std::uniform_int_distribution<SequenceId> d_mode(0, number_of_modes(element_id) - 1);
                 Mode mode = d_mode(generator);
                 SequenceId sequence_id = di(generator);
-                append(solution.sequences[sequence_id], {j, mode});
+                append(solution.sequences[sequence_id], {element_id, mode});
             }
             compute_global_cost(solution);
             return solution;
@@ -1466,8 +1466,8 @@ public:
             ElementPos seq_size = elements.size();
             for (ElementPos pos = 0; pos < seq_size - 1; ++pos) {
                 ElementId element_id = elements[pos].element_id;
-                ElementId j_next = elements[pos + 1].element_id;
-                next_1[element_id] = j_next;
+                ElementId element_id_next = elements[pos + 1].element_id;
+                next_1[element_id] = element_id_next;
             }
         }
 
@@ -1478,8 +1478,8 @@ public:
             ElementPos seq_size = elements.size();
             for (ElementPos pos = 0; pos < seq_size - 1; ++pos) {
                 ElementId element_id = elements[pos].element_id;
-                ElementId j_next = elements[pos + 1].element_id;
-                if (j_next != next_1[element_id])
+                ElementId element_id_next = elements[pos + 1].element_id;
+                if (element_id_next != next_1[element_id])
                     d++;
             }
         }
@@ -1786,8 +1786,8 @@ public:
                             // Remove string.
                             for (ElementPos pos_j3 = start;
                                     pos_j3 < start + string_cardinality; ++pos_j3) {
-                                ElementId j3 = solution.sequences[i_j2].elements[pos_j3].element_id;
-                                elts.remove(j3);
+                                ElementId element_id_3 = solution.sequences[i_j2].elements[pos_j3].element_id;
+                                elts.remove(element_id_3);
                             }
                             if (elts.contains(element_id_2)) {
                                 throw std::runtime_error("");
@@ -1825,13 +1825,13 @@ public:
                             // Remove splitted string.
                             for (ElementPos pos_j3 = start;
                                     pos_j3 < start_sub; ++pos_j3) {
-                                ElementId j3 = solution.sequences[i_j2].elements[pos_j3].element_id;
-                                elts.remove(j3);
+                                ElementId element_id_3 = solution.sequences[i_j2].elements[pos_j3].element_id;
+                                elts.remove(element_id_3);
                             }
                             for (ElementPos pos_j3 = start_sub + m;
                                     pos_j3 < start + string_cardinality; ++pos_j3) {
-                                ElementId j3 = solution.sequences[i_j2].elements[pos_j3].element_id;
-                                elts.remove(j3);
+                                ElementId element_id_3 = solution.sequences[i_j2].elements[pos_j3].element_id;
+                                elts.remove(element_id_3);
                             }
                         }
                         // Update structures.
@@ -1891,16 +1891,16 @@ public:
                 for (auto it = elts.out_begin(); it != elts.out_end(); ++it) {
                     ElementId element_id = *it;
                     //std::cout << to_string(solution_cur_.global_cost) << std::endl;
-                    ElementId j_prec_old = -1;
+                    ElementId element_id_prec_old = -1;
                     if (positions[element_id] > 0) {
                         const auto& elements = solution.sequences[sequences[element_id]].elements;
-                        j_prec_old = elements[positions[element_id] - 1].element_id;
+                        element_id_prec_old = elements[positions[element_id] - 1].element_id;
                     }
                     auto improving_moves = explore_add(
                             solution_cur_,
                             element_id,
                             sequences[element_id],
-                            j_prec_old,
+                            element_id_prec_old,
                             modes[element_id]);
                     //std::cout << "improving_moves.size() " << improving_moves.size() << std::endl;
                     if (!improving_moves.empty()) {
@@ -2547,16 +2547,16 @@ private:
     }
 
     SequencePos number_of_modes(
-            ElementId j,
+            ElementId element_id,
             std::true_type) const
     {
-        return sequencing_scheme_.number_of_modes(j);;
+        return sequencing_scheme_.number_of_modes(element_id);;
     }
 
-    Mode number_of_modes(ElementId j) const
+    Mode number_of_modes(ElementId element_id) const
     {
         return number_of_modes(
-                j,
+                element_id,
                 std::integral_constant<
                     bool,
                     HasNumberOfModesMethod<SequencingScheme, Mode(ElementId)>::value>());
@@ -5127,9 +5127,9 @@ private:
 
     inline std::vector<Move> explore_add(
             const Solution& solution,
-            ElementId j,
+            ElementId element_id,
             SequenceId i_old = -1,
-            ElementId j_prec_old = -2,
+            ElementId element_id_prec_old = -2,
             Mode mode_old = -1)
     {
         //std::cout << "explore_add j " << j << std::endl;
@@ -5145,16 +5145,16 @@ private:
             // Loop through all new positions.
             for (ElementPos pos = 0; pos <= seq_size; ++pos) {
 
-                for (Mode mode = 0; mode < number_of_modes(j); ++mode) {
+                for (Mode mode = 0; mode < number_of_modes(element_id); ++mode) {
 
-                    if (j_prec_old == -1
+                    if (element_id_prec_old == -1
                             && sequence_id == i_old
                             && (seq_size > 0 || m > 1)
                             && pos == 0
                             && mode == mode_old)
                         continue;
                     if (pos > 0
-                            && j_prec_old == sequence.elements[pos - 1].element_id
+                            && element_id_prec_old == sequence.elements[pos - 1].element_id
                             && mode == mode_old)
                         continue;
 
@@ -5164,7 +5164,7 @@ private:
                         SequenceData sequence_data = sequence_datas_cur_1_[sequence_id][pos];
                         append(
                                 sequence_data, (pos == 0),
-                                {j, mode});
+                                {element_id, mode});
                         concatenate(
                                 sequence_data, false,
                                 sequence, pos, seq_size - 1, false);
@@ -5180,7 +5180,7 @@ private:
                         SequenceData sequence_data = sequence_datas_cur_1_[sequence_id][pos];
                         bool ok = append(
                                 sequence_data, (pos == 0),
-                                {j, mode},
+                                {element_id, mode},
                                 gc, gcm);
                         if (!ok)
                             continue;
@@ -5203,7 +5203,7 @@ private:
                         Move move;
                         move.type = Neighborhoods::Add;
                         move.sequence_id_1 = sequence_id;
-                        move.element_id = j;
+                        move.element_id = element_id;
                         move.mode = mode;
                         move.pos_1 = pos;
                         move.global_cost = diff(gc_tmp, gc);

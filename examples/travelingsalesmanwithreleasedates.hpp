@@ -52,7 +52,7 @@ public:
 
     struct SequenceData
     {
-        LocationId j_last = -1;
+        LocationId location_id_last = -1;
         Time current_trip_start = 0;
         Time current_trip_duration = 0;
         Time time_full = 0;
@@ -91,26 +91,28 @@ public:
 
     inline void append(
             SequenceData& sequence_data,
-            sequencing::ElementId j,
+            sequencing::ElementId element_id,
             sequencing::Mode mode) const
     {
         // Update last_start and time.
-        Time rj = instance_.release_date(j + 1);
+        Time rj = instance_.release_date(element_id + 1);
         if (mode == 0) {  // No return to depot.
             if (sequence_data.current_trip_start < rj)
                 sequence_data.current_trip_start = rj;
-            sequence_data.current_trip_duration += instance_.travel_time(sequence_data.j_last + 1, j + 1);
+            sequence_data.current_trip_duration += instance_.travel_time(
+                        sequence_data.location_id_last + 1,
+                        element_id + 1);
         } else {  // Return to depot.
             sequence_data.current_trip_start = sequence_data.time_full;
             if (sequence_data.current_trip_start < rj)
                 sequence_data.current_trip_start = rj;
-            sequence_data.current_trip_duration = instance_.travel_time(0, j + 1);
+            sequence_data.current_trip_duration = instance_.travel_time(0, element_id + 1);
         }
         sequence_data.time_full = sequence_data.current_trip_start
             + sequence_data.current_trip_duration
-            + instance_.travel_time(j + 1, 0);
-        // Update j_last.
-        sequence_data.j_last = j;
+            + instance_.travel_time(element_id + 1, 0);
+        // Update location_id_last.
+        sequence_data.location_id_last = element_id;
     }
 
 private:

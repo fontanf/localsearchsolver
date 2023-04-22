@@ -82,14 +82,16 @@ public:
         return instance_.number_of_locations() - 1;
     }
 
-    inline double distance(sequencing::ElementId j1, sequencing::ElementId j2) const
+    inline double distance(
+            sequencing::ElementId element_id_1,
+            sequencing::ElementId element_id_2) const
     {
-        Time r1 = instance_.location(j1 + 1).release_date;
-        Time d1 = instance_.location(j1 + 1).deadline;
-        Time s1 = instance_.location(j1 + 1).service_time;
-        Time r2 = instance_.location(j2 + 1).release_date;
-        Time d2 = instance_.location(j2 + 1).deadline;
-        Time t12 = instance_.travel_time(j1 + 1, j2 + 1);
+        Time r1 = instance_.location(element_id_1 + 1).release_date;
+        Time d1 = instance_.location(element_id_1 + 1).deadline;
+        Time s1 = instance_.location(element_id_1 + 1).service_time;
+        Time r2 = instance_.location(element_id_2 + 1).release_date;
+        Time d2 = instance_.location(element_id_2 + 1).deadline;
+        Time t12 = instance_.travel_time(element_id_1 + 1, element_id_2 + 1);
         Time wt = r2 - (d1 + t12 + s1);
         Time tw = (r1 + s1 + t12) - d2;
         return (double)t12 + 1 * std::max((Time)0, wt) + 0.2 * std::max((Time)0, tw);

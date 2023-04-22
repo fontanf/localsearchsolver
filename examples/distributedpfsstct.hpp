@@ -54,7 +54,6 @@ public:
 
     struct SequenceData
     {
-        JobId j_last = -1;
         std::vector<Time> times;
         Time total_completion_time = 0;
     };

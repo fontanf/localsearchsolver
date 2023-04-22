@@ -195,8 +195,8 @@ public:
                     "Unable to open file \"" + certificate_path + "\".");
         }
 
-        for (ItemId j: solution.items)
-            cert << j << " ";
+        for (ItemId item_id: solution.items)
+            cert << item_id << " ";
     }
 
 private:

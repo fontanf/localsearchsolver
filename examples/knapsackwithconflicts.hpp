@@ -312,8 +312,8 @@ public:
                         remove(solution, item_id_in);
                         for (ItemId item_id_out_1: free_items_) {
                             free_items_2_.clear();
-                            for (ItemId j: free_items_)
-                                free_items_2_.add(j);
+                            for (ItemId item_id: free_items_)
+                                free_items_2_.add(item_id);
                             free_items_2_.remove(item_id_out_1);
                             for (ItemId item_id_neighbor: instance_.item(item_id_out_1).neighbors)
                                 if (free_items_2_.contains(item_id_neighbor))
@@ -592,9 +592,12 @@ public:
                     "Unable to open file \"" + certificate_path + "\".");
         }
 
-        for (ItemId j = 0; j < instance_.number_of_items(); ++j)
-            if (contains(solution, j))
-                cert << j << " ";
+        for (ItemId item_id = 0;
+                item_id < instance_.number_of_items();
+                ++item_id) {
+            if (contains(solution, item_id))
+                cert << item_id << " ";
+        }
     }
 
     void print_parameters(

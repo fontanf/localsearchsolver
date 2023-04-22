@@ -53,8 +53,8 @@ int main(int argc, char *argv[])
         }
         for (const auto& batch: solution) {
             file << batch.size() << std::endl;
-            for (JobId j: batch)
-                file << j << " ";
+            for (JobId job_id: batch)
+                file << job_id << " ";
             file << std::endl;
         }
     }

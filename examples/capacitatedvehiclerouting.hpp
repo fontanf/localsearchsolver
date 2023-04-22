@@ -81,9 +81,11 @@ public:
         return instance_.number_of_locations() - 1;
     }
 
-    inline double distance(sequencing::ElementId j1, sequencing::ElementId j2) const
+    inline double distance(
+            sequencing::ElementId element_id_1,
+            sequencing::ElementId element_id_2) const
     {
-        return instance_.distance(j1 + 1, j2 + 1);
+        return instance_.distance(element_id_1 + 1, element_id_2 + 1);
     }
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const

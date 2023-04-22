@@ -53,8 +53,8 @@ int main(int argc, char *argv[])
         }
         for (const auto& trip: solution) {
             file << trip.size() << std::endl;
-            for (LocationId j: trip)
-                file << j + 1 << " ";
+            for (LocationId location_id: trip)
+                file << location_id + 1 << " ";
             file << std::endl;
         }
     }

@@ -51,10 +51,12 @@ public:
     {
         std::iota(positions1_.begin(), positions1_.end(), 0);
         std::iota(positions2_.begin(), positions2_.end(), 0);
-        for (JobId j = 0; j < instance_.number_of_jobs() + 1; ++j) {
-            heads_[j] = std::vector<Time>(instance_.number_of_machines(), 0);
-            tails_[j] = std::vector<Time>(instance_.number_of_machines(), 0);
-            completion_times_[j] = std::vector<Time>(instance_.number_of_machines(), 0);
+        for (JobId job_id = 0;
+                job_id < instance_.number_of_jobs() + 1;
+                ++job_id) {
+            heads_[job_id] = std::vector<Time>(instance_.number_of_machines(), 0);
+            tails_[job_id] = std::vector<Time>(instance_.number_of_machines(), 0);
+            completion_times_[job_id] = std::vector<Time>(instance_.number_of_machines(), 0);
         }
     }
 
@@ -299,8 +301,8 @@ public:
                 const std::shared_ptr<CompactSolution>& compact_solution) const
         {
             size_t hash = 0;
-            for (JobId j: *compact_solution)
-                optimizationtools::hash_combine(hash, hasher(j));
+            for (JobId job_id: *compact_solution)
+                optimizationtools::hash_combine(hash, hasher(job_id));
             return hash;
         }
     };
@@ -337,8 +339,8 @@ public:
             const Solution& solution)
     {
         os << "jobs:";
-        for (JobId j: solution.jobs)
-            os << " " << j;
+        for (JobId job_id: solution.jobs)
+            os << " " << job_id;
         os << std::endl;
         os << "makespan: " << solution.makespan << std::endl;
         return os;
@@ -356,8 +358,8 @@ public:
                     "Unable to open file \"" + certificate_path + "\".");
         }
 
-        for (JobId j: solution.jobs)
-            cert << j << " ";
+        for (JobId job_id: solution.jobs)
+            cert << job_id << " ";
     }
 
 private:

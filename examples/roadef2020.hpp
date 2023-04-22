@@ -233,9 +233,16 @@ public:
     Solution compact2solution(const CompactSolution& compact_solution)
     {
         auto solution = empty_solution();
-        for (InterventionId j = 0; j < instance_.number_of_interventions(); ++j)
-            if (compact_solution[j] != -1)
-                add(solution, j, compact_solution[j]);
+        for (InterventionId intervention_id = 0;
+                intervention_id < instance_.number_of_interventions();
+                ++intervention_id) {
+            if (compact_solution[intervention_id] != -1) {
+                add(
+                        solution,
+                        intervention_id,
+                        compact_solution[intervention_id]);
+            }
+        }
         return solution;
     }
 
@@ -302,9 +309,12 @@ public:
                     "Unable to open file \"" + certificate_path + "\".");
         }
 
-        for (InterventionId j = 0; j < instance_.number_of_interventions(); ++j)
-            cert << instance_.intervention_name(j)
-                << " " << solution.intervention_starts[j] + 1 << std::endl;
+        for (InterventionId intervention_id = 0;
+                intervention_id < instance_.number_of_interventions();
+                ++intervention_id) {
+            cert << instance_.intervention_name(intervention_id)
+                << " " << solution.intervention_starts[intervention_id] + 1 << std::endl;
+        }
     }
 
 private:
