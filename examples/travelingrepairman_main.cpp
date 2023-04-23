@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
             throw std::runtime_error(
                     "Unable to open file \"" + certificate_path + "\".");
         }
-        std::vector<std::vector<LocationId>> solution;
+
         for (auto se: solution_pool.best().sequences[0].elements)
             file << se.element_id + 1 << std::endl;
     }
@@ -59,12 +59,12 @@ int main(int argc, char *argv[])
 
     // Run checker.
     if (main_args.print_checker > 0
-            && main_args.info.output->certificate_path != "") {
+            && certificate_path != "") {
         os << std::endl
             << "Checker" << std::endl
             << "-------" << std::endl;
         instance.check(
-                main_args.info.output->certificate_path,
+                certificate_path,
                 os,
                 main_args.print_checker);
     }

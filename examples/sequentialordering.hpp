@@ -44,25 +44,25 @@ public:
      * - Number of precedence violations
      * - Total distance
      */
-    using GlobalCost = std::tuple<VertexPos, Distance>;
+    using GlobalCost = std::tuple<LocationPos, Distance>;
 
     struct SequenceData
     {
         sequencing::ElementId element_id_last = -1;
         Distance length = 0;
-        VertexPos number_of_precedence_violations = 0;
+        LocationPos number_of_precedence_violations = 0;
         std::vector<uint8_t> contains;
     };
 
     SequencingScheme(const Instance& instance): instance_(instance) { }
 
-    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_vertices(); }
+    inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_locations(); }
 
     inline SequenceData empty_sequence_data(sequencing::SequenceId) const
     {
         SequenceData sequence_data;
         sequence_data.contains = std::vector<uint8_t>(
-                instance_.number_of_vertices(), 0);
+                instance_.number_of_locations(), 0);
         return sequence_data;
     }
 
@@ -95,8 +95,8 @@ public:
             sequencing::ElementId element_id) const
     {
         // Update number_of_precedence_violations.
-        for (VertexId vertex_id_pred: instance_.predecessors(element_id))
-            if (!sequence_data.contains[vertex_id_pred])
+        for (LocationId location_id_pred: instance_.predecessors(element_id))
+            if (!sequence_data.contains[location_id_pred])
                 sequence_data.number_of_precedence_violations++;
         // Update time.
         if (sequence_data.element_id_last != -1) {

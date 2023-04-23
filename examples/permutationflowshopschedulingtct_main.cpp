@@ -9,11 +9,17 @@ int main(int argc, char *argv[])
     MainArgs main_args;
     main_args.algorithm = "best_first_local_search";
     read_args(argc, argv, main_args);
+    auto& os = main_args.info.os();
 
     // Create instance.
     Instance instance(main_args.instance_path, main_args.format);
-    if (main_args.print_instance)
-        std::cout << instance << std::endl;
+    if (main_args.print_instance > 0) {
+        os
+            << "Instance" << std::endl
+            << "--------" << std::endl;
+        instance.print(os, main_args.print_instance);
+        os << std::endl;
+    }
 
     // Create local scheme.
     SequencingScheme sequencing_scheme(instance);
@@ -31,7 +37,8 @@ int main(int argc, char *argv[])
         run_genetic_local_search(main_args, local_scheme, main_args.info);
 
     // Write solution.
-    local_scheme.write(solution_pool.best(), main_args.info.output->certificate_path);
+    std::string certificate_path = main_args.info.output->certificate_path;
+    local_scheme.write(solution_pool.best(), certificate_path);
     if (main_args.print_solution) {
         std::cout << std::endl
             << "Solution" << std::endl
@@ -40,9 +47,15 @@ int main(int argc, char *argv[])
     }
 
     // Run checker.
-    if (main_args.info.output->certificate_path != "") {
-        std::cout << std::endl;
-        instance.check(main_args.info.output->certificate_path);
+    if (main_args.print_checker > 0
+            && certificate_path != "") {
+        os << std::endl
+            << "Checker" << std::endl
+            << "-------" << std::endl;
+        instance.check(
+                certificate_path,
+                os,
+                main_args.print_checker);
     }
 
     return 0;

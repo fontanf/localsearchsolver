@@ -68,12 +68,12 @@ int main(int argc, char *argv[])
 
     // Run checker.
     if (main_args.print_checker > 0
-            && main_args.info.output->certificate_path != "") {
+            && certificate_path != "") {
         os << std::endl
             << "Checker" << std::endl
             << "-------" << std::endl;
         instance.check(
-                main_args.info.output->certificate_path,
+                certificate_path,
                 os,
                 main_args.print_checker);
     }
