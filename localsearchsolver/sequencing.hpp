@@ -102,41 +102,55 @@ struct Parameters
     bool linking_constraints = false;
 
     /*
-     * Neighborhoods - Intra.
+     * Neighborhoods - Intra
      */
 
     ElementPos shift_block_maximum_length = 3;
+
     ElementPos shift_maximum_distance = 1024;
+
     ElementPos swap_maximum_distance = 1024;
+
     ElementPos swap_block_maximum_length = 2;
+
     bool reverse = false;
+
     ElementPos reverse_maximum_length = 1024;
+
     ElementPos shift_reverse_block_maximum_length = 0;
 
     /*
-     * Neighborhoods - Inter.
+     * Neighborhoods - Inter
      */
 
     bool swap_tails = false;
+
     bool split = false;
+
     ElementPos inter_shift_block_maximum_length = 0;
+
     ElementPos inter_swap_block_maximum_length = 0;
+
     ElementPos inter_shift_reverse_block_maximum_length = 0;
+
     bool inter_swap_star = false;
 
     /*
-     * Neighborhoods - Sub-sequence.
+     * Neighborhoods - Sub-sequence
      */
 
     bool add_remove = false;
+
     bool replace = false;
 
     /*
-     * Neighborhoods - Modes.
+     * Neighborhoods - Modes
      */
 
     bool shift_change_mode = false;
+
     bool mode_swap = false;
+
     bool swap_with_modes = false;
 
     /*
@@ -390,6 +404,14 @@ public:
 
         compute_sorted_neighbors();
 
+        // Compute maximum_number_of_modes_.
+        maximum_number_of_modes_ = 1;
+        for (ElementId element_id = 0; element_id < n; ++element_id) {
+            maximum_number_of_modes_ = std::max(
+                    maximum_number_of_modes_,
+                    number_of_modes(element_id));
+        }
+
         // Initialize neighborhoods_.
 
         neighborhoods_[int(Neighborhoods::Shift)]
@@ -500,6 +522,8 @@ public:
             Solution solution = empty_solution();
             for (ElementPos pos = 0; pos < seq_size; ++pos)
                 append(solution.sequences[0], elements[pos]);
+            compute_global_cost(solution);
+            return solution;
         }
 
         //for (ElementPos pos = 0; pos < seq_size; ++pos)
@@ -537,13 +561,13 @@ public:
                             edges[pos_2][pos_1]);
                     if (!distance_init[sequence_id + 1][pos_2]
                             || strictly_better(d, distance[sequence_id + 1][pos_2])) {
-                        //std::cout << "Update " << i
+                        //std::cout << "Update " << sequence_id
                         //    << " pos_2 " << pos_2
                         //    << " from pos_1 " << pos_1
-                        //    << " dv " << to_string(distance[i + 1][pos_2])
-                        //    << " du " << to_string(distance[i][pos_1])
+                        //    << " dv " << to_string(distance[sequence_id + 1][pos_2])
+                        //    << " du " << to_string(distance[sequence_id][pos_1])
                         //    << " uv " << to_string(edges[pos_2][pos_1])
-                        //    << " du+uv " << to_string(distance[i][pos_1] + edges[pos_2][pos_1])
+                        //    << " du+uv " << to_string(distance[sequence_id][pos_1] + edges[pos_2][pos_1])
                         //    << std::endl;
                         distance_init[sequence_id + 1][pos_2] = true;
                         distance[sequence_id + 1][pos_2] = d;
@@ -552,10 +576,10 @@ public:
                 }
             }
             //ElementPos pos = seq_size;
-            //SequenceId i_cur = i + 1;
+            //SequenceId sequence_id_cur = i + 1;
             //while (pos > 0) {
-            //    pos = prev[i_cur][pos];
-            //    i_cur--;
+            //    pos = prev[sequence_id_cur][pos];
+            //    sequence_id_cur--;
             //    std::cout << " " << pos;
             //}
             //std::cout << std::endl;
@@ -566,22 +590,22 @@ public:
         ElementPos pos = seq_size;
         ElementPos pos_prev = seq_size;
         Solution solution = empty_solution();
-        for (SequenceId i_cur = 0; pos != 0; ++i_cur) {
-            //std::cout << "i_cur " << i_cur
+        for (SequenceId sequence_id_cur = 0; pos != 0; ++sequence_id_cur) {
+            //std::cout << "sequence_id_cur " << sequence_id_cur
             //    << " / " << m
             //    << " pos " << pos
             //    << " pos_prev " << pos_prev
-            //    << " prev " << prev[m - i_cur][pos]
+            //    << " prev " << prev[m - sequence_id_cur][pos]
             //    << std::endl;
             pos_prev = pos;
-            pos = prev[m - i_cur][pos];
+            pos = prev[m - sequence_id_cur][pos];
             for (ElementPos p = pos; p < pos_prev; ++p) {
                 //std::cout
-                //    << "i_cur " << i_cur << " / " << m
+                //    << "sequence_id_cur " << sequence_id_cur << " / " << m
                 //    << " p " << p << " / " << elements.size()
                 //    << std::endl;
-                append(solution.sequences[i_cur], elements[p]);
-                //std::cout << to_string(sequencing_scheme_, sequencing_scheme_.global_cost(solution.sequences[i_cur].data)) << std::endl;
+                append(solution.sequences[sequence_id_cur], elements[p]);
+                //std::cout << to_string(sequencing_scheme_, sequencing_scheme_.global_cost(solution.sequences[sequence_id_cur].data)) << std::endl;
             }
         }
         compute_global_cost(solution);
@@ -1496,8 +1520,10 @@ public:
 
         /** Type of perturbation. */
         Perturbations type;
+
         /** ForceAdd: element to add. */
         ElementId force_add_element_id = -1;
+
         /** Global cost of the perturbation. */
         GlobalCost global_cost;
     };
@@ -2278,7 +2304,7 @@ public:
                 if (maximum_number_of_modes_ == 1) {
                     os << " " << se.element_id;
                 } else {
-                    os << " " << se.element_id << " " << se.mode;
+                    os << " (" << se.element_id << ", " << se.mode << ")";
                 }
             }
             os << std::endl;
@@ -5824,18 +5850,25 @@ private:
 
     /** Number of calls to a crossover operator. */
     Counter number_of_crossover_calls_ = 0;
+
     /** Time spent in crossover operators. */
     double crossover_time_ = 0.0;
+
     /** Number of calls to the local search method. */
     Counter number_of_local_search_calls_ = 0;
+
     /** Time spent in the local search method. */
     double local_search_time_ = 0.0;
+
     /** Number of local search iterations. */
     Counter number_of_local_search_iterations_ = 0;
+
     /** Number of calls to an initial solution generator. */
     Counter number_of_initial_solution_calls_ = 0;
+
     /** Time spent generating initial solutions. */
     double initial_solution_time_ = 0.0;
+
     /** Time spent in method 'compute_temporary_structures'. */
     double compute_temporary_structures_time_ = 0.0;
 
@@ -5844,12 +5877,19 @@ private:
      */
 
     std::vector<std::vector<SequenceData>> sequence_datas_cur_1_;
+
     std::vector<std::vector<std::vector<SequenceData>>> sequence_datas_cur_2_;
+
     std::vector<GlobalCost> global_costs_cur_;
+
     std::vector<GlobalCost> partial_global_costs_cur_1_;
+
     std::vector<std::vector<GlobalCost>> partial_global_costs_cur_2_;
+
     std::vector<SolutionElement> elements_cur_;
+
     Solution solution_cur_;
+
     Solution solution_tmp_;
 
 };
