@@ -52,7 +52,7 @@ enum class Neighborhoods
     SwapWithModes,
 };
 
-std::string neighborhood2string(
+inline std::string neighborhood2string(
         Neighborhoods neighborhood,
         ElementPos k1,
         ElementPos k2)
