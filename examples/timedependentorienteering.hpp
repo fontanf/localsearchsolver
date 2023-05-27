@@ -95,7 +95,7 @@ public:
                 element_id + 1,
                 instance_.number_of_locations() - 1,
                 sequence_data.time_cur);
-        // Update j_last.
+        // Update element_id_last.
         sequence_data.element_id_last = element_id;
     }
 
