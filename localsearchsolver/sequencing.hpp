@@ -50,6 +50,7 @@ enum class Neighborhoods
     ShiftChangeMode,
     ModeSwap,
     SwapWithModes,
+    IncrementDecrementModes,
 };
 
 inline std::string neighborhood2string(
@@ -90,6 +91,8 @@ inline std::string neighborhood2string(
         return "Mode-swap";
     case Neighborhoods::SwapWithModes:
         return "Swap-with-modes";
+    case Neighborhoods::IncrementDecrementModes:
+        return "Increment-decrement-modes";
     }
     return "";
 }
@@ -149,9 +152,13 @@ struct Parameters
 
     bool shift_change_mode = false;
 
+    ElementPos shift_change_mode_maximum_mode_diff = -1;
+
     bool mode_swap = false;
 
     bool swap_with_modes = false;
+
+    bool increment_decrement_modes = false;
 
     /*
      * Perturbations.
@@ -467,6 +474,7 @@ public:
         neighborhoods_[int(Neighborhoods::ShiftChangeMode)] = {{{Neighborhood()}}};
         neighborhoods_[int(Neighborhoods::ModeSwap)] = {{{Neighborhood()}}};
         neighborhoods_[int(Neighborhoods::SwapWithModes)] = {{{Neighborhood()}}};
+        neighborhoods_[int(Neighborhoods::IncrementDecrementModes)] = {{{Neighborhood()}}};
 
         for (int a = 0; a < (int)neighborhoods_.size(); ++a) {
             for (int k1 = 0; k1 < (int)neighborhoods_[a].size(); ++k1) {
@@ -2143,6 +2151,8 @@ public:
                 neighborhoods.push_back({Neighborhoods::ModeSwap, 0, 0});
             if (parameters_.swap_with_modes)
                 neighborhoods.push_back({Neighborhoods::SwapWithModes, 0, 0});
+            if (parameters_.increment_decrement_modes)
+                neighborhoods.push_back({Neighborhoods::IncrementDecrementModes, 0, 0});
         }
 
         for (int a = 0; a < (int)neighborhoods_.size(); ++a) {
@@ -2156,8 +2166,11 @@ public:
                                 neighborhood.modified_sequences.end(),
                                 true);
                     } else {
-                        for (SequenceId sequence_id = 0; sequence_id < number_of_sequences_; ++sequence_id)
+                        for (SequenceId sequence_id = 0;
+                                sequence_id < number_of_sequences_;
+                                ++sequence_id) {
                             neighborhood.modified_sequences[sequence_id] = solution.modified_sequences[sequence_id];
+                        }
                     }
                 }
             }
@@ -2166,7 +2179,9 @@ public:
         compute_temporary_structures(solution);
 
         if (parameters_.inter_shift_block_maximum_length >= 1) {
-            for (SequenceId sequence_id = 0; sequence_id < number_of_sequences_; ++sequence_id) {
+            for (SequenceId sequence_id = 0;
+                    sequence_id < number_of_sequences_;
+                    ++sequence_id) {
                 std::fill(
                         inter_shift_1_best_positions_[sequence_id].begin(),
                         inter_shift_1_best_positions_[sequence_id].end(),
@@ -2257,6 +2272,9 @@ public:
                     break;
                 case Neighborhoods::SwapWithModes:
                     explore_swap_with_modes(solution);
+                    break;
+                case Neighborhoods::IncrementDecrementModes:
+                    explore_increment_decrement_modes(solution);
                     break;
                 case Neighborhoods::SwapTails:
                     explore_swap_tails(solution);
@@ -2458,13 +2476,17 @@ public:
                 << "    Inter-two-opt-reverse:                     " << parameters_.split << std::endl
                 << "    Inter-shift-reverse" << std::endl
                 << "        Block maximum length:                  " << parameters_.inter_shift_reverse_block_maximum_length << std::endl
-                << "    Inter-swap-star:                           " << parameters_.inter_swap_star << std::endl;
+                << "    Inter-swap-star:                           " << parameters_.inter_swap_star << std::endl
+                ;
         }
         if (maximum_number_of_modes_ > 1) {
             info.os()
                 << "    Shfit-change-mode:                         " << parameters_.shift_change_mode << std::endl
+                << "        Maximum mode diff:                     " << parameters_.shift_change_mode_maximum_mode_diff << std::endl
                 << "    Mode-swap:                                 " << parameters_.mode_swap << std::endl
-                << "    Swap-with-modes:                           " << parameters_.swap_with_modes << std::endl;
+                << "    Swap-with-modes:                           " << parameters_.swap_with_modes << std::endl
+                << "    Increment-decrement-modes:                 " << parameters_.increment_decrement_modes << std::endl
+                ;
         }
         info.os()
             << "Perturbations" << std::endl
@@ -2481,14 +2503,16 @@ public:
             << "            Beta:                              " << parameters_.ruin_adjacent_string_removal_beta << std::endl
             << "        Recreate random:                       " << parameters_.recreate_random_weight << std::endl
             << "        Recreate best:                         " << parameters_.recreate_best_weight << std::endl
-            << "    Force-add:                                 " << parameters_.force_add << std::endl;
+            << "    Force-add:                                 " << parameters_.force_add << std::endl
+            ;
         info.os()
             << "Crossovers" << std::endl
             << "    OX:                                        " << parameters_.crossover_ox_weight << std::endl
             << "    SBOX:                                      " << parameters_.crossover_sbox_weight << std::endl
             << "    SJOX:                                      " << parameters_.crossover_sjox_weight << std::endl
             << "    SREX1:                                     " << parameters_.crossover_srex1_weight << std::endl
-            << "    SREX2:                                     " << parameters_.crossover_srex2_weight << std::endl;
+            << "    SREX2:                                     " << parameters_.crossover_srex2_weight << std::endl
+            ;
     }
 
     void print_statistics(
@@ -4980,6 +5004,7 @@ private:
                     block_pos <= seq_size - 1;
                     ++block_pos) {
                 ElementId element_id = sequence.elements[block_pos].element_id;
+                Mode mode_cur = sequence.elements[block_pos].mode;
                 // Loop through all new positions.
                 ElementPos pos_min = std::max(
                         (ElementPos)0,
@@ -4994,6 +5019,10 @@ private:
                     for (Mode mode = 0;
                             mode < number_of_modes(element_id);
                             ++mode) {
+                        if (parameters_.shift_change_mode_maximum_mode_diff != -1
+                                && std::abs(mode - mode_cur)
+                                > parameters_.shift_change_mode_maximum_mode_diff)
+                            continue;
 
                         GlobalCost* gcm = (parameters_.linking_constraints && number_of_sequences_ > 1)?
                             &partial_global_costs_cur_1_[sequence_id]: nullptr;
@@ -5089,10 +5118,13 @@ private:
                 ElementPos pos_2_max = std::min(
                         pos_max,
                         pos_1 + parameters_.swap_maximum_distance);
-                for (ElementPos pos_2 = pos_1 + 1; pos_2 < pos_2_max; ++pos_2) {
+                for (ElementPos pos_2 = pos_1 + 1; pos_2 <= pos_2_max; ++pos_2) {
                     ElementId element_id_2 = sequence.elements[pos_2].element_id;
                     ElementId mode_2 = sequence.elements[pos_2].mode;
                     if (mode_1 == mode_2)
+                        continue;
+                    if (mode_1 >= number_of_modes(element_id_2)
+                            || mode_2 >= number_of_modes(element_id_1))
                         continue;
 
                     GlobalCost* gcm = (parameters_.linking_constraints && number_of_sequences_ > 1)?
@@ -5166,10 +5198,13 @@ private:
                 ElementPos pos_2_max = std::min(
                         pos_max,
                         pos_1 + parameters_.swap_maximum_distance);
-                for (ElementPos pos_2 = pos_1 + 1; pos_2 < pos_2_max; ++pos_2) {
+                for (ElementPos pos_2 = pos_1 + 1; pos_2 <= pos_2_max; ++pos_2) {
                     ElementId element_id_2 = sequence.elements[pos_2].element_id;
                     ElementId mode_2 = sequence.elements[pos_2].mode;
                     if (mode_1 == mode_2)
+                        continue;
+                    if (mode_1 >= number_of_modes(element_id_2)
+                            || mode_2 >= number_of_modes(element_id_1))
                         continue;
 
                     GlobalCost* gcm = (parameters_.linking_constraints && number_of_sequences_ > 1)?
@@ -5208,6 +5243,90 @@ private:
                     if (ok && strictly_better(gc_tmp, gc)) {
                         Move move;
                         move.type = Neighborhoods::SwapWithModes;
+                        move.sequence_id_1 = sequence_id;
+                        move.pos_1 = pos_1;
+                        move.pos_2 = pos_2;
+                        move.global_cost = diff(gc_tmp, gc);
+                        neighborhood.improving_moves.push_back(move);
+                    }
+                }
+            }
+        }
+    }
+
+    inline void explore_increment_decrement_modes(
+            const Solution& solution)
+    {
+        GlobalCost gc = global_cost(solution);
+        Neighborhood& neighborhood = neighborhoods_[int(Neighborhoods::IncrementDecrementModes)][0][0];
+        for (SequenceId sequence_id = 0;
+                sequence_id < number_of_sequences_;
+                ++sequence_id) {
+            if (!neighborhood.modified_sequences[sequence_id])
+                continue;
+            const auto& sequence = solution.sequences[sequence_id];
+            SequencePos seq_size = sequence.elements.size();
+            if (!(parameters_.linking_constraints && number_of_sequences_ > 1))
+                gc = global_costs_cur_[sequence_id];
+
+            // Loop through all pairs.
+            Counter pos_max = seq_size - 1;
+            for (ElementPos pos_1 = 0; pos_1 <= pos_max; ++pos_1) {
+                ElementId element_id_1 = sequence.elements[pos_1].element_id;
+                ElementId mode_1 = sequence.elements[pos_1].mode;
+                if (mode_1 == number_of_modes(element_id_1) - 1)
+                    continue;
+
+                ElementPos pos_2_min = std::max(
+                        (ElementPos)0,
+                        pos_1 - parameters_.swap_maximum_distance);
+                ElementPos pos_2_max = std::min(
+                        pos_max,
+                        pos_1 + parameters_.swap_maximum_distance);
+                for (ElementPos pos_2 = pos_2_min; pos_2 <= pos_2_max; ++pos_2) {
+                    if (pos_1 == pos_2)
+                        continue;
+                    ElementId element_id_2 = sequence.elements[pos_2].element_id;
+                    ElementId mode_2 = sequence.elements[pos_2].mode;
+                    if (mode_2 == 0)
+                        continue;
+
+                    GlobalCost* gcm = (parameters_.linking_constraints && number_of_sequences_ > 1)?
+                        &partial_global_costs_cur_1_[sequence_id]: nullptr;
+                    SequenceData sequence_data = sequence_datas_cur_1_[sequence_id][pos_1];
+                    bool ok = append(
+                            sequence_data, (pos_1 == 0),
+                            {element_id_1, mode_1 + 1},
+                            gc, gcm);
+                    if (!ok)
+                        continue;
+                    ok = concatenate(
+                            sequence_data, false,
+                            sequence, pos_1 + 1, pos_2 - 1, false,
+                            gc, gcm);
+                    if (!ok)
+                        continue;
+                    ok = append(
+                            sequence_data, false,
+                            {element_id_2, mode_2 - 1},
+                            gc, gcm);
+                    if (!ok)
+                        continue;
+                    ok = concatenate(
+                            sequence_data, false,
+                            sequence, pos_2 + 1, seq_size - 1, false,
+                            gc, gcm);
+                    if (!ok)
+                        continue;
+                    GlobalCost gc_tmp = (parameters_.linking_constraints && number_of_sequences_ > 1)?
+                        merge(
+                                sequencing_scheme_.global_cost(sequence_data),
+                                partial_global_costs_cur_1_[sequence_id]):
+                        sequencing_scheme_.global_cost(sequence_data);
+
+                    if (ok && strictly_better(gc_tmp, gc)) {
+                        Move move;
+                        move.type = Neighborhoods::IncrementDecrementModes;
                         move.sequence_id_1 = sequence_id;
                         move.pos_1 = pos_1;
                         move.pos_2 = pos_2;
@@ -5901,6 +6020,27 @@ private:
                 append(sequence_tmp, se);
             }
             break;
+        } case Neighborhoods::IncrementDecrementModes: {
+            for (SequenceId sequence_id = 0;
+                    sequence_id < number_of_sequences_;
+                    ++sequence_id) {
+                if (sequence_id != move.sequence_id_1)
+                    solution_tmp_.sequences[sequence_id] = solution.sequences[sequence_id];
+            }
+            const auto& elements = solution.sequences[move.sequence_id_1].elements;
+            SequencePos seq_size = elements.size();
+            Sequence& sequence_tmp = solution_tmp_.sequences[move.sequence_id_1];
+            sequence_tmp = empty_sequence(move.sequence_id_1);
+            for (ElementPos p = 0; p < seq_size; ++p) {
+                SequenceElement se = elements[p];
+                if (p == move.pos_1) {
+                    se.mode++;
+                } else if (p == move.pos_2) {
+                    se.mode--;
+                }
+                append(sequence_tmp, se);
+            }
+            break;
         } case Neighborhoods::InterSwapStar: {
             //std::cout << "i1 " << move.sequence_id_1
             //    << " i2 " << move.sequence_id_2
@@ -6034,7 +6174,7 @@ private:
 
     /** Structure storing neighborhood related information. */
     std::vector<std::vector<std::vector<Neighborhood>>> neighborhoods_
-        = std::vector<std::vector<std::vector<Neighborhood>>>(16);
+        = std::vector<std::vector<std::vector<Neighborhood>>>(17);
 
     /** inter_shift_1_best_positions_[i][j] = {pos, GlobalCost}. */
     std::vector<std::vector<std::pair<ElementPos, GlobalCost>>> inter_shift_1_best_positions_;
