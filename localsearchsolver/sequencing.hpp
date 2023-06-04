@@ -5019,6 +5019,8 @@ private:
                     for (Mode mode = 0;
                             mode < number_of_modes(element_id);
                             ++mode) {
+                        if (mode == mode_cur)
+                            continue;
                         if (parameters_.shift_change_mode_maximum_mode_diff != -1
                                 && std::abs(mode - mode_cur)
                                 > parameters_.shift_change_mode_maximum_mode_diff)
@@ -5274,64 +5276,104 @@ private:
             for (ElementPos pos_1 = 0; pos_1 <= pos_max; ++pos_1) {
                 ElementId element_id_1 = sequence.elements[pos_1].element_id;
                 ElementId mode_1 = sequence.elements[pos_1].mode;
-                if (mode_1 == number_of_modes(element_id_1) - 1)
-                    continue;
 
-                ElementPos pos_2_min = std::max(
-                        (ElementPos)0,
-                        pos_1 - parameters_.swap_maximum_distance);
                 ElementPos pos_2_max = std::min(
                         pos_max,
                         pos_1 + parameters_.swap_maximum_distance);
-                for (ElementPos pos_2 = pos_2_min; pos_2 <= pos_2_max; ++pos_2) {
-                    if (pos_1 == pos_2)
-                        continue;
+                for (ElementPos pos_2 = pos_1 + 1; pos_2 <= pos_2_max; ++pos_2) {
                     ElementId element_id_2 = sequence.elements[pos_2].element_id;
                     ElementId mode_2 = sequence.elements[pos_2].mode;
-                    if (mode_2 == 0)
-                        continue;
 
-                    GlobalCost* gcm = (parameters_.linking_constraints && number_of_sequences_ > 1)?
-                        &partial_global_costs_cur_1_[sequence_id]: nullptr;
-                    SequenceData sequence_data = sequence_datas_cur_1_[sequence_id][pos_1];
-                    bool ok = append(
-                            sequence_data, (pos_1 == 0),
-                            {element_id_1, mode_1 + 1},
-                            gc, gcm);
-                    if (!ok)
-                        continue;
-                    ok = concatenate(
-                            sequence_data, false,
-                            sequence, pos_1 + 1, pos_2 - 1, false,
-                            gc, gcm);
-                    if (!ok)
-                        continue;
-                    ok = append(
-                            sequence_data, false,
-                            {element_id_2, mode_2 - 1},
-                            gc, gcm);
-                    if (!ok)
-                        continue;
-                    ok = concatenate(
-                            sequence_data, false,
-                            sequence, pos_2 + 1, seq_size - 1, false,
-                            gc, gcm);
-                    if (!ok)
-                        continue;
-                    GlobalCost gc_tmp = (parameters_.linking_constraints && number_of_sequences_ > 1)?
-                        merge(
-                                sequencing_scheme_.global_cost(sequence_data),
-                                partial_global_costs_cur_1_[sequence_id]):
-                        sequencing_scheme_.global_cost(sequence_data);
+                    if (mode_1 < number_of_modes(element_id_1) - 1
+                            && mode_2 > 0) {
+                        GlobalCost* gcm = (parameters_.linking_constraints && number_of_sequences_ > 1)?
+                            &partial_global_costs_cur_1_[sequence_id]: nullptr;
+                        SequenceData sequence_data = sequence_datas_cur_1_[sequence_id][pos_1];
+                        bool ok = append(
+                                sequence_data, (pos_1 == 0),
+                                {element_id_1, mode_1 + 1},
+                                gc, gcm);
+                        if (!ok)
+                            continue;
+                        ok = concatenate(
+                                sequence_data, false,
+                                sequence, pos_1 + 1, pos_2 - 1, false,
+                                gc, gcm);
+                        if (!ok)
+                            continue;
+                        ok = append(
+                                sequence_data, false,
+                                {element_id_2, mode_2 - 1},
+                                gc, gcm);
+                        if (!ok)
+                            continue;
+                        ok = concatenate(
+                                sequence_data, false,
+                                sequence, pos_2 + 1, seq_size - 1, false,
+                                gc, gcm);
+                        if (!ok)
+                            continue;
+                        GlobalCost gc_tmp = (parameters_.linking_constraints && number_of_sequences_ > 1)?
+                            merge(
+                                    sequencing_scheme_.global_cost(sequence_data),
+                                    partial_global_costs_cur_1_[sequence_id]):
+                            sequencing_scheme_.global_cost(sequence_data);
 
-                    if (ok && strictly_better(gc_tmp, gc)) {
-                        Move move;
-                        move.type = Neighborhoods::IncrementDecrementModes;
-                        move.sequence_id_1 = sequence_id;
-                        move.pos_1 = pos_1;
-                        move.pos_2 = pos_2;
-                        move.global_cost = diff(gc_tmp, gc);
-                        neighborhood.improving_moves.push_back(move);
+                        if (ok && strictly_better(gc_tmp, gc)) {
+                            Move move;
+                            move.type = Neighborhoods::IncrementDecrementModes;
+                            move.sequence_id_1 = sequence_id;
+                            move.pos_1 = pos_1;
+                            move.pos_2 = pos_2;
+                            move.global_cost = diff(gc_tmp, gc);
+                            neighborhood.improving_moves.push_back(move);
+                        }
+                    }
+
+                    if (mode_1 > 0
+                            && mode_2 < number_of_modes(element_id_1) - 1) {
+                        GlobalCost* gcm = (parameters_.linking_constraints && number_of_sequences_ > 1)?
+                            &partial_global_costs_cur_1_[sequence_id]: nullptr;
+                        SequenceData sequence_data = sequence_datas_cur_1_[sequence_id][pos_1];
+                        bool ok = append(
+                                sequence_data, (pos_1 == 0),
+                                {element_id_1, mode_1 - 1},
+                                gc, gcm);
+                        if (!ok)
+                            continue;
+                        ok = concatenate(
+                                sequence_data, false,
+                                sequence, pos_1 + 1, pos_2 - 1, false,
+                                gc, gcm);
+                        if (!ok)
+                            continue;
+                        ok = append(
+                                sequence_data, false,
+                                {element_id_2, mode_2 + 1},
+                                gc, gcm);
+                        if (!ok)
+                            continue;
+                        ok = concatenate(
+                                sequence_data, false,
+                                sequence, pos_2 + 1, seq_size - 1, false,
+                                gc, gcm);
+                        if (!ok)
+                            continue;
+                        GlobalCost gc_tmp = (parameters_.linking_constraints && number_of_sequences_ > 1)?
+                            merge(
+                                    sequencing_scheme_.global_cost(sequence_data),
+                                    partial_global_costs_cur_1_[sequence_id]):
+                            sequencing_scheme_.global_cost(sequence_data);
+
+                        if (ok && strictly_better(gc_tmp, gc)) {
+                            Move move;
+                            move.type = Neighborhoods::IncrementDecrementModes;
+                            move.sequence_id_1 = sequence_id;
+                            move.pos_1 = pos_2;
+                            move.pos_2 = pos_1;
+                            move.global_cost = diff(gc_tmp, gc);
+                            neighborhood.improving_moves.push_back(move);
+                        }
                     }
                 }
             }
