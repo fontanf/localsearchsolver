@@ -61,7 +61,7 @@ In case the `GlobalCost global_cost_concatenate(SequenceData&, const SequenceDat
     * Remove an element from the solution
     * Replace an element from the solution by an element outside of the solution
   * Modes:
-    * Shift an element `j` in the same sequence and change its mode
+    * Shift a block of `k` consecutive elements and change the mode of the first one.
     * Swap the mode of element `j1` with the mode of another element `j2` from the same sequence
     * Swap an elemnt `j1` with another element `j2` from the same sequence and swap their modes
     * Increment the mode of element `j1` and decrement the mode of element `j2` from the same sequence

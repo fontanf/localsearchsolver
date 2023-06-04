@@ -34,7 +34,7 @@ public:
         parameters.reverse = true;
         parameters.shift_reverse_block_maximum_length = 3;
 
-        parameters.shift_change_mode = true;
+        parameters.shift_change_mode_block_maximum_length = 1;
         parameters.mode_swap = true;
         parameters.swap_with_modes = true;
 
