@@ -261,15 +261,15 @@ struct Parameters
      * Crossovers.
      */
 
-    double crossover_ox_weight = 0;
+    double order_crossover_weight = 0;
 
-    double crossover_sjox_weight = 0;
+    double similar_job_order_crossover_weight = 0;
 
-    double crossover_sbox_weight = 0;
+    double similar_block_order_crossover_weight = 0;
 
-    double crossover_srex1_weight = 0;
+    double selective_route_exchange_crossover_1_weight = 0;
 
-    double crossover_srex2_weight = 0;
+    double selective_route_exchange_crossover_2_weight = 0;
 
 };
 
@@ -859,39 +859,39 @@ public:
     {
         auto begin = std::chrono::steady_clock::now();
         std::discrete_distribution<Counter> d_crossover({
-                parameters_.crossover_ox_weight,
-                parameters_.crossover_sjox_weight,
-                parameters_.crossover_sbox_weight,
-                parameters_.crossover_srex1_weight,
-                parameters_.crossover_srex2_weight,
+                parameters_.order_crossover_weight,
+                parameters_.similar_job_order_crossover_weight,
+                parameters_.similar_block_order_crossover_weight,
+                parameters_.selective_route_exchange_crossover_1_weight,
+                parameters_.selective_route_exchange_crossover_2_weight,
                 });
         Counter x = d_crossover(generator);
         Solution solution_1;
         Solution solution_2;
         switch (x) {
         case 0: {
-            solution_1 = crossover_ox(solution_parent_1, solution_parent_2, generator);
-            solution_2 = crossover_ox(solution_parent_2, solution_parent_1, generator);
+            solution_1 = order_crossover(solution_parent_1, solution_parent_2, generator);
+            solution_2 = order_crossover(solution_parent_2, solution_parent_1, generator);
             break;
         } case 1: {
-            solution_1 = crossover_sjox(solution_parent_1, solution_parent_2, generator);
-            solution_2 = crossover_sjox(solution_parent_2, solution_parent_1, generator);
+            solution_1 = similar_job_order_crossover(solution_parent_1, solution_parent_2, generator);
+            solution_2 = similar_job_order_crossover(solution_parent_2, solution_parent_1, generator);
             break;
         } case 2: {
-            solution_1 = crossover_sbox(solution_parent_1, solution_parent_2, generator);
-            solution_2 = crossover_sbox(solution_parent_2, solution_parent_1, generator);
+            solution_1 = similar_block_order_crossover(solution_parent_1, solution_parent_2, generator);
+            solution_2 = similar_block_order_crossover(solution_parent_2, solution_parent_1, generator);
             break;
         } case 3: {
-            solution_1 = crossover_srex1(solution_parent_1, solution_parent_2, generator);
-            solution_2 = crossover_srex1(solution_parent_2, solution_parent_1, generator);
+            solution_1 = selective_route_exchange_crossover_1(solution_parent_1, solution_parent_2, generator);
+            solution_2 = selective_route_exchange_crossover_1(solution_parent_2, solution_parent_1, generator);
             break;
         } case 4: {
-            solution_1 = crossover_srex2(solution_parent_1, solution_parent_2, generator);
-            solution_2 = crossover_srex2(solution_parent_2, solution_parent_1, generator);
+            solution_1 = selective_route_exchange_crossover_2(solution_parent_1, solution_parent_2, generator);
+            solution_2 = selective_route_exchange_crossover_2(solution_parent_2, solution_parent_1, generator);
             break;
         } default: {
-            solution_1 = crossover_ox(solution_parent_1, solution_parent_2, generator);
-            solution_2 = crossover_ox(solution_parent_2, solution_parent_1, generator);
+            solution_1 = order_crossover(solution_parent_1, solution_parent_2, generator);
+            solution_2 = order_crossover(solution_parent_2, solution_parent_1, generator);
             break;
         }
         }
@@ -948,21 +948,21 @@ public:
     }
 
     /**
-     * Generate a new solution from two parent solutions using the OX crossover
-     * operator.
+     * Generate a new solution from two parent solutions using the order
+     * crossover (OX) operator.
      *
-     * The OX crossover operator consists in selecting a random substring from
-     * the first parent, copying this substring into the child while leaving
-     * the rest of the positions empty, and finally completing the child’s
-     * missing positions circularly with the visits from the second parent,
-     * starting from the end cutting point.
+     * The order crossover operator consists in selecting a random substring
+     * from the first parent, copying this substring into the child while
+     * leaving the rest of the positions empty, and finally completing the
+     * child’s missing positions circularly with the visits from the second
+     * parent, starting from the end cutting point.
      *
      * References:
      * - "A simple and effective hybrid genetic search for the job sequencing
      *   and tool switching problem" (Mecler et al., 2021)
      *   https://doi.org/10.1016/j.cor.2020.105153
      */
-    inline Solution crossover_ox(
+    inline Solution order_crossover(
             const Solution& solution_parent_1,
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
@@ -1020,15 +1020,23 @@ public:
     }
 
     /**
-     * Generate a new solution from two parent solutions using the SJOX
-     * crossover operator.
+     * Generate a new solution from two parent solutions using the similar job
+     * order crossover (SJOX) operator.
+     *
+     * First, both parents are examined on a position-by-position basis.
+     * Identical jobs at the same positions are copied over to both offspring.
+     * Then, each offspring directly inherits all jobs from one of the parents
+     * up to a randomly chosen cut point. That is to say, Offspring 1 inherits
+     * directly from Parent 1 and Offspring 2 from Parent 2.  Lastly, the
+     * missing elements of each offspring are copied in the relative order of
+     * the other parent.
      *
      * References:
      * - "Two new robust genetic algorithms for the flowshop scheduling
      *   problem" (Ruiz et al., 2006)
      *   https://doi.org/10.1016/j.omega.2004.12.006
      */
-    inline Solution crossover_sjox(
+    inline Solution similar_job_order_crossover(
             const Solution& solution_parent_1,
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
@@ -1093,15 +1101,20 @@ public:
     }
 
     /**
-     * Generate a new solution from two parent solutions using the SBOX
-     * crossover operator.
+     * Generate a new solution from two parent solutions using the similar
+     * block order crossover (SJOX) operator.
+     *
+     * In this case, the first step of the SJOX crossover is modified in the
+     * following way: We consider blocks of at least two consecutive identical
+     * jobs and only those identical blocks that occupy the same positions in
+     * both parents are directly copied to offspring.
      *
      * References:
      * - "Two new robust genetic algorithms for the flowshop scheduling
      *   problem" (Ruiz et al., 2006)
      *   https://doi.org/10.1016/j.omega.2004.12.006
      */
-    inline Solution crossover_sbox(
+    inline Solution similar_block_order_crossover(
             const Solution& solution_parent_1,
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
@@ -1179,7 +1192,8 @@ public:
     }
 
     /**
-     * Crossover SREX 1
+     * Generate a new solution from two parent solutions using the first
+     * selective route exchange crossover operator.
      *
      * The idea is to keep some routes from the first parent solution and to
      * fill the rest of the child solution with routes or partial routes from
@@ -1187,12 +1201,12 @@ public:
      *
      * This variant kind of assumes that the sequences are homogeneous.
      */
-    inline Solution crossover_srex1(
+    inline Solution selective_route_exchange_crossover_1(
             const Solution& solution_parent_1,
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
     {
-        //std::cout << "crossover_srex1 start" << std::endl;
+        //std::cout << "selective_route_exchange_crossover_1 start" << std::endl;
 
         // Compute the number of sequences to remove.
         SequenceId m1 = 0;
@@ -1355,16 +1369,17 @@ public:
         }
 
         compute_global_cost(solution);
-        //std::cout << "crossover_srex1 end" << std::endl;
+        //std::cout << "selective_route_exchange_crossover_1 end" << std::endl;
         return solution;
     }
 
     /**
-     * Crossover SREX 2.
+     * Generate a new solution from two parent solutions using the second
+     * selective route exchange crossover operator.
      *
      * This variant kind of assumes that the sequences are heterogeneous.
      */
-    inline Solution crossover_srex2(
+    inline Solution selective_route_exchange_crossover_2(
             const Solution& solution_parent_1,
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
@@ -2534,11 +2549,11 @@ public:
             ;
         info.os()
             << "Crossovers" << std::endl
-            << "    OX:                                        " << parameters_.crossover_ox_weight << std::endl
-            << "    SBOX:                                      " << parameters_.crossover_sbox_weight << std::endl
-            << "    SJOX:                                      " << parameters_.crossover_sjox_weight << std::endl
-            << "    SREX1:                                     " << parameters_.crossover_srex1_weight << std::endl
-            << "    SREX2:                                     " << parameters_.crossover_srex2_weight << std::endl
+            << "    Order crossover:                           " << parameters_.order_crossover_weight << std::endl
+            << "    Similar job order crossover:               " << parameters_.similar_job_order_crossover_weight << std::endl
+            << "    Similar block order crossover:             " << parameters_.similar_block_order_crossover_weight << std::endl
+            << "    Selective route exchange crossover 1:      " << parameters_.selective_route_exchange_crossover_1_weight << std::endl
+            << "    Selective route exchange crossover 2:      " << parameters_.selective_route_exchange_crossover_2_weight << std::endl
             ;
     }
 

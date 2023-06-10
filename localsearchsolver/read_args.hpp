@@ -200,9 +200,9 @@ inline sequencing::Parameters read_sequencing_args(
         ("double-bridge-number-of-perturbations,", boost::program_options::value<sequencing::ElementPos>(&parameters.double_bridge_number_of_perturbations), "")
         ("ruin-and-recreate-number-of-perturbations,", boost::program_options::value<sequencing::ElementPos>(&parameters.ruin_and_recreate_number_of_perturbations), "")
         ("ruin-and-recreate-number-of-elements-removed,", boost::program_options::value<sequencing::ElementPos>(&parameters.ruin_number_of_elements_removed), "")
-        ("crossover-ox-weight,", boost::program_options::value<double>(&parameters.crossover_ox_weight), "")
-        ("crossover-sjox-weight,", boost::program_options::value<double>(&parameters.crossover_sjox_weight), "")
-        ("crossover-sbox-weight,", boost::program_options::value<double>(&parameters.crossover_sbox_weight), "")
+        ("ox-weight,", boost::program_options::value<double>(&parameters.order_crossover_weight), "")
+        ("sjox-weight,", boost::program_options::value<double>(&parameters.similar_job_order_crossover_weight), "")
+        ("sbox-weight,", boost::program_options::value<double>(&parameters.similar_block_order_crossover_weight), "")
         ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line((Counter)argv.size(), argv.data(), desc), vm);

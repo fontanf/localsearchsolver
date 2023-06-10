@@ -45,7 +45,7 @@ public:
         parameters.ruin_adjacent_string_removal_weight = 1.0;
         parameters.recreate_best_weight = 1.0;
 
-        parameters.crossover_srex1_weight = 1.0;
+        parameters.selective_route_exchange_crossover_1_weight = 1.0;
 
         return parameters;
     }
