@@ -498,7 +498,7 @@ inline BestFirstLocalSearchOutput<LocalScheme> best_first_local_search(
         << std::endl
         << "Algorithm" << std::endl
         << "---------" << std::endl
-        << "Best First Local Search" << std::endl
+        << "Best first local search" << std::endl
         << std::endl
         << "Parameters" << std::endl
         << "----------" << std::endl

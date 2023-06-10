@@ -24,20 +24,28 @@ struct GeneticLocalSearchOptionalParameters
 
     /** Number of threads. */
     Counter number_of_threads = 1;
+
     /** Maximum number of genetic iterations. */
     Counter maximum_number_of_iterations = -1;
+
     /** Maximum size of the population. */
     Counter maximum_size_of_the_population = 10;
+
     /** Parent selection. */
     ParentSelection parent_selection = ParentSelection::Random;
+
     /** Ids of generated initial solutions. */
     std::vector<Counter> initial_solution_ids = {0};
+
     /** User-provided initial solutions. */
     std::vector<Solution> initial_solutions;
+
     /** Maximum size of the solution pool. */
     Counter maximum_size_of_the_solution_pool = 1;
+
     /** Seed. */
     Seed seed = 0;
+
     /**
      * Goal.
      *
@@ -45,11 +53,14 @@ struct GeneticLocalSearchOptionalParameters
      * found.
      */
     bool has_goal = false;
+
     GlobalCost goal;
+
     /** Callback function called when a new best solution is found. */
     GeneticLocalSearchCallback<LocalScheme> new_solution_callback
         = [](const Solution&) { };
 
+    /** Info structure. */
     optimizationtools::Info info;
 };
 
@@ -64,6 +75,7 @@ struct GeneticLocalSearchOutput
 
     /** Solution pool. */
     SolutionPool<LocalScheme> solution_pool;
+
     /** Number of genetic iterations. */
     Counter number_of_iterations = 0;
 };
@@ -325,15 +337,19 @@ struct GeneticLocalSearchData
 
     /** Local scheme. */
     LocalScheme& local_scheme;
+
     /** Genetic Local Search optional parameters. */
     GeneticLocalSearchOptionalParameters<LocalScheme>& parameters;
+
     /** Population. */
     Population<LocalScheme> population;
+
     /** Genetic Local Search output structure. */
     GeneticLocalSearchOutput<LocalScheme>& output;
 
     /** Position storing which is the next initial solution to generate/add. */
     Counter initial_solution_pos = 0;
+
     /** Mutex to use when manipulating the structure. */
     std::mutex mutex;
 };
@@ -495,7 +511,7 @@ inline GeneticLocalSearchOutput<LocalScheme> genetic_local_search(
         << std::endl
         << "Algorithm" << std::endl
         << "---------" << std::endl
-        << "Genetic Local Search" << std::endl
+        << "Genetic local search" << std::endl
         << std::endl
         << "Parameters" << std::endl
         << "----------" << std::endl
@@ -513,7 +529,9 @@ inline GeneticLocalSearchOutput<LocalScheme> genetic_local_search(
     output.solution_pool.display_init(parameters.info);
     std::vector<std::thread> threads;
     GeneticLocalSearchData<LocalScheme> data(local_scheme, parameters, output);
-    for (Counter thread_id = 1; thread_id < parameters.number_of_threads; ++thread_id) {
+    for (Counter thread_id = 1;
+            thread_id < parameters.number_of_threads;
+            ++thread_id) {
         threads.push_back(std::thread(
                     genetic_local_search_worker<LocalScheme>,
                     std::ref(data),

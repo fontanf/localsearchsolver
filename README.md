@@ -18,19 +18,19 @@ Still, more complex neighborhoods can be implemented if better performances are 
 All algorithms require the Local Scheme to implement: `GlobalCost`, `Solution`, `initial_solution`, `global_cost` and `local_search`.
 
 Implemented algorithms:
-* Restarting Local Search `-a restarting_local_search`
+* Multi-start local search `-a restarting_local_search`
   * Most basic algorithm, can be used as a baseline
-* Iterated Local Search `-a iterated_local_search`
+* Iterated local search `-a iterated_local_search`
   * Single solution algorithm
   * Low implementation cost
   * Good for very large problems
   * Additional requirements: `Perturbation`, `perturbations`, `apply_perturbation`
-* Best First Local Search `-a best_first_local_search`
+* Best first local search `-a best_first_local_search`
   * Multi-solution algorithm
   * Higher implementation cost
   * Higher quality solutions
   * Additional requirements: `CompactSolution`, `compact_solution_hasher`, `solution2compact`, `compact2solution`, `Perturbation`, `perturbation_hasher`, `perturbations`, `apply_perturbation`
-* Genetic Local Search `-a genetic_local_search`
+* Genetic local search `-a genetic_local_search`
   * Population-based algorithm
   * Good when the ruggedness of the landscape is high
   * Additional requirements: `crossover` and `distance`

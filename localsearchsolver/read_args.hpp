@@ -1,6 +1,6 @@
 #pragma once
 
-#include "localsearchsolver/restarting_local_search.hpp"
+#include "localsearchsolver/multi_start_local_search.hpp"
 #include "localsearchsolver/iterated_local_search.hpp"
 #include "localsearchsolver/best_first_local_search.hpp"
 #include "localsearchsolver/genetic_local_search.hpp"
@@ -12,10 +12,10 @@ namespace localsearchsolver
 {
 
 template <typename LocalScheme>
-inline RestartingLocalSearchOptionalParameters<LocalScheme> read_restarting_local_search_args(
+inline MultiStartLocalSearchOptionalParameters<LocalScheme> read_multi_start_local_search_args(
         const std::vector<char*> argv)
 {
-    RestartingLocalSearchOptionalParameters<LocalScheme> parameters;
+    MultiStartLocalSearchOptionalParameters<LocalScheme> parameters;
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
         ("seed,s", boost::program_options::value<Seed>(&parameters.seed), "")
@@ -216,19 +216,19 @@ inline sequencing::Parameters read_sequencing_args(
 }
 
 template <typename LocalScheme>
-SolutionPool<LocalScheme> run_restarting_local_search(
+SolutionPool<LocalScheme> run_multi_start_local_search(
         const MainArgs& main_args,
         LocalScheme& local_scheme,
         const optimizationtools::Info& info)
 {
-    auto parameters = read_restarting_local_search_args<LocalScheme>(main_args.algorithm_argv);
+    auto parameters = read_multi_start_local_search_args<LocalScheme>(main_args.algorithm_argv);
     parameters.info = info;
     parameters.initial_solution_ids = main_args.initial_solution_ids;
     if (main_args.has_goal) {
         parameters.has_goal = true;
         parameters.goal = global_cost_goal(local_scheme, main_args.goal);
     }
-    return restarting_local_search(local_scheme, parameters).solution_pool;
+    return multi_start_local_search(local_scheme, parameters).solution_pool;
 }
 
 template <typename LocalScheme>

@@ -9,10 +9,10 @@ namespace localsearchsolver
 {
 
 template <typename LocalScheme>
-using RestartingLocalSearchCallback = std::function<void(const typename LocalScheme::Solution&)>;
+using MultiStartLocalSearchCallback = std::function<void(const typename LocalScheme::Solution&)>;
 
 template <typename LocalScheme>
-struct RestartingLocalSearchOptionalParameters
+struct MultiStartLocalSearchOptionalParameters
 {
     using Solution = typename LocalScheme::Solution;
     using GlobalCost = typename LocalScheme::GlobalCost;
@@ -44,7 +44,7 @@ struct RestartingLocalSearchOptionalParameters
     GlobalCost goal;
 
     /** Callback function called when a new best solution is found. */
-    RestartingLocalSearchCallback<LocalScheme> new_solution_callback
+    MultiStartLocalSearchCallback<LocalScheme> new_solution_callback
         = [](const Solution& solution) { (void)solution; };
 
     /** Info structure. */
@@ -52,10 +52,10 @@ struct RestartingLocalSearchOptionalParameters
 };
 
 template <typename LocalScheme>
-struct RestartingLocalSearchOutput
+struct MultiStartLocalSearchOutput
 {
     /** Constructor. */
-    RestartingLocalSearchOutput(
+    MultiStartLocalSearchOutput(
             const LocalScheme& local_scheme,
             Counter maximum_size_of_the_solution_pool):
         solution_pool(local_scheme, maximum_size_of_the_solution_pool) { }
@@ -68,18 +68,18 @@ struct RestartingLocalSearchOutput
 };
 
 template <typename LocalScheme>
-inline RestartingLocalSearchOutput<LocalScheme> iterated_local_search(
+inline MultiStartLocalSearchOutput<LocalScheme> iterated_local_search(
         LocalScheme& local_scheme,
-        RestartingLocalSearchOptionalParameters<LocalScheme> parameters = {});
+        MultiStartLocalSearchOptionalParameters<LocalScheme> parameters = {});
 
 ///////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Template implementations //////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 template <typename LocalScheme>
-inline RestartingLocalSearchOutput<LocalScheme> restarting_local_search(
+inline MultiStartLocalSearchOutput<LocalScheme> multi_start_local_search(
         LocalScheme& local_scheme,
-        RestartingLocalSearchOptionalParameters<LocalScheme> parameters)
+        MultiStartLocalSearchOptionalParameters<LocalScheme> parameters)
 {
     // Initial display.
     parameters.info.os()
@@ -89,7 +89,7 @@ inline RestartingLocalSearchOutput<LocalScheme> restarting_local_search(
         << std::endl
         << "Algorithm" << std::endl
         << "---------" << std::endl
-        << "Restarting Local Search" << std::endl
+        << "Multi-start local search" << std::endl
         << std::endl
         << "Parameters" << std::endl
         << "----------" << std::endl
@@ -100,7 +100,7 @@ inline RestartingLocalSearchOutput<LocalScheme> restarting_local_search(
         << std::endl;
 
     //std::cout << "iterated_local_search start" << std::endl;
-    RestartingLocalSearchOutput<LocalScheme> output(
+    MultiStartLocalSearchOutput<LocalScheme> output(
             local_scheme,
             parameters.maximum_size_of_the_solution_pool);
     output.solution_pool.display_init(parameters.info);

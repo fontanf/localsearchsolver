@@ -110,7 +110,7 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
         << std::endl
         << "Algorithm" << std::endl
         << "---------" << std::endl
-        << "Iterated Local Search" << std::endl
+        << "Iterated local search" << std::endl
         << std::endl
         << "Parameters" << std::endl
         << "----------" << std::endl
