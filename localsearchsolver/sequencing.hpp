@@ -5515,7 +5515,7 @@ private:
                     }
 
                     if (mode_1 > 0
-                            && mode_2 < number_of_modes(element_id_1) - 1) {
+                            && mode_2 < number_of_modes(element_id_2) - 1) {
                         GlobalCost* gcm = (parameters_.linking_constraints && number_of_sequences_ > 1)?
                             &partial_global_costs_cur_1_[sequence_id]: nullptr;
                         SequenceData sequence_data = sequence_datas_cur_1_[sequence_id][pos_1];
