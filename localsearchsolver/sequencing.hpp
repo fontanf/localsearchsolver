@@ -271,6 +271,8 @@ struct Parameters
 
     double selective_route_exchange_crossover_2_weight = 0;
 
+    double maximal_preservative_crossover_weight = 0;
+
 };
 
 template <typename SequencingScheme>
@@ -864,6 +866,7 @@ public:
                 parameters_.similar_block_order_crossover_weight,
                 parameters_.selective_route_exchange_crossover_1_weight,
                 parameters_.selective_route_exchange_crossover_2_weight,
+                parameters_.maximal_preservative_crossover_weight,
                 });
         Counter x = d_crossover(generator);
         Solution solution_1;
@@ -888,6 +891,10 @@ public:
         } case 4: {
             solution_1 = selective_route_exchange_crossover_2(solution_parent_1, solution_parent_2, generator);
             solution_2 = selective_route_exchange_crossover_2(solution_parent_2, solution_parent_1, generator);
+            break;
+        } case 5: {
+            solution_1 = maximal_preservative_crossover(solution_parent_1, solution_parent_2, generator);
+            solution_2 = maximal_preservative_crossover(solution_parent_2, solution_parent_1, generator);
             break;
         } default: {
             solution_1 = order_crossover(solution_parent_1, solution_parent_2, generator);
@@ -1192,6 +1199,99 @@ public:
         }
 
         return split(elements, generator);
+    }
+
+    /**
+     * Generate a new solution from two parent solutions using the maximal
+     * preservative crossover (MPX) operator.
+     *
+     * This crossover operator is designed for problems with a single sequence.
+     *
+     * References:
+     * - "Evolution in Time and Space – The Parallel Genetic Algorithm"
+     *   (Mühlenbein, 1991)
+     *   https://doi.org/10.1016/B978-0-08-050684-5.50023-9
+     */
+    inline Solution maximal_preservative_crossover(
+            const Solution& solution_parent_1,
+            const Solution& solution_parent_2,
+            std::mt19937_64& generator)
+    {
+        // Check not multiple sequences.
+        if (number_of_sequences_ != 1) {
+            throw std::invalid_argument(
+                    "The maximal preservative crossover"
+                    " cannot be used with multiple sequences.");
+        }
+        // Check not sub-sequence.
+        if ((ElementPos)solution_parent_1.sequences[0].elements.size() != number_of_elements_
+                || (ElementPos)solution_parent_2.sequences[0].elements.size() != number_of_elements_) {
+            throw std::invalid_argument(
+                    "The maximal preservative crossover"
+                    " cannot be used with sub-sequences.");
+        }
+
+        const auto& elements_parent_1 = solution_parent_1.sequences[0].elements;
+        const auto& elements_parent_2 = solution_parent_2.sequences[0].elements;
+
+        std::vector<ElementPos> positions_parent_1(number_of_elements_);
+        std::vector<ElementPos> positions_parent_2(number_of_elements_);
+        for (ElementPos pos = 0; pos < number_of_elements_; ++pos) {
+            const SequenceElement& se1 = elements_parent_1[pos];
+            positions_parent_1[se1.element_id] = pos;
+            const SequenceElement& se2 = elements_parent_2[pos];
+            positions_parent_2[se2.element_id] = pos;
+        }
+
+        std::vector<SequenceElement> elements(number_of_elements_);
+        std::vector<ElementPos> positions(number_of_elements_, -1);
+
+        std::vector<ElementPos> edges = optimizationtools::bob_floyd<ElementPos>(
+                2, number_of_elements_ + 1, generator);
+        std::sort(edges.begin(), edges.end());
+
+        ElementPos pos_1 = edges[0];
+        ElementPos pos_2 = edges[1];
+
+        for (ElementPos pos = pos_1; pos < pos_2; ++pos) {
+            elements[pos] = elements_parent_1[pos];
+            positions[elements[pos].element_id] = pos;
+        }
+
+        for (ElementPos pos_0 = pos_2;
+                pos_0 < number_of_elements_ + pos_1;
+                ++pos_0) {
+            ElementPos pos = pos_0 % number_of_elements_;
+            ElementPos pos_prev = (number_of_elements_ + pos - 1) % number_of_elements_;
+            ElementId element_id_prev = elements[pos_prev].element_id;
+
+            ElementPos pos_2_next = (positions_parent_2[element_id_prev] + 1) % number_of_elements_;
+            ElementPos pos_1_next = (positions_parent_1[element_id_prev] + 1) % number_of_elements_;
+            if (positions[elements_parent_2[pos_2_next].element_id] == -1) {
+                elements[pos] = elements_parent_2[pos_2_next];
+            } else if (positions[elements_parent_1[pos_1_next].element_id] == -1) {
+                elements[pos] = elements_parent_1[pos_1_next];
+            } else {
+                ElementPos pos_2_next = (positions_parent_2[element_id_prev] + 1) % number_of_elements_;
+                while (positions[elements_parent_2[pos_2_next].element_id] != -1)
+                    pos_2_next = (pos_2_next + 1) % number_of_elements_;
+                elements[pos] = elements_parent_2[pos_2_next];
+            }
+            positions[elements[pos].element_id] = pos;
+        }
+
+        Solution solution_child = split(elements, generator);
+
+        //std::cout << "Parent 1" << std::endl;
+        //print(std::cout, solution_parent_1);
+        //std::cout << "Parent 2" << std::endl;
+        //print(std::cout, solution_parent_2);
+        //std::cout << "pos_1: " << pos_1 << std::endl;
+        //std::cout << "pos_2: " << pos_2 << std::endl;
+        //std::cout << "Child" << std::endl;
+        //print(std::cout, solution_child);
+
+        return solution_child;
     }
 
     /**
@@ -2575,6 +2675,7 @@ public:
             << "    Similar block order crossover:             " << parameters_.similar_block_order_crossover_weight << std::endl
             << "    Selective route exchange crossover 1:      " << parameters_.selective_route_exchange_crossover_1_weight << std::endl
             << "    Selective route exchange crossover 2:      " << parameters_.selective_route_exchange_crossover_2_weight << std::endl
+            << "    Maximal preservative crossover:            " << parameters_.maximal_preservative_crossover_weight << std::endl
             ;
     }
 

@@ -70,11 +70,12 @@ In case the `GlobalCost global_cost_concatenate(SequenceData&, const SequenceDat
   * Remove `k` elements and re-insert them (ruin-and-recreate)
   * Force an element into the solution
 * Crossover algorithms:
-  * Order crossover (OX)
-  * Similar job order crossover (SJOX)
-  * Similar block order crossover (SBOX)
-  * Selective route exchange crossover 1 (SREX1) (multiple sequences only)
-  * Selective route exchange crossover 2 (SREX2) (multiple sequences only)
+  * Order crossover (OX): single or multiple sequences
+  * Similar job order crossover (SJOX): single sequence
+  * Similar block order crossover (SBOX): single sequence
+  * Maximal preservative crossover (MPX): single sequence
+  * Selective route exchange crossover 1 (SREX1): multiple sequences
+  * Selective route exchange crossover 2 (SREX2): multiple sequences
 
 ### Examples
 
