@@ -951,6 +951,9 @@ public:
      * Generate a new solution from two parent solutions using the order
      * crossover (OX) operator.
      *
+     * This crossover is designed for problems with a single or multiple
+     * sequences.
+     *
      * The order crossover operator consists in selecting a random substring
      * from the first parent, copying this substring into the child while
      * leaving the rest of the positions empty, and finally completing the
@@ -986,35 +989,39 @@ public:
                     solution_parent_2.sequences[sequence_id].elements.end());
         }
 
-        ElementPos seq_1_size = elements_parent_1.size();
+        // Check not sub-sequence.
+        if ((ElementPos)elements_parent_1.size() != number_of_elements_
+                || (ElementPos)elements_parent_2.size() != number_of_elements_) {
+            throw std::invalid_argument(
+                    "The order crossover"
+                    " cannot be used with sub-sequences.");
+        }
+
+        std::vector<SequenceElement> elements(number_of_elements_);
+        std::vector<ElementPos> positions(number_of_elements_, -1);
 
         std::vector<ElementPos> edges = optimizationtools::bob_floyd<ElementPos>(
-                2, seq_1_size + 1, generator);
+                2, number_of_elements_ + 1, generator);
         std::sort(edges.begin(), edges.end());
 
         ElementPos pos_1 = edges[0];
         ElementPos pos_2 = edges[1];
 
-        std::vector<uint8_t> in_substring(seq_1_size, false);
         for (ElementPos pos = pos_1; pos < pos_2; ++pos) {
-            ElementId element_id = elements_parent_1[pos].element_id;
-            in_substring[element_id] = true;
+            elements[pos] = elements_parent_1[pos];
+            positions[elements[pos].element_id] = pos;
         }
 
-        std::vector<SequenceElement> elements;
-
-        for (ElementPos pos = 0; pos < seq_1_size; ++pos) {
-            if ((ElementPos)elements.size() == pos_1)
-                for (ElementPos p = pos_1; p < pos_2; ++p)
-                    elements.push_back(elements_parent_1[p]);
-            ElementId element_id = elements_parent_2[pos].element_id;
-            if (in_substring[element_id])
-                continue;
-            elements.push_back(elements_parent_2[pos]);
+        ElementPos p = pos_2 % number_of_elements_;
+        for (ElementPos pos_0 = pos_2;
+                pos_0 < number_of_elements_ + pos_1;
+                ++pos_0) {
+            ElementPos pos = pos_0 % number_of_elements_;
+            while (positions[elements_parent_2[p].element_id] != -1)
+                p = (p + 1) % number_of_elements_;
+            elements[pos] = elements_parent_2[p];
+            positions[elements[pos].element_id] = pos;
         }
-        if ((ElementPos)elements.size() == pos_1)
-            for (ElementPos p = pos_1; p < pos_2; ++p)
-                elements.push_back(elements_parent_1[p]);
 
         return split(elements, generator);
     }
@@ -1022,6 +1029,8 @@ public:
     /**
      * Generate a new solution from two parent solutions using the similar job
      * order crossover (SJOX) operator.
+     *
+     * This crossover operator is designed for problems with a single sequence.
      *
      * First, both parents are examined on a position-by-position basis.
      * Identical jobs at the same positions are copied over to both offspring.
@@ -1041,32 +1050,28 @@ public:
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
     {
-        std::vector<SequenceElement> elements_parent_1;
-        for (SequenceId sequence_id = 0;
-                sequence_id < number_of_sequences_;
-                ++sequence_id) {
-            elements_parent_1.insert(
-                    elements_parent_1.begin(),
-                    solution_parent_1.sequences[sequence_id].elements.begin(),
-                    solution_parent_1.sequences[sequence_id].elements.end());
+        // Check not multiple sequences.
+        if (number_of_sequences_ != 1) {
+            throw std::invalid_argument(
+                    "The similar job order crossover"
+                    " cannot be used with multiple sequences.");
         }
-        std::vector<SequenceElement> elements_parent_2;
-        for (SequenceId sequence_id = 0;
-                sequence_id < number_of_sequences_;
-                ++sequence_id) {
-            elements_parent_2.insert(
-                    elements_parent_2.begin(),
-                    solution_parent_2.sequences[sequence_id].elements.begin(),
-                    solution_parent_2.sequences[sequence_id].elements.end());
+        // Check not sub-sequence.
+        if ((ElementPos)solution_parent_1.sequences[0].elements.size() != number_of_elements_
+                || (ElementPos)solution_parent_2.sequences[0].elements.size() != number_of_elements_) {
+            throw std::invalid_argument(
+                    "The similar job order crossover"
+                    " cannot be used with sub-sequences.");
         }
 
-        ElementPos seq_1_size = elements_parent_1.size();
-        std::vector<ElementPos> positions(seq_1_size, -1);
+        const auto& elements_parent_1 = solution_parent_1.sequences[0].elements;
+        const auto& elements_parent_2 = solution_parent_2.sequences[0].elements;
 
+        std::vector<ElementPos> positions(number_of_elements_, -1);
         std::vector<SequenceElement> elements;
 
         // Add elements from parent_1 up to a given cut point.
-        std::uniform_int_distribution<ElementPos> d_point(1, seq_1_size);
+        std::uniform_int_distribution<ElementPos> d_point(1, number_of_elements_);
         ElementPos pos_0 = d_point(generator);
         for (ElementPos pos = 0; pos < pos_0; ++pos) {
             ElementId element_id = elements_parent_1[pos].element_id;
@@ -1075,11 +1080,11 @@ public:
         }
 
         // Add elements from parent_2 keeping the relative order.
-        for (ElementPos pos = 0; pos < seq_1_size; ++pos) {
+        for (ElementPos pos = 0; pos < number_of_elements_; ++pos) {
             // Add elements which have the same positions in both parents.
             for (;;) {
                 ElementPos p = elements.size();
-                if (p == seq_1_size)
+                if (p == number_of_elements_)
                     break;
                 ElementId element_id_1 = elements_parent_1[p].element_id;
                 ElementId element_id_2 = elements_parent_2[p].element_id;
@@ -1104,6 +1109,8 @@ public:
      * Generate a new solution from two parent solutions using the similar
      * block order crossover (SJOX) operator.
      *
+     * This crossover operator is designed for problems with a single sequence.
+     *
      * In this case, the first step of the SJOX crossover is modified in the
      * following way: We consider blocks of at least two consecutive identical
      * jobs and only those identical blocks that occupy the same positions in
@@ -1119,32 +1126,28 @@ public:
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
     {
-        std::vector<SequenceElement> elements_parent_1;
-        for (SequenceId sequence_id = 0;
-                sequence_id < number_of_sequences_;
-                ++sequence_id) {
-            elements_parent_1.insert(
-                    elements_parent_1.begin(),
-                    solution_parent_1.sequences[sequence_id].elements.begin(),
-                    solution_parent_1.sequences[sequence_id].elements.end());
+        // Check not multiple sequences.
+        if (number_of_sequences_ != 1) {
+            throw std::invalid_argument(
+                    "The similar block order crossover"
+                    " cannot be used with multiple sequences.");
         }
-        std::vector<SequenceElement> elements_parent_2;
-        for (SequenceId sequence_id = 0;
-                sequence_id < number_of_sequences_;
-                ++sequence_id) {
-            elements_parent_2.insert(
-                    elements_parent_2.begin(),
-                    solution_parent_2.sequences[sequence_id].elements.begin(),
-                    solution_parent_2.sequences[sequence_id].elements.end());
+        // Check not sub-sequence.
+        if ((ElementPos)solution_parent_1.sequences[0].elements.size() != number_of_elements_
+                || (ElementPos)solution_parent_2.sequences[0].elements.size() != number_of_elements_) {
+            throw std::invalid_argument(
+                    "The similar block order crossover"
+                    " cannot be used with sub-sequences.");
         }
 
-        ElementPos seq_1_size = elements_parent_1.size();
-        std::vector<ElementPos> positions(seq_1_size, -1);
+        const auto& elements_parent_1 = solution_parent_1.sequences[0].elements;
+        const auto& elements_parent_2 = solution_parent_2.sequences[0].elements;
 
+        std::vector<ElementPos> positions(number_of_elements_, -1);
         std::vector<SequenceElement> elements;
 
         // Add elements from parent_1 up to a given cut point.
-        std::uniform_int_distribution<ElementPos> d_point(1, seq_1_size);
+        std::uniform_int_distribution<ElementPos> d_point(1, number_of_elements_);
         ElementPos pos_0 = d_point(generator);
         for (ElementPos pos = 0; pos < pos_0; ++pos) {
             ElementId element_id = elements_parent_1[pos].element_id;
@@ -1153,15 +1156,15 @@ public:
         }
 
         // Add elements from parent_2 keeping the relative order.
-        for (ElementPos pos = 0; pos < seq_1_size; ++pos) {
+        for (ElementPos pos = 0; pos < number_of_elements_; ++pos) {
             // Add elements which have the same positions in both parents.
             for (;;) {
                 ElementPos p = elements.size();
-                if (p == seq_1_size)
+                if (p == number_of_elements_)
                     break;
                 ElementId element_id_1 = elements_parent_1[p].element_id;
                 ElementId element_id_2 = elements_parent_2[p].element_id;
-                if (p <= seq_1_size - 1) {
+                if (p <= number_of_elements_ - 1) {
                     ElementId element_id_1_next = elements_parent_1[p + 1].element_id;
                     ElementId element_id_2_next = elements_parent_2[p + 1].element_id;
                     if (element_id_1 == element_id_2 && element_id_1_next == element_id_2_next) {
@@ -1195,6 +1198,9 @@ public:
      * Generate a new solution from two parent solutions using the first
      * selective route exchange crossover operator.
      *
+     * This crossover operator is designed for problems with a multiple
+     * (homogenous) sequences.
+     *
      * The idea is to keep some routes from the first parent solution and to
      * fill the rest of the child solution with routes or partial routes from
      * the second parent solution.
@@ -1206,7 +1212,12 @@ public:
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
     {
-        //std::cout << "selective_route_exchange_crossover_1 start" << std::endl;
+        // Check not multiple sequences.
+        if (number_of_sequences_ == 1) {
+            throw std::invalid_argument(
+                    "The selective route exchange crossover"
+                    " cannot be used with single sequences.");
+        }
 
         // Compute the number of sequences to remove.
         SequenceId m1 = 0;
@@ -1377,6 +1388,9 @@ public:
      * Generate a new solution from two parent solutions using the second
      * selective route exchange crossover operator.
      *
+     * This crossover operator is designed for problems with a multiple
+     * (heterogenous) sequences.
+     *
      * This variant kind of assumes that the sequences are heterogeneous.
      */
     inline Solution selective_route_exchange_crossover_2(
@@ -1384,6 +1398,13 @@ public:
             const Solution& solution_parent_2,
             std::mt19937_64& generator)
     {
+        // Check not multiple sequences.
+        if (number_of_sequences_ == 1) {
+            throw std::invalid_argument(
+                    "The selective route exchange crossover"
+                    " cannot be used with single sequences.");
+        }
+
         // Compute the number of sequences to remove.
         SequenceId m1 = 0;
         SequenceId m2 = 0;
