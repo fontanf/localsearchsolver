@@ -273,6 +273,8 @@ struct Parameters
 
     double maximal_preservative_crossover_weight = 0;
 
+    double cycle_crossover_weight = 0;
+
 };
 
 template <typename SequencingScheme>
@@ -867,6 +869,7 @@ public:
                 parameters_.selective_route_exchange_crossover_1_weight,
                 parameters_.selective_route_exchange_crossover_2_weight,
                 parameters_.maximal_preservative_crossover_weight,
+                parameters_.cycle_crossover_weight,
                 });
         Counter x = d_crossover(generator);
         Solution solution_1;
@@ -895,6 +898,10 @@ public:
         } case 5: {
             solution_1 = maximal_preservative_crossover(solution_parent_1, solution_parent_2, generator);
             solution_2 = maximal_preservative_crossover(solution_parent_2, solution_parent_1, generator);
+            break;
+        } case 6: {
+            solution_1 = cycle_crossover(solution_parent_1, solution_parent_2, generator);
+            solution_2 = cycle_crossover(solution_parent_2, solution_parent_1, generator);
             break;
         } default: {
             solution_1 = order_crossover(solution_parent_1, solution_parent_2, generator);
@@ -1288,6 +1295,102 @@ public:
         //print(std::cout, solution_parent_2);
         //std::cout << "pos_1: " << pos_1 << std::endl;
         //std::cout << "pos_2: " << pos_2 << std::endl;
+        //std::cout << "Child" << std::endl;
+        //print(std::cout, solution_child);
+
+        return solution_child;
+    }
+
+    /**
+     * Generate a new solution from two parent solutions using the cycle
+     * crossover (CX) operator.
+     *
+     * This crossover operator is designed for problems with a single sequence.
+     *
+     * References:
+     * - "A study of permutation crossover operators on the traveling salesman
+     *   problem" (Oliver et al., 1987)
+     *   https://dl.acm.org/doi/10.5555/42512.42542
+     * - "Investigation of the Traveling Thief Problem" (Wuijts, 2018)
+     *   https://studenttheses.uu.nl/handle/20.500.12932/29179
+     * - "Genetic Algorithms 21/30: Cycle Crossover"
+     *   https://www.youtube.com/watch?v=DJ-yBmEEkgA
+     */
+    inline Solution cycle_crossover(
+            const Solution& solution_parent_1,
+            const Solution& solution_parent_2,
+            std::mt19937_64& generator)
+    {
+        // Check not multiple sequences.
+        if (number_of_sequences_ != 1) {
+            throw std::invalid_argument(
+                    "The cycle crossover"
+                    " cannot be used with multiple sequences.");
+        }
+        // Check not sub-sequence.
+        if ((ElementPos)solution_parent_1.sequences[0].elements.size() != number_of_elements_
+                || (ElementPos)solution_parent_2.sequences[0].elements.size() != number_of_elements_) {
+            throw std::invalid_argument(
+                    "The cycle crossover"
+                    " cannot be used with sub-sequences.");
+        }
+
+        const auto& elements_parent_1 = solution_parent_1.sequences[0].elements;
+        const auto& elements_parent_2 = solution_parent_2.sequences[0].elements;
+
+        std::vector<ElementPos> positions_parent_1(number_of_elements_);
+        std::vector<ElementPos> positions_parent_2(number_of_elements_);
+        for (ElementPos pos = 0; pos < number_of_elements_; ++pos) {
+            const SequenceElement& se1 = elements_parent_1[pos];
+            positions_parent_1[se1.element_id] = pos;
+            const SequenceElement& se2 = elements_parent_2[pos];
+            positions_parent_2[se2.element_id] = pos;
+        }
+
+        ElementPos pos_1 = 0;
+        ElementPos pos_2 = 0;
+        bool first_parent = true;
+        ElementPos n = 0;
+
+        std::vector<SequenceElement> elements(number_of_elements_);
+        std::vector<ElementPos> positions(number_of_elements_, -1);
+
+        while (n < number_of_elements_) {
+            if (first_parent) {
+                //std::cout << "first_parent" << std::endl;
+                while (positions[elements_parent_1[pos_1].element_id] != -1)
+                    pos_1++;
+                ElementPos p = pos_1;
+                do {
+                    //std::cout << "p " << p << " element_id " << elements_parent_1[p].element_id << std::endl;
+                    elements[p] = elements_parent_1[p];
+                    positions[elements[p].element_id] = p;
+                    p = positions_parent_1[elements_parent_2[p].element_id];
+                    n++;
+                } while (p != pos_1);
+                first_parent = false;
+            } else {
+                //std::cout << "second_parent" << std::endl;
+                while (positions[elements_parent_2[pos_2].element_id] != -1)
+                    pos_2++;
+                ElementPos p = pos_2;
+                do {
+                    //std::cout << "p " << p << " element_id " << elements_parent_2[p].element_id << std::endl;
+                    elements[p] = elements_parent_2[p];
+                    positions[elements[p].element_id] = p;
+                    p = positions_parent_2[elements_parent_1[p].element_id];
+                    n++;
+                } while (p != pos_2);
+                first_parent = true;
+            }
+        }
+
+        Solution solution_child = split(elements, generator);
+
+        //std::cout << "Parent 1" << std::endl;
+        //print(std::cout, solution_parent_1);
+        //std::cout << "Parent 2" << std::endl;
+        //print(std::cout, solution_parent_2);
         //std::cout << "Child" << std::endl;
         //print(std::cout, solution_child);
 

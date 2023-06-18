@@ -74,6 +74,7 @@ In case the `GlobalCost global_cost_concatenate(SequenceData&, const SequenceDat
   * Similar job order crossover (SJOX): single sequence
   * Similar block order crossover (SBOX): single sequence
   * Maximal preservative crossover (MPX): single sequence
+  * Cycle crossover (CX): single sequence
   * Selective route exchange crossover 1 (SREX1): multiple sequences
   * Selective route exchange crossover 2 (SREX2): multiple sequences
 
