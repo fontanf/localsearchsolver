@@ -85,9 +85,9 @@ inline GeneticLocalSearchOutput<LocalScheme> genetic_local_search(
         LocalScheme& local_scheme,
         GeneticLocalSearchOptionalParameters<LocalScheme> parameters = {});
 
-///////////////////////////////////////////////////////////////////////////////
-/////////////////////////// Template implementations //////////////////////////
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+/////////////////////////// Template implementations ///////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 template <typename LocalScheme>
 class Population
@@ -97,6 +97,9 @@ class Population
 
     struct PopulationSolution
     {
+        PopulationSolution(const Solution& solution):
+            solution(solution) { }
+
         Solution solution;
         double diversity = std::numeric_limits<double>::infinity();
         Counter diversity_rank = -1;
@@ -185,7 +188,9 @@ public:
      * If the size of the population exceeds the maximum size of the
      * population, then the worst solution is removed from the population.
      */
-    void add(const Solution& solution, std::mt19937_64& generator)
+    void add(
+            const Solution& solution,
+            std::mt19937_64& generator)
     {
         // Check if the solution is already in the population.
         for (Counter solution_id = 0; solution_id < size(); ++solution_id) {
@@ -197,8 +202,7 @@ public:
         }
 
         // Add the new solution to the population.
-        PopulationSolution population_solution;
-        population_solution.solution = solution;
+        PopulationSolution population_solution(solution);
         //std::cout << "Add new solution." << std::endl;
         solutions_.push_back(population_solution);
         update_scores(generator);
