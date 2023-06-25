@@ -2698,6 +2698,7 @@ public:
                 }
             }
         } else {
+            file << number_of_sequences_ << std::endl;
             for (SequenceId sequence_id = 0;
                     sequence_id < number_of_sequences_;
                     ++sequence_id) {
