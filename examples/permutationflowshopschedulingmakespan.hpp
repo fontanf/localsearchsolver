@@ -61,7 +61,7 @@ public:
     }
 
     /*
-     * Global cost.
+     * Global cost
      */
 
     /** Global cost: <Makespan>. */
@@ -71,12 +71,15 @@ public:
     inline Time  makespan(const GlobalCost& global_cost) { return std::get<0>(global_cost); }
 
     /*
-     * Solutions.
+     * Solutions
      */
 
     struct Solution
     {
+        /** Jobs. */
         std::vector<JobId> jobs;
+
+        /** Makespan. */
         Time makespan = 0;
     };
 
@@ -105,7 +108,7 @@ public:
     }
 
     /*
-     * Local search.
+     * Local search
      */
 
     struct Perturbation;
@@ -115,12 +118,15 @@ public:
             std::mt19937_64& generator,
             const Perturbation& = Perturbation())
     {
-        MachineId m = instance_.number_of_machines();
+        std::vector<Counter> neighborhoods;
+        for (JobPos block_size = 1;
+                block_size <= parameters_.block_size_max;
+                ++block_size) {
+            neighborhoods.push_back(block_size);
+        }
+
         Counter it = 0;
         (void)it;
-        std::vector<Counter> neighborhoods;
-        for (JobPos block_size = 1; block_size <= parameters_.block_size_max; ++block_size)
-            neighborhoods.push_back(block_size);
         for (;; ++it) {
             //std::cout << "it " << it
             //    << " c " << to_string(global_cost(solution))
@@ -145,10 +151,13 @@ public:
                         if (pos == pos_new || pos_new > (JobPos)solution.jobs.size() - block_size)
                             continue;
                         Time makespan = 0;
-                        for (MachineId machine_id = 0; machine_id < m; ++machine_id)
+                        for (MachineId machine_id = 0;
+                                machine_id < instance_.number_of_machines();
+                                ++machine_id) {
                             makespan = std::max(makespan,
                                     completion_times_[pos_new][machine_id]
                                              + tails_[pos_new][machine_id]);
+                        }
                         GlobalCost c = {makespan};
                         if (c >= c_best)
                             continue;
@@ -196,7 +205,9 @@ public:
                             << std::endl;
                         std::cout << makespan(c_best) << std::endl;
                         std::cout << solution.makespan << std::endl;
-                        for (MachineId machine_id = 0; machine_id < m; ++machine_id) {
+                        for (MachineId machine_id = 0;
+                                machine_id < instance_.number_of_machines();
+                                ++machine_id) {
                             std::cout << "machine_id " << machine_id
                                 << " " << heads_[((pos_new_best <= pos_best)? pos_new_best: pos_new_best - block_size)][machine_id]
                                 << " " << completion_times_[((pos_new_best <= pos_best)? pos_new_best: pos_new_best - block_size)][machine_id]
@@ -217,7 +228,7 @@ public:
     }
 
     /*
-     * Iterated local search.
+     * Iterated local search
      */
 
     struct Perturbation
@@ -240,7 +251,9 @@ public:
                 perturbation_id < parameters_.number_of_perturbations;
                 ++perturbation_id) {
             std::vector<JobPos> edges = optimizationtools::bob_floyd<JobPos>(
-                    4, solution.jobs.size() + 1, generator);
+                    4,
+                    solution.jobs.size() + 1,
+                    generator);
             std::sort(edges.begin(), edges.end());
             Perturbation perturbation;
             perturbation.pos_1 = edges[0];
@@ -276,7 +289,7 @@ public:
     }
 
     /*
-     * Best first local search.
+     * Best first local search
      */
 
     /**
@@ -331,7 +344,7 @@ public:
     inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
 
     /*
-     * Outputs.
+     * Outputs
      */
 
     std::ostream& print(
@@ -365,19 +378,20 @@ public:
 private:
 
     /*
-     * Manipulate solutions.
+     * Manipulate solutions
      */
 
     inline void compute(
             Solution& solution,
             const std::vector<JobId>& jobs)
     {
-        MachineId m = instance_.number_of_machines();
         solution.jobs = jobs;
         std::fill(times_.begin(), times_.end(), 0);
         for (JobId job_id: solution.jobs) {
             times_[0] = times_[0] + instance_.processing_time(job_id, 0);
-            for (MachineId machine_id = 1; machine_id < m; ++machine_id) {
+            for (MachineId machine_id = 1;
+                    machine_id < instance_.number_of_machines();
+                    ++machine_id) {
                 if (times_[machine_id - 1] > times_[machine_id]) {
                     times_[machine_id] = times_[machine_id - 1]
                         + instance_.processing_time(job_id, machine_id);
@@ -387,11 +401,11 @@ private:
                 }
             }
         }
-        solution.makespan = times_[m - 1];
+        solution.makespan = times_[instance_.number_of_machines() - 1];
     }
 
     /*
-     * Evaluate moves.
+     * Evaluate moves
      */
 
     inline void compute_structures(
@@ -399,14 +413,14 @@ private:
             JobPos pos,
             JobPos size)
     {
-        MachineId m = instance_.number_of_machines();
-
         // Compute heads_.
         for (JobPos pos_new = 0; pos_new < (JobPos)solution.jobs.size() - size; ++pos_new) {
             JobId job_id = solution.jobs[((pos_new < pos)? pos_new: pos_new + size)];
             heads_[pos_new + 1][0] = heads_[pos_new][0]
                 + instance_.processing_time(job_id, 0);
-            for (MachineId machine_id = 1; machine_id < m; ++machine_id) {
+            for (MachineId machine_id = 1;
+                    machine_id < instance_.number_of_machines();
+                    ++machine_id) {
                 if (heads_[pos_new + 1][machine_id - 1] > heads_[pos_new][machine_id]) {
                     heads_[pos_new + 1][machine_id] = heads_[pos_new + 1][machine_id - 1]
                         + instance_.processing_time(job_id, machine_id);
@@ -419,13 +433,18 @@ private:
 
         // Compute completion_times_.
         for (JobPos pos_new = 0; pos_new <= (JobPos)solution.jobs.size() - size; ++pos_new) {
-            for (MachineId machine_id = 0; machine_id < m; ++machine_id)
+            for (MachineId machine_id = 0;
+                    machine_id < instance_.number_of_machines();
+                    ++machine_id) {
                 completion_times_[pos_new][machine_id] = heads_[pos_new][machine_id];
+            }
             for (JobPos pos_0 = pos; pos_0 < pos + size; ++pos_0) {
                 JobId job_id_0 = solution.jobs[pos_0];
                 completion_times_[pos_new][0] = completion_times_[pos_new][0]
                     + instance_.processing_time(job_id_0, 0);
-                for (MachineId machine_id = 1; machine_id < m; ++machine_id) {
+                for (MachineId machine_id = 1;
+                        machine_id < instance_.number_of_machines();
+                        ++machine_id) {
                     if (completion_times_[pos_new][machine_id] > completion_times_[pos_new][machine_id - 1]) {
                         completion_times_[pos_new][machine_id] = completion_times_[pos_new][machine_id]
                             + instance_.processing_time(job_id_0, machine_id);
@@ -438,15 +457,21 @@ private:
         }
 
         // Update tails_.
-        for (MachineId machine_id = m - 1; machine_id >= 0; --machine_id)
+        for (MachineId machine_id = instance_.number_of_machines() - 1;
+                machine_id >= 0;
+                --machine_id) {
             tails_[solution.jobs.size() - size][machine_id] = 0;
+        }
         for (JobPos pos_new = solution.jobs.size() - size - 1; pos_new >= 0; --pos_new) {
             JobId job_id = solution.jobs[((pos_new < pos)? pos_new: pos_new + size)];
             assert(job_id >= 0);
             assert(job_id < instance_.number_of_jobs());
-            tails_[pos_new][m - 1] = tails_[pos_new + 1][m - 1]
-                + instance_.processing_time(job_id, m - 1);
-            for (MachineId machine_id = m - 2; machine_id >= 0; --machine_id) {
+            tails_[pos_new][instance_.number_of_machines() - 1]
+                = tails_[pos_new + 1][instance_.number_of_machines() - 1]
+                + instance_.processing_time(job_id, instance_.number_of_machines() - 1);
+            for (MachineId machine_id = instance_.number_of_machines() - 2;
+                    machine_id >= 0;
+                    --machine_id) {
                 if (tails_[pos_new][machine_id + 1] > tails_[pos_new + 1][machine_id]) {
                     tails_[pos_new][machine_id] = tails_[pos_new][machine_id + 1]
                         + instance_.processing_time(job_id, machine_id);
@@ -459,7 +484,7 @@ private:
     }
 
     /*
-     * Private attributes.
+     * Private attributes
      */
 
     /** Instance. */

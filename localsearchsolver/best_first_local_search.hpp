@@ -316,6 +316,11 @@ inline void best_first_local_search_worker(
 
         data.mutex.lock();
 
+        if (data.q.empty()) {
+            data.mutex.unlock();
+            continue;
+        }
+
         // Check node limit.
         if (data.parameters.maximum_number_of_nodes != -1
                 && data.number_of_nodes >= data.parameters.maximum_number_of_nodes) {
@@ -355,12 +360,8 @@ inline void best_first_local_search_worker(
                 && !strictly_better(
                     local_scheme,
                     data.parameters.goal,
-                    local_scheme.global_cost(data.output.solution_pool.best())))
+                    local_scheme.global_cost(data.output.solution_pool.best()))) {
             break;
-
-        if (data.q.empty()) {
-            data.mutex.unlock();
-            continue;
         }
 
         // Draw next node from the queue.
