@@ -1,6 +1,6 @@
 /**
- * Single machine scheduling problem with sequence-dependent setup times, Total
- * weighted tardiness.
+ * Single machine scheduling problem with sequence-dependent setup times, total
+ * weighted tardiness
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/schedulingwithsdsttwt.hpp

@@ -1,4 +1,4 @@
-# Local Search Solver
+# Local search solver
 
 A solver based on local search.
 
@@ -82,7 +82,7 @@ In case the `GlobalCost global_cost_concatenate(SequenceData&, const SequenceDat
 
 #### Single sequence
 
-[Sequential Ordering Problem](examples/sequentialordering.hpp)
+[Sequential ordering problem](examples/sequentialordering.hpp)
 
 <details><summary>Benchmarks</summary>
 <p>
@@ -97,7 +97,7 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/sequential
 </p>
 </details>
 
-[Single machine scheduling problem with sequence-dependent setup times, Total weighted tardiness](examples/schedulingwithsdsttwt.hpp)
+[Single machine scheduling problem with sequence-dependent setup times, total weighted tardiness](examples/schedulingwithsdsttwt.hpp)
 
 <details><summary>Benchmarks</summary>
 <p>
@@ -112,7 +112,7 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/scheduling
 </p>
 </details>
 
-[Permutation flow shop scheduling problem, Total completion time](examples/permutationflowshopschedulingtct.hpp)
+[Permutation flow shop scheduling problem, total completion time](examples/permutationflowshopschedulingtct.hpp)
 
 <details><summary>Benchmarks</summary>
 <p>
@@ -127,7 +127,7 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/flowshopsc
 </p>
 </details>
 
-[Permutation flow shop scheduling problem, Total tardiness](examples/permutationflowshopschedulingtt.hpp)
+[Permutation flow shop scheduling problem, total tardiness](examples/permutationflowshopschedulingtt.hpp)
 
 <details><summary>Benchmarks</summary>
 <p>
@@ -144,7 +144,7 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/flowshopsc
 
 #### Single sub-sequence
 
-[Single machine order acceptance and scheduling problem with time windows and sequence-dependent setup times, Total weighted tardiness](examples/orderacceptanceandscheduling.hpp)
+[Single machine order acceptance and scheduling problem with time windows and sequence-dependent setup times, total weighted tardiness](examples/orderacceptanceandscheduling.hpp)
 
 <details><summary>Benchmarks</summary>
 <p>
@@ -161,7 +161,7 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/orderaccep
 
 #### Multiple sequences
 
-[Distributed permutation flow shop scheduling problem, Total completion time](examples/distributedpfsstct.hpp)
+[Distributed permutation flow shop scheduling problem, total completion time](examples/distributedpfsstct.hpp)
 
 <details><summary>Benchmarks</summary>
 <p>
@@ -178,11 +178,11 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/flowshopsc
 
 [Traveling salesman problem with release dates](examples/travelingsalesmanwithreleasedates.hpp)
 
-[Single machine batch scheduling problem, Total weighted tardiness](examples/batchschedulingtotalweightedtardiness.hpp)
+[Single machine batch scheduling problem, total weighted tardiness](examples/batchschedulingtotalweightedtardiness.hpp)
 
 #### Single sequence, `sequence_data_init/concatenate`
 
-[Traveling Repairman Problem](examples/travelingrepairman.hpp)
+[Traveling repairman problem](examples/travelingrepairman.hpp)
 
 #### Multiple sequences, `sequence_data_init/concatenate`
 
@@ -195,7 +195,7 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/flowshopsc
 
 Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orproblems)
 
-[Multidimensional Multiple-choice Knapsack Problem](examples/multidimensionalmultiplechoiceknapsack.hpp)
+[Multidimensional multiple-choice knapsack problem](examples/multidimensionalmultiplechoiceknapsack.hpp)
 * Straightforward example for a genetic local search: single neighborhood, basic operators
 * Algorithm:
   * Local search neighborhoods:
@@ -215,7 +215,7 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/multidimen
 </p>
 </details>
 
-[Quadratic Assignment Problem](examples/quadraticassignment.hpp)
+[Quadratic assignment problem](examples/quadraticassignment.hpp)
 * Example which implements a problem specific acceleration strategy to compute the move costs
 * Algorithm:
   * Local search neighborhood: swap two assignments
@@ -235,7 +235,7 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/quadratica
 </p>
 </details>
 
-[Knapsack Problem with Conflicts](examples/knapsackwithconflicts.hpp)
+[Knapsack problem with conflicts](examples/knapsackwithconflicts.hpp)
 * Example with multiple neigborhoods
 * Algorithm:
   * Local search neighborhoods:
@@ -258,13 +258,13 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/knapsackwi
 </p>
 </details>
 
-Generalized Assignment Problem from [fontanf/generalizedassignmentsolver](https://github.com/fontanf/generalizedassignmentsolver/blob/master/generalizedassignmentsolver/algorithms/localsearch.cpp)
+Generalized assignment problem from [fontanf/generalizedassignmentsolver](https://github.com/fontanf/generalizedassignmentsolver/blob/master/generalizedassignmentsolver/algorithms/localsearch.cpp)
 * Example which implements a generic strategy for very large problems to avoid recomputing moves which have not change since the last neighborhood exploration
 * Algorithm:
   * Local search neighborhoods: shift item `j` to agent `i`
   * Perturbation: shift 8 random jobs
 
-[Permutation flow shop scheduling problem, Makespan](examples/permutationflowshopschedulingmakespan.hpp)
+[Permutation flow shop scheduling problem, makespan](examples/permutationflowshopschedulingmakespan.hpp)
 * This one is not considered as a sequencing problem since the dedicated acceleration strategy makes it possible to explore the neighborhoods more efficiently
 * Algorithm:
   * Local search neighborhood: move a block of `k` consecutive jobs, `k = 1..4`
@@ -281,7 +281,7 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/permutatio
 </p>
 </details>
 
-[ROADEF/EURO Challenge 2020: Maintenance Planning Problem](examples/roadef2020.hpp)
+[ROADEF/EURO challenge 2020: maintenance planning problem](examples/roadef2020.hpp)
 * Example of a problem with expensive move evaluations
 * Algorithm:
   * Local search neighborhood: shift intervention `j` to time `t_start`
@@ -298,7 +298,7 @@ python3 ../optimizationtools/scripts/bench_process.py -b heuristiclong --csv ../
 </p>
 </details>
 
-Maximum-Weight Independent Set Problem from [fontanf/stablesolver](https://github.com/fontanf/stablesolver/blob/master/stablesolver/algorithms/localsearch.cpp)
+[Maximum-weight independent set problem](https://github.com/fontanf/stablesolver/blob/master/stablesolver/algorithms/localsearch.cpp) and [maximum-weight clique problem](https://github.com/fontanf/stablesolver/blob/master/cliquesolver/algorithms/localsearch.hpp) from [fontanf/stablesolver](https://github.com/fontanf/stablesolver)
 * Algorithm:
   * Local search neighborhoods:
     * Move vertex `v` in/out of the solution (and remove conflicting vertices)

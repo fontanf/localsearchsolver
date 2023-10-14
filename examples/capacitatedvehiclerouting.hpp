@@ -1,5 +1,5 @@
 /**
- * Capacitated vehicle routing problem.
+ * Capacitated vehicle routing problem
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/capacitatedvehiclerouting.hpp

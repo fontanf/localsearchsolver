@@ -1,5 +1,5 @@
 /**
- * ROADEF/EURO Challenge 2020: Maintenance Planning Problem.
+ * ROADEF/EURO challenge 2020: maintenance planning problem
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/roadef2020.hpp

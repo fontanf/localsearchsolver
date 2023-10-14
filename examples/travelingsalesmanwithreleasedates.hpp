@@ -1,5 +1,5 @@
 /**
- * Traveling salesman problem with release dates.
+ * Traveling salesman problem with release dates
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/travelingsalesmanwithreleasedates.hpp

@@ -1,5 +1,5 @@
 /**
- * Single machine batch scheduling problem, Total weighted tardiness.
+ * Single machine batch scheduling problem, total weighted tardiness
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/batchschedulingtotalweightedtardiness.hpp

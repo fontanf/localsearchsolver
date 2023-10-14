@@ -1,5 +1,5 @@
 /**
- * Quadratic Assignment Problem.
+ * Quadratic assignment problem
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/quadraticassignment.hpp

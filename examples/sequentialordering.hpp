@@ -1,5 +1,5 @@
 /**
- * Sequential Ordering Problem.
+ * Sequential ordering problem
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/sequentialordering.hpp

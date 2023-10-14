@@ -1,6 +1,6 @@
 /**
  * Single machine order acceptance and scheduling problem with time windows and
- * sequence_data-dependent setup times, Total weighted tardiness.
+ * sequence_data-dependent setup times, total weighted tardiness
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/orderacceptanceandscheduling.hpp

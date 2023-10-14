@@ -1,5 +1,5 @@
 /**
- * Permutation flow shop scheduling problem, Makespan.
+ * Permutation flow shop scheduling problem, makespan
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/permutationflowshopschedulingmakespan.hpp

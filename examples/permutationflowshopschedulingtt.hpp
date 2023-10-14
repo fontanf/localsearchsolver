@@ -1,5 +1,5 @@
 /**
- * Permutation flow shop scheduling problem, Total tardiness.
+ * Permutation flow shop scheduling problem, total tardiness
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/permutationflowshopschedulingtt.hpp

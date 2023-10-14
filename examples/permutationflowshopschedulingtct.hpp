@@ -1,5 +1,5 @@
 /**
- * Permutation flow shop scheduling problem, Total completion_time.
+ * Permutation flow shop scheduling problem, total completion_time
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/permutationflowshopschedulingtct.hpp

@@ -1,5 +1,5 @@
 /**
- * Time-dependent orienteering problem.
+ * Time-dependent orienteering problem
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/timedependentorienteering.hpp

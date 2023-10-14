@@ -1,5 +1,5 @@
 /**
- * Traveling Repairman Problem.
+ * Traveling repairman problem
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/travelingrepairman.hpp

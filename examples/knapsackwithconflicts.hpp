@@ -1,10 +1,10 @@
 /**
- * Knapsack Problem with Conflicts.
+ * Knapsack problem with conflicts
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/knapsackwithconflicts.hpp
  *
- * Local Search:
+ * Local search:
  *
  * Three neighborhoods are implemented:
  * - Toggle: remove an item from the knapsack or add an item into the knapsack
