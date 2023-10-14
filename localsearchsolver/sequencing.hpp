@@ -1,5 +1,5 @@
 /**
- * Sequencing problems.
+ * Sequencing problems
  */
 
 #pragma once
