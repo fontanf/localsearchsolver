@@ -717,7 +717,7 @@ public:
                             improving_moves.end(),
                             generator);
                     Move move_best;
-                    for (const Move move: improving_moves)
+                    for (const Move& move: improving_moves)
                         if (move_best.sequence_id_1 == -1 || dominates(
                                     move.global_cost,
                                     move_best.global_cost))
@@ -743,7 +743,7 @@ public:
                             improving_moves.end(),
                             generator);
                     Move move_best;
-                    for (const Move move: improving_moves)
+                    for (const Move& move: improving_moves)
                         if (move_best.sequence_id_1 == -1 || dominates(
                                     move.global_cost,
                                     move_best.global_cost))
@@ -772,7 +772,7 @@ public:
                             improving_moves.end(),
                             generator);
                     Move move_best;
-                    for (const Move move: improving_moves)
+                    for (const Move& move: improving_moves)
                         if (move_best.sequence_id_1 == -1 || dominates(
                                     move.global_cost,
                                     move_best.global_cost))
@@ -1569,7 +1569,7 @@ public:
                         improving_moves.end(),
                         generator);
                 Move move_best;
-                for (const Move move: improving_moves)
+                for (const Move& move: improving_moves)
                     if (move_best.sequence_id_1 == -1 || dominates(
                                 move.global_cost,
                                 move_best.global_cost))
@@ -1729,7 +1729,7 @@ public:
                         improving_moves.end(),
                         generator);
                 Move move_best;
-                for (const Move move: improving_moves)
+                for (const Move& move: improving_moves)
                     if (move_best.sequence_id_1 == -1 || dominates(
                                 move.global_cost,
                                 move_best.global_cost))
@@ -2274,7 +2274,7 @@ public:
                                 improving_moves.end(),
                                 generator);
                         Move move_best;
-                        for (const Move move: improving_moves)
+                        for (const Move& move: improving_moves)
                             if (move_best.sequence_id_1 == -1 || dominates(
                                         move.global_cost,
                                         move_best.global_cost))
@@ -2582,7 +2582,7 @@ public:
                             neighborhood.improving_moves.end(),
                             generator);
                     Move move_best;
-                    for (const Move move: neighborhood.improving_moves)
+                    for (const Move& move: neighborhood.improving_moves)
                         if (move_best.sequence_id_1 == -1 || dominates(
                                     move.global_cost,
                                     move_best.global_cost))
