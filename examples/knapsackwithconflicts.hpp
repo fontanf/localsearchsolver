@@ -159,7 +159,7 @@ public:
     }
 
     /*
-     * Local search.
+     * Local search
      */
 
     struct Perturbation;

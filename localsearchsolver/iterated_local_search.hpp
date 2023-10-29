@@ -105,7 +105,7 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
     // Initial display.
     parameters.info.os()
         << "=======================================" << std::endl
-        << "          Local Search Solver          " << std::endl
+        << "           LocalSearchSolver           " << std::endl
         << "=======================================" << std::endl
         << std::endl
         << "Algorithm" << std::endl

@@ -93,7 +93,7 @@ public:
     }
 
     /*
-     * Local search.
+     * Local search
      */
 
     inline void local_search(
