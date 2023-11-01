@@ -298,7 +298,7 @@ python3 ../optimizationtools/scripts/bench_process.py -b heuristiclong --csv ../
 </p>
 </details>
 
-[Maximum-weight independent set problem](https://github.com/fontanf/stablesolver/blob/master/stablesolver/stable/algorithms/localsearch.cpp) and [maximum-weight clique problem](https://github.com/fontanf/stablesolver/blob/master/stablesolver/clique/algorithms/localsearch.cpp) from [fontanf/stablesolver](https://github.com/fontanf/stablesolver)
+[Maximum-weight independent set problem](https://github.com/fontanf/stablesolver/blob/master/stablesolver/stable/algorithms/local_search.cpp) and [maximum-weight clique problem](https://github.com/fontanf/stablesolver/blob/master/stablesolver/clique/algorithms/local_search.cpp) from [fontanf/stablesolver](https://github.com/fontanf/stablesolver)
 * Algorithm:
   * Local search neighborhoods:
     * Move vertex `v` in/out of the solution (and remove conflicting vertices)
