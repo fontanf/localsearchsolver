@@ -258,7 +258,7 @@ python3 ../optimizationtools/scripts/bench_process.py --csv ../ordata/knapsackwi
 </p>
 </details>
 
-[Generalized assignment problem](https://github.com/fontanf/generalizedassignmentsolver/blob/master/generalizedassignmentsolver/algorithms/localsearch.cpp) from [fontanf/generalizedassignmentsolver](https://github.com/fontanf/generalizedassignmentsolver)
+[Generalized assignment problem](https://github.com/fontanf/generalizedassignmentsolver/blob/master/generalizedassignmentsolver/algorithms/local_search.cpp) from [fontanf/generalizedassignmentsolver](https://github.com/fontanf/generalizedassignmentsolver)
 * Example which implements a generic strategy for very large problems to avoid recomputing moves which have not change since the last neighborhood exploration
 * Algorithm:
   * Local search neighborhoods: shift item `j` to agent `i`
@@ -298,7 +298,7 @@ python3 ../optimizationtools/scripts/bench_process.py -b heuristiclong --csv ../
 </p>
 </details>
 
-[Maximum-weight independent set problem](https://github.com/fontanf/stablesolver/blob/master/stablesolver/algorithms/localsearch.cpp) and [maximum-weight clique problem](https://github.com/fontanf/stablesolver/blob/master/cliquesolver/algorithms/localsearch.cpp) from [fontanf/stablesolver](https://github.com/fontanf/stablesolver)
+[Maximum-weight independent set problem](https://github.com/fontanf/stablesolver/blob/master/stablesolver/stable/algorithms/localsearch.cpp) and [maximum-weight clique problem](https://github.com/fontanf/stablesolver/blob/master/stablesolver/clique/algorithms/localsearch.cpp) from [fontanf/stablesolver](https://github.com/fontanf/stablesolver)
 * Algorithm:
   * Local search neighborhoods:
     * Move vertex `v` in/out of the solution (and remove conflicting vertices)
