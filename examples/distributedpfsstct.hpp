@@ -1,5 +1,5 @@
 /**
- * Permutation flow shop scheduling problem, total completion_time
+ * Distributed permutation flow shop scheduling problem, total completion time
  *
  * Problem description:
  * See https://github.com/fontanf/orproblems/blob/main/orproblems/distributedpfsstct.hpp
@@ -14,7 +14,6 @@
 
 namespace localsearchsolver
 {
-
 namespace distributedpfsstct
 {
 
@@ -102,13 +101,21 @@ public:
         sequence_data.total_completion_time += sequence_data.times[m - 1];
     }
 
+    void instance_format(
+            std::ostream& os,
+            int verbosity_level) const
+    {
+        os << "Distributed permutation flow shop scheduling problem, total completion time" << std::endl;
+        instance_.format(os, verbosity_level);
+    }
+
 private:
 
+    /** Instance. */
     const Instance& instance_;
 
 };
 
 }
-
 }
 

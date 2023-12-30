@@ -29,16 +29,16 @@ class LocalScheme
 
 public:
 
-    /*
-     * Constructors and destructor.
-     */
-
     struct Parameters
     {
         double crossover_ux_weight = 1.0;
         double crossover_swap_weight = 0.0;
         double crossover_insert_weight = 0.0;
     };
+
+    /*
+     * Constructors and destructor
+     */
 
     LocalScheme(
             const Instance& instance,
@@ -57,7 +57,7 @@ public:
     }
 
     /*
-     * Global cost.
+     * Global cost
      */
 
     /** Global cost: <Cost>; */
@@ -74,7 +74,7 @@ public:
     }
 
     /*
-     * Solutions.
+     * Solutions
      */
 
     struct Solution
@@ -158,7 +158,7 @@ public:
     }
 
     /*
-     * Genetic local search.
+     * Genetic local search
      */
 
     inline Solution crossover_ux(
@@ -300,7 +300,7 @@ public:
     }
 
     /*
-     * Iterated local search.
+     * Iterated local search
      */
 
     struct Perturbation
@@ -378,7 +378,7 @@ public:
     }
 
     /*
-     * Best first local search.
+     * Best first local search
      */
 
     using CompactSolution = std::vector<LocationId>;
@@ -459,41 +459,50 @@ public:
     inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
 
     /*
-     * Outputs.
+     * Outputs
      */
 
-    std::ostream& print(
-            std::ostream &os,
-            const Solution& solution) const
+    void instance_format(
+            std::ostream& os,
+            int verbosity_level) const
     {
+        os << "Quadratic assignment problem" << std::endl;
+        instance_.format(os, verbosity_level);
+    }
+
+    void solution_format(
+            std::ostream& os,
+            const Solution& solution,
+            int verbosity_level) const
+    {
+        (void)verbosity_level;
         os << "locations:";
         for (LocationId location_id: solution.locations)
             os << " " << location_id;
         os << std::endl;
         os << "cost: " << solution.cost << std::endl;
-        return os;
     }
 
-    inline void write(
+    void solution_write(
             const Solution& solution,
-            std::string certificate_path) const
+            const std::string& certificate_path) const
     {
         if (certificate_path.empty())
             return;
-        std::ofstream cert(certificate_path);
-        if (!cert.good()) {
+        std::ofstream file(certificate_path);
+        if (!file.good()) {
             throw std::runtime_error(
                     "Unable to open file \"" + certificate_path + "\".");
         }
 
         for (LocationId location_id: solution.locations)
-            cert << location_id << " ";
+            file << location_id << " ";
     }
 
 private:
 
     /*
-     * Manipulate solutions.
+     * Manipulate solutions
      */
 
     inline void add(Solution& solution, FacilityId facility_id, LocationId location_id) const
@@ -533,7 +542,7 @@ private:
     }
 
     /*
-     * Evaluate moves.
+     * Evaluate moves
      */
 
     inline GlobalCost cost_swap(
@@ -585,7 +594,7 @@ private:
     }
 
     /*
-     * Private attributes.
+     * Private attributes
      */
 
     /** Instance. */

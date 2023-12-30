@@ -15,7 +15,6 @@
 
 namespace localsearchsolver
 {
-
 namespace permutationflowshopschedulingmakespan
 {
 
@@ -26,16 +25,16 @@ class LocalScheme
 
 public:
 
-    /*
-     * Constructors and destructor.
-     */
-
     struct Parameters
     {
         JobPos block_size_max = 8;
         bool shuffle_neighborhood_order = true;
         Counter number_of_perturbations = 10;
     };
+
+    /*
+     * Constructors and destructor
+     */
 
     LocalScheme(
             const Instance& instance,
@@ -214,7 +213,7 @@ public:
                                 << " " << tails_[((pos_new_best <= pos_best)? pos_new_best: pos_new_best - block_size)][machine_id]
                                 << std::endl;
                         }
-                        print(std::cout, solution);
+                        solution_format(std::cout, solution, 1);
                     }
                     assert(solution.makespan == makespan(c_best));
                 }
@@ -347,32 +346,41 @@ public:
      * Outputs
      */
 
-    std::ostream& print(
-            std::ostream &os,
-            const Solution& solution)
+    void instance_format(
+            std::ostream& os,
+            int verbosity_level) const
     {
+        os << "Permutation flow shop scheduling problem, makespan" << std::endl;
+        instance_.format(os, verbosity_level);
+    }
+
+    void solution_format(
+            std::ostream& os,
+            const Solution& solution,
+            int verbosity_level)
+    {
+        (void)verbosity_level;
         os << "jobs:";
         for (JobId job_id: solution.jobs)
             os << " " << job_id;
         os << std::endl;
         os << "makespan: " << solution.makespan << std::endl;
-        return os;
     }
 
-    inline void write(
+    void solution_write(
             const Solution& solution,
-            std::string certificate_path) const
+            const std::string& certificate_path) const
     {
         if (certificate_path.empty())
             return;
-        std::ofstream cert(certificate_path);
-        if (!cert.good()) {
+        std::ofstream file(certificate_path);
+        if (!file.good()) {
             throw std::runtime_error(
                     "Unable to open file \"" + certificate_path + "\".");
         }
 
         for (JobId job_id: solution.jobs)
-            cert << job_id << " ";
+            file << job_id << " ";
     }
 
 private:
@@ -508,6 +516,5 @@ private:
 };
 
 }
-
 }
 

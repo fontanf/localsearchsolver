@@ -1,6 +1,6 @@
 #pragma once
 
-#include "localsearchsolver/common.hpp"
+#include "localsearchsolver/algorithm_formatter.hpp"
 
 #include <unordered_set>
 #include <thread>
@@ -9,10 +9,7 @@ namespace localsearchsolver
 {
 
 template <typename LocalScheme>
-using BestFirstLocalSearchCallback = std::function<void(const typename LocalScheme::Solution&)>;
-
-template <typename LocalScheme>
-struct BestFirstLocalSearchOptionalParameters
+struct BestFirstLocalSearchParameters: Parameters<LocalScheme>
 {
     using Solution = typename LocalScheme::Solution;
     using GlobalCost = typename LocalScheme::GlobalCost;
@@ -26,54 +23,68 @@ struct BestFirstLocalSearchOptionalParameters
     /** Number of threads running on the same node pool in parallel. */
     Counter number_of_threads_2 = 1;
 
-    /** Ids of generated initial solutions. */
-    std::vector<Counter> initial_solution_ids = {0};
 
-    /** User-provided initial solutions. */
-    std::vector<Solution> initial_solutions;
+    virtual nlohmann::json to_json(
+            const LocalScheme& local_scheme) const override
+    {
+        nlohmann::json json = Parameters<LocalScheme>::to_json(local_scheme);
+        json.merge_patch({
+            {"MaximumNumberOfNodes", maximum_number_of_nodes}});
+        return json;
+    }
 
-    /** Maximum size of the solution pool. */
-    Counter maximum_size_of_the_solution_pool = 1;
+    virtual int format_width() const { return 26; }
 
-    /** Seed. */
-    Seed seed = 0;
-
-    /**
-     * Goal.
-     *
-     * The alglorithm stops as soon as a solution with a better global cost is
-     * found.
-     */
-    bool has_goal = false;
-
-    /** Goal. */
-    GlobalCost goal;
-
-    /** Callback function called when a new best solution is found. */
-    BestFirstLocalSearchCallback<LocalScheme> new_solution_callback
-        = [](const Solution& solution) { (void)solution; };
-
-    /** Info structure. */
-    optimizationtools::Info info;
+    virtual void format(
+            std::ostream& os,
+            const LocalScheme& local_scheme) const override
+    {
+        Parameters<LocalScheme>::format(os, local_scheme);
+        int width = format_width();
+        os
+            << std::setw(width) << std::left << "Maximum number of nodes: " << maximum_number_of_nodes << std::endl
+            ;
+    }
 };
 
 template <typename LocalScheme>
-struct BestFirstLocalSearchOutput
+struct BestFirstLocalSearchOutput: Output<LocalScheme>
 {
     /** Constructor. */
     BestFirstLocalSearchOutput(
             const LocalScheme& local_scheme,
             Counter maximum_size_of_the_solution_pool):
-        solution_pool(local_scheme, maximum_size_of_the_solution_pool) { }
+        Output<LocalScheme>(local_scheme, maximum_size_of_the_solution_pool) { }
 
-    /** Solution pool. */
-    SolutionPool<LocalScheme> solution_pool;
+
+    /** Number of nodes. */
+    Counter number_of_nodes = 0;
+
+
+    virtual nlohmann::json to_json() const override
+    {
+        nlohmann::json json = Output<LocalScheme>::to_json();
+        json.merge_patch({
+            {"NumberOfNodes", number_of_nodes}});
+        return json;
+    }
+
+    virtual int format_width() const { return 18; }
+
+    virtual void format(std::ostream& os) const override
+    {
+        Output<LocalScheme>::format(os);
+        int width = format_width();
+        os
+            << std::setw(width) << std::left << "Number of nodes: " << number_of_nodes << std::endl
+            ;
+    }
 };
 
 template <typename LocalScheme>
-inline BestFirstLocalSearchOutput<LocalScheme> best_first_local_search(
+inline const BestFirstLocalSearchOutput<LocalScheme> best_first_local_search(
         LocalScheme& local_scheme,
-        BestFirstLocalSearchOptionalParameters<LocalScheme> parameters = {});
+        const BestFirstLocalSearchParameters<LocalScheme>& parameters = {});
 
 ///////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Template implementations //////////////////////////
@@ -139,10 +150,12 @@ struct BestFirstLocalSearchData
 
     BestFirstLocalSearchData(
             LocalScheme& local_scheme,
-            BestFirstLocalSearchOptionalParameters<LocalScheme>& parameters,
+            const BestFirstLocalSearchParameters<LocalScheme>& parameters,
+            AlgorithmFormatter<LocalScheme>& algorithm_formatter,
             BestFirstLocalSearchOutput<LocalScheme>& output):
         local_scheme(local_scheme),
         parameters(parameters),
+        algorithm_formatter(algorithm_formatter),
         output(output),
         compact_solution_hasher(local_scheme.compact_solution_hasher()),
         history{0, compact_solution_hasher, compact_solution_hasher},
@@ -152,7 +165,8 @@ struct BestFirstLocalSearchData
         {  }
 
     LocalScheme& local_scheme;
-    BestFirstLocalSearchOptionalParameters<LocalScheme>& parameters;
+    const BestFirstLocalSearchParameters<LocalScheme>& parameters;
+    AlgorithmFormatter<LocalScheme>& algorithm_formatter;
     BestFirstLocalSearchOutput<LocalScheme>& output;
     CompactSolutionHasher compact_solution_hasher;
     CompactSolutionSet<LocalScheme> history;
@@ -228,7 +242,7 @@ inline void best_first_local_search_worker(
     for (;;) {
 
         // Check end.
-        if (data.parameters.info.needs_to_end())
+        if (data.parameters.timer.needs_to_end())
             break;
 
         // Check goal.
@@ -268,11 +282,7 @@ inline void best_first_local_search_worker(
             std::stringstream ss;
             ss << "s" << initial_solution_pos
                 << " (t" << thread_id << ")";
-            int res = data.output.solution_pool.add(solution, ss, data.parameters.info);
-            if (res == 2) {
-                data.output.solution_pool.display(ss, data.parameters.info);
-                data.parameters.new_solution_callback(solution);
-            }
+            data.algorithm_formatter.update_solution(solution, ss);
         }
 
         // Get perturbation perturbations.
@@ -302,7 +312,7 @@ inline void best_first_local_search_worker(
     for (;;) {
 
         // Check end.
-        if (data.parameters.info.needs_to_end())
+        if (data.parameters.timer.needs_to_end())
             break;
 
         // Check goal.
@@ -451,11 +461,7 @@ inline void best_first_local_search_worker(
                 << " d" << node_cur->depth
                 << " c" << node_cur->next_child_pos - 1
                 << " (t" << thread_id << ")";
-            int res = data.output.solution_pool.add(solution, ss, data.parameters.info);
-            if (res == 2) {
-                data.output.solution_pool.display(ss, data.parameters.info);
-                data.parameters.new_solution_callback(solution);
-            }
+            data.algorithm_formatter.update_solution(solution, ss);
         }
 
         // Get perturbation perturbations.
@@ -487,41 +493,27 @@ inline void best_first_local_search_worker(
 }
 
 template <typename LocalScheme>
-inline BestFirstLocalSearchOutput<LocalScheme> best_first_local_search(
+inline const BestFirstLocalSearchOutput<LocalScheme> best_first_local_search(
         LocalScheme& local_scheme,
-        BestFirstLocalSearchOptionalParameters<LocalScheme> parameters)
+        const BestFirstLocalSearchParameters<LocalScheme>& parameters)
 {
-    // Initial display.
-    parameters.info.os()
-        << "=======================================" << std::endl
-        << "           LocalSearchSolver           " << std::endl
-        << "=======================================" << std::endl
-        << std::endl
-        << "Algorithm" << std::endl
-        << "---------" << std::endl
-        << "Best first local search" << std::endl
-        << std::endl
-        << "Parameters" << std::endl
-        << "----------" << std::endl
-        << "Maximum number of nodes:     " << parameters.maximum_number_of_nodes << std::endl
-        << "Seed:                        " << parameters.seed << std::endl
-        << "Maximum size of the pool:    " << parameters.maximum_size_of_the_solution_pool << std::endl
-        << "Time limit:                  " << parameters.info.time_limit << std::endl;
-    print_local_scheme_parameters(local_scheme, parameters.info);
-    parameters.info.os() << std::endl;
-
-
-    //std::cout << "best_first_local_search start" << std::endl;
     BestFirstLocalSearchOutput<LocalScheme> output(
             local_scheme,
             parameters.maximum_size_of_the_solution_pool);
-    output.solution_pool.display_init(parameters.info);
+    AlgorithmFormatter<LocalScheme> algorithm_formatter(local_scheme, parameters, output);
+    algorithm_formatter.start("Best first local search");
+    algorithm_formatter.print_header();
+
     std::vector<std::thread> threads;
     std::vector<std::shared_ptr<BestFirstLocalSearchData<LocalScheme>>> datas;
     Counter thread_id = 0;
     for (Counter thread_id_1 = 0; thread_id_1 < parameters.number_of_threads_1; ++thread_id_1) {
         datas.push_back(std::shared_ptr<BestFirstLocalSearchData<LocalScheme>>(
-                    new BestFirstLocalSearchData<LocalScheme>(local_scheme, parameters, output)));
+                    new BestFirstLocalSearchData<LocalScheme>(
+                        local_scheme,
+                        parameters,
+                        algorithm_formatter,
+                        output)));
         for (Counter thread_id_2 = 0; thread_id_2 < parameters.number_of_threads_2; ++thread_id_2) {
             threads.push_back(std::thread(
                         best_first_local_search_worker<LocalScheme>,
@@ -533,8 +525,10 @@ inline BestFirstLocalSearchOutput<LocalScheme> best_first_local_search(
     for (Counter thread_id = 0; thread_id < (Counter)threads.size(); ++thread_id)
         threads[thread_id].join();
 
-    output.solution_pool.display_end(parameters.info);
-    print_local_scheme_statistics(local_scheme, parameters.info);
+    for (Counter thread_id = 0; thread_id < (Counter)threads.size(); ++thread_id)
+        output.number_of_nodes += datas[thread_id]->number_of_nodes;
+
+    algorithm_formatter.end();
     return output;
 }
 

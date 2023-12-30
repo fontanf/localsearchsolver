@@ -99,6 +99,30 @@ public:
         sequence_data.element_id_last = element_id;
     }
 
+    void instance_format(
+            std::ostream& os,
+            int verbosity_level) const
+    {
+        os << "Time-dependent orienteering problem" << std::endl;
+        instance_.format(os, verbosity_level);
+    }
+
+    void solution_write(
+            const sequencing::LocalScheme<SequencingScheme>::Solution& solution,
+            const std::string& certificate_path)
+    {
+        if (certificate_path.empty())
+            return;
+        std::ofstream file(certificate_path);
+        if (!file.good()) {
+            throw std::runtime_error(
+                    "Unable to open file \"" + certificate_path + "\".");
+        }
+
+        for (auto se: solution.sequences[0].elements)
+            file << se.element_id + 1 << std::endl;
+    }
+
 private:
 
     /** Instance. */

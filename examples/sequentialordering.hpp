@@ -14,7 +14,6 @@
 
 namespace localsearchsolver
 {
-
 namespace sequentialordering
 {
 
@@ -111,13 +110,40 @@ public:
         sequence_data.element_id_last = element_id;
     }
 
+    void instance_format(
+            std::ostream& os,
+            int verbosity_level) const
+    {
+        os << "Sequential ordering problem" << std::endl;
+        instance_.format(os, verbosity_level);
+    }
+
+    void solution_write(
+            const sequencing::LocalScheme<SequencingScheme>::Solution& solution,
+            const std::string& certificate_path)
+    {
+        if (certificate_path.empty())
+            return;
+        std::ofstream file(certificate_path);
+        if (!file.good()) {
+            throw std::runtime_error(
+                    "Unable to open file \"" + certificate_path + "\".");
+        }
+
+        for (auto it = solution.sequences[0].elements.begin() + 1;
+                it != solution.sequences[0].elements.end();
+                ++it) {
+            file << it->element_id << std::endl;
+        }
+    }
+
 private:
 
+    /** Instance. */
     const Instance& instance_;
 
 };
 
 }
-
 }
 

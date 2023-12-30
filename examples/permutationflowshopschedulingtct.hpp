@@ -101,8 +101,17 @@ public:
         sequence_data.number_of_jobs++;
     }
 
+    void instance_format(
+            std::ostream& os,
+            int verbosity_level) const
+    {
+        os << "Permutation flow shop scheduling problem, total completion_time" << std::endl;
+        instance_.format(os, verbosity_level);
+    }
+
 private:
 
+    /** Instance. */
     const Instance& instance_;
 
 };

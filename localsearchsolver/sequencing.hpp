@@ -2651,13 +2651,15 @@ public:
     }
 
     /*
-     * Outputs.
+     * Outputs
      */
 
-    std::ostream& print(
+    void solution_format(
+            const Solution& solution,
             std::ostream &os,
-            const Solution& solution) const
+            int verbosity_level) const
     {
+        (void)verbosity_level;
         for (SequenceId sequence_id = 0;
                 sequence_id < number_of_sequences_;
                 ++sequence_id) {
@@ -2673,10 +2675,9 @@ public:
             os << "    Cost: " << to_string(sequencing_scheme_.global_cost(solution.sequences[sequence_id].data)) << std::endl;
         }
         os << "Total cost: " << to_string(solution.global_cost) << std::endl;
-        return os;
     }
 
-    inline void write(
+    void solution_write_internal(
             const Solution& solution,
             std::string certificate_path,
             ElementPos offset = 0) const
@@ -2715,13 +2716,36 @@ public:
         }
     }
 
-    void print_parameters(
-            optimizationtools::Info& info) const
+    void instance_format(
+            std::ostream& os,
+            int verbosity_level) const
     {
-        info.os()
-            << "Number of sequences:                           " << number_of_sequences_ << std::endl
-            << "Number of elements:                            " << number_of_elements_ << std::endl
-            << "Maximum number of modes:                       " << maximum_number_of_modes_ << std::endl
+        return instance_format(
+                os,
+                verbosity_level,
+                std::integral_constant<
+                    bool,
+                    HasInstanceFormatMethod<SequencingScheme, void(std::ostream&, int)>::value>());
+    }
+
+    void solution_write(
+            const Solution& solution,
+            const std::string& certificate_path) const
+    {
+        return solution_write(
+                solution,
+                certificate_path,
+                std::integral_constant<
+                    bool,
+                    HasSolutionWriteMethod<SequencingScheme, void(const Solution&, const std::string&)>::value>());
+    }
+
+    void parameters_format(
+            std::ostream& os,
+            int verbosity_level) const
+    {
+        (void)verbosity_level;
+        os
             << "Neighborhoods" << std::endl
             << "    Shift" << std::endl
             << "        Block maximum length:                  " << parameters_.shift_block_maximum_length << std::endl
@@ -2733,7 +2757,7 @@ public:
             << "    Add/Remove:                                " << parameters_.add_remove << std::endl
             << "    Replace:                                   " << parameters_.replace << std::endl;
         if (number_of_sequences_ > 1) {
-            info.os()
+            os
                 << "    Inter-shift" << std::endl
                 << "        Block maximum length:                  " << parameters_.inter_shift_block_maximum_length << std::endl
                 << "    Inter-swap" << std::endl
@@ -2746,7 +2770,7 @@ public:
                 ;
         }
         if (maximum_number_of_modes_ > 1) {
-            info.os()
+            os
                 << "    Shfit-change-mode" << std::endl
                 << "        Block maximum length:                  " << parameters_.shift_change_mode_block_maximum_length << std::endl
                 << "        Maximum mode diff:                     " << parameters_.shift_change_mode_maximum_mode_diff << std::endl
@@ -2755,7 +2779,7 @@ public:
                 << "    Increment-decrement-modes:                 " << parameters_.increment_decrement_modes << std::endl
                 ;
         }
-        info.os()
+        os
             << "Perturbations" << std::endl
             << "    Double-bridge" << std::endl
             << "        Number of perturbations:               " << parameters_.double_bridge_number_of_perturbations << std::endl
@@ -2772,7 +2796,7 @@ public:
             << "        Recreate best:                         " << parameters_.recreate_best_weight << std::endl
             << "    Force-add:                                 " << parameters_.force_add << std::endl
             ;
-        info.os()
+        os
             << "Crossovers" << std::endl
             << "    Order crossover:                           " << parameters_.order_crossover_weight << std::endl
             << "    Similar job order crossover:               " << parameters_.similar_job_order_crossover_weight << std::endl
@@ -2783,43 +2807,45 @@ public:
             ;
     }
 
-    void print_statistics(
-            optimizationtools::Info& info) const
+    void statistics_format(
+            std::ostream& os,
+            int verbosity_level) const
     {
-        info.os() << "General" << std::endl;
-        info.os()
+        (void)verbosity_level;
+        os << "General" << std::endl;
+        os
             << "    "
             << std::left << std::setw(28) << "Initial solution:"
             << number_of_initial_solution_calls_
             << " / " << initial_solution_time_ << "s"
             << " / " << initial_solution_time_ / number_of_initial_solution_calls_ << "s"
             << std::endl;
-        info.os()
+        os
             << "    "
             << std::left << std::setw(28) << "Crossover time:"
             << number_of_crossover_calls_
             << " / " << crossover_time_ << "s"
             << " / " << crossover_time_ / number_of_crossover_calls_ << "s"
             << std::endl;
-        info.os()
+        os
             << "    "
             << std::left << std::setw(28) << "Local search time:"
             << number_of_local_search_calls_
             << " / " << local_search_time_ << "s"
             << " / " << local_search_time_ / number_of_local_search_calls_ << "s"
             << std::endl;
-        info.os()
+        os
             << "    "
             << std::left << std::setw(28) << "Local search iterations:"
             << number_of_local_search_iterations_
             << " / " << (double)number_of_local_search_iterations_ / number_of_local_search_calls_ 
             << std::endl;
-        info.os()
+        os
             << "    "
             << std::left << std::setw(28) << "Temporary structures time:"
             << compute_temporary_structures_time_ << "s"
             << std::endl;
-        info.os() << "Neighborhoods" << std::endl;
+        os << "Neighborhoods" << std::endl;
         for (int a = 0; a < (int)neighborhoods_.size(); ++a) {
             for (int k1 = 0; k1 < (int)neighborhoods_[a].size(); ++k1) {
                 for (int k2 = 0; k2 < (int)neighborhoods_[a][k1].size(); ++k2) {
@@ -2827,7 +2853,7 @@ public:
                     const Neighborhood& neighborhood = neighborhoods_[a][k1][k2];
                     if (neighborhood.number_of_explorations == 0)
                         continue;
-                    info.os()
+                    os
                         << "    "
                         << std::left << std::setw(28) << s
                         << neighborhood.number_of_explorations
@@ -2835,15 +2861,6 @@ public:
                         << " / " << (double)neighborhood.number_of_successes / neighborhood.number_of_explorations * 100 << "%"
                         << " / " << neighborhood.time << "s"
                         << std::endl;
-                    info.add_to_json(
-                            "Algorithm",
-                            s + "NumberOfExplorations",
-                            neighborhood.number_of_explorations);
-                    info.add_to_json(
-                            "Algorithm",
-                            s + "NumberOfSuccesses",
-                            neighborhood.number_of_successes);
-
                 }
             }
         }
@@ -6482,6 +6499,113 @@ private:
         solution_tmp_.modified_sequences = solution.modified_sequences;
         compute_global_cost(solution_tmp_);
         solution = solution_tmp_;
+    }
+
+    /*
+     * instance_format
+     */
+
+    template<typename, typename T>
+    struct HasInstanceFormatMethod
+    {
+        static_assert(
+                std::integral_constant<T, false>::value,
+                "Second template parameter needs to be of function type.");
+    };
+
+    template<typename C, typename Ret, typename... Args>
+    struct HasInstanceFormatMethod<C, Ret(Args...)>
+    {
+
+    private:
+
+        template<typename T>
+        static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().instance_format(std::declval<Args>()...)), Ret>::type;
+
+        template<typename>
+        static constexpr std::false_type check(...);
+
+        typedef decltype(check<C>(0)) type;
+
+    public:
+
+        static constexpr bool value = type::value;
+
+    };
+
+    void instance_format(
+            std::ostream& os,
+            int,
+            std::false_type) const
+    {
+        os
+            << "Sequencing problem"
+            << "Number of sequences:                           " << number_of_sequences_ << std::endl
+            << "Number of elements:                            " << number_of_elements_ << std::endl
+            << "Maximum number of modes:                       " << maximum_number_of_modes_ << std::endl
+            ;
+    }
+
+    void instance_format(
+            std::ostream& os,
+            int verbosity_level,
+            std::true_type) const
+    {
+        return sequencing_scheme_.instance_format(
+                os,
+                verbosity_level);
+    }
+
+    /*
+     * solution_write
+     */
+
+    template<typename, typename T>
+    struct HasSolutionWriteMethod
+    {
+        static_assert(
+                std::integral_constant<T, false>::value,
+                "Second template parameter needs to be of function type.");
+    };
+
+    template<typename C, typename Ret, typename... Args>
+    struct HasSolutionWriteMethod<C, Ret(Args...)>
+    {
+
+    private:
+
+        template<typename T>
+        static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().solution_write(std::declval<Args>()...)), Ret>::type;
+
+        template<typename>
+        static constexpr std::false_type check(...);
+
+        typedef decltype(check<C>(0)) type;
+
+    public:
+
+        static constexpr bool value = type::value;
+
+    };
+
+    void solution_write(
+            const Solution& solution,
+            const std::string& certificate_path,
+            std::false_type) const
+    {
+        return solution_write_internal(
+                solution,
+                certificate_path);
+    }
+
+    void solution_write(
+            const Solution& solution,
+            const std::string& certificate_path,
+            std::true_type) const
+    {
+        return sequencing_scheme_.solution_write(
+                solution,
+                certificate_path);
     }
 
     /*

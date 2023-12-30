@@ -168,41 +168,50 @@ public:
     }
 
     /*
-     * Outputs.
+     * Outputs
      */
 
-    std::ostream& print(
-            std::ostream &os,
-            const Solution& solution,
-            int verbosity_level)
+    void instance_format(
+            std::ostream& os,
+            int verbosity_level) const
     {
-        if (verbosity_level >= 1) {
-            os << "Overweight:        " << solution.overweight << std::endl;
-            os << "Profit:            " << solution.profit << std::endl;
-        }
-        return os;
+        os << "Multidimansional multiple-choice knapsack problem" << std::endl;
+        instance_.format(os, verbosity_level);
     }
 
-    inline void write(
+    void solution_format(
             const Solution& solution,
-            std::string certificate_path) const
+            std::ostream& os,
+            int verbosity_level) const
+    {
+        if (verbosity_level >= 1) {
+            os
+                << "Overweight:  " << solution.overweight << std::endl
+                << "Profit:      " << solution.profit << std::endl
+                ;
+        }
+    }
+
+    void solution_write(
+            const Solution& solution,
+            const std::string& certificate_path) const
     {
         if (certificate_path.empty())
             return;
-        std::ofstream cert(certificate_path);
-        if (!cert.good()) {
+        std::ofstream file(certificate_path);
+        if (!file.good()) {
             throw std::runtime_error(
                     "Unable to open file \"" + certificate_path + "\".");
         }
 
         for (ItemId item_id: solution.items)
-            cert << item_id << " ";
+            file << item_id << " ";
     }
 
 private:
 
     /*
-     * Manipulate solutions.
+     * Manipulate solutions
      */
 
     inline void add(
@@ -254,7 +263,7 @@ private:
     }
 
     /*
-     * Evaluate moves.
+     * Evaluate moves
      */
 
     inline GlobalCost cost_add(
@@ -281,7 +290,7 @@ private:
     }
 
     /*
-     * Private attributes.
+     * Private attributes
      */
 
     /** Instance. */

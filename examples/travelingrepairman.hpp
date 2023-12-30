@@ -15,7 +15,6 @@
 
 namespace localsearchsolver
 {
-
 namespace travelingrepairman
 {
 
@@ -120,13 +119,21 @@ public:
         return true;
     }
 
+    void instance_format(
+            std::ostream& os,
+            int verbosity_level) const
+    {
+        os << "Traveling repairman problem" << std::endl;
+        instance_.format(os, verbosity_level);
+    }
+
 private:
 
+    /** Instance. */
     const Instance& instance_;
 
 };
 
 }
-
 }
 

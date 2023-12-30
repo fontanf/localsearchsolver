@@ -152,8 +152,42 @@ public:
         sequence_data.current_batch_jobs.push_back(element_id);
     }
 
+    void instance_format(
+            std::ostream& os,
+            int verbosity_level)
+    {
+        os << "Single machine batch scheduling problem, total weighted tardiness" << std::endl;
+        instance_.format(os, verbosity_level);
+    }
+
+    void solution_write(
+            const sequencing::LocalScheme<SequencingScheme>::Solution& solution,
+            const std::string& certificate_path)
+    {
+        if (certificate_path.empty())
+            return;
+        std::ofstream file(certificate_path);
+        if (!file.good()) {
+            throw std::runtime_error(
+                    "Unable to open file \"" + certificate_path + "\".");
+        }
+        std::vector<std::vector<JobId>> batches;
+        for (auto se: solution.sequences[0].elements) {
+            if (batches.empty() || se.mode == 1)
+                batches.push_back({});
+            batches.back().push_back(se.element_id);
+        }
+        for (const auto& batch: batches) {
+            file << batch.size() << std::endl;
+            for (JobId job_id: batch)
+                file << job_id << " ";
+            file << std::endl;
+        }
+    }
+
 private:
 
+    /** Instance. */
     const Instance& instance_;
 
 };

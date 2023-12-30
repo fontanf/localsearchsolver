@@ -1,10 +1,12 @@
 #pragma once
 
-#include "optimizationtools/utils/info.hpp"
+#include "optimizationtools/utils/output.hpp"
 #include "optimizationtools/utils/utils.hpp"
 
 #include <cstdint>
 #include <set>
+#include <mutex>
+#include <iomanip>
 
 namespace localsearchsolver
 {
@@ -361,15 +363,15 @@ std::string to_string(
 //////////////////////////////// Solution Pool /////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-template <typename Scheme>
+template <typename LocalScheme>
 struct SolutionPoolComparator
 {
-    using Solution = typename Scheme::Solution;
+    using Solution = typename LocalScheme::Solution;
 
-    SolutionPoolComparator(const Scheme& local_scheme):
+    SolutionPoolComparator(const LocalScheme& local_scheme):
         local_scheme(local_scheme) { }
 
-    const Scheme& local_scheme;
+    const LocalScheme& local_scheme;
 
     bool operator()(
             const Solution& solution_1,
@@ -381,42 +383,50 @@ struct SolutionPoolComparator
     }
 };
 
-template <typename Scheme>
+////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////// Solution pool /////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+template <typename LocalScheme>
 class SolutionPool
 {
-    using Solution = typename Scheme::Solution;
-    using GlobalCost = typename Scheme::GlobalCost;
+    using Solution = typename LocalScheme::Solution;
+    using GlobalCost = typename LocalScheme::GlobalCost;
 
 public:
 
-    SolutionPool(const Scheme& local_scheme, Counter size_max):
-        scheme_(local_scheme),
+    SolutionPool(const LocalScheme& local_scheme, Counter size_max):
+        local_scheme_(local_scheme),
         size_max_(size_max),
         solution_pool_comparator_(local_scheme),
         solutions_(solution_pool_comparator_),
         worst_(local_scheme.empty_solution()),
         best_(local_scheme.empty_solution()) { }
 
-    virtual ~SolutionPool() { }
+    const std::multiset<Solution, SolutionPoolComparator<LocalScheme>>& solutions() const { return solutions_; };
 
-    const std::multiset<Solution, SolutionPoolComparator<Scheme>>& solutions() const { return solutions_; };
-    const Solution& best() { return best_; }
-    const Solution& worst() { return worst_; }
+    /** Get the best solution of the pool. */
+    const Solution& best() const { return best_; }
+
+    /** Get the worst solution fo the pool. */
+    const Solution& worst() const { return worst_; }
+
+    /** Get the number of solutions in the pool. */
     Counter size() const { return solutions_.size(); }
 
+    /** Get the local scheme. */
+    const LocalScheme& local_scheme() const { return local_scheme_; }
+
+    /** Add a solution to the pool. */
     int add(
-            const Solution& solution,
-            const std::stringstream& ss,
-            optimizationtools::Info& info)
+            const Solution& solution)
     {
-        info.output->mutex.lock();
         // If the solution is worse than the worst solution of the pool, stop.
         if ((Counter)solutions_.size() >= size_max_) {
             if (!strictly_better(
-                        scheme_,
-                        scheme_.global_cost(solution),
-                        scheme_.global_cost(*std::prev(solutions_.end())))) {
-                info.output->mutex.unlock();
+                        local_scheme_,
+                        local_scheme_.global_cost(solution),
+                        local_scheme_.global_cost(*std::prev(solutions_.end())))) {
                 return 0;
             }
         }
@@ -426,83 +436,149 @@ public:
         // If new best solution, display.
         bool new_best = (solutions_.size() == 0)
             || strictly_better(
-                    scheme_,
-                    scheme_.global_cost(solution),
-                    scheme_.global_cost(*solutions_.begin()));
+                    local_scheme_,
+                    local_scheme_.global_cost(solution),
+                    local_scheme_.global_cost(*solutions_.begin()));
         // Add new solution to solution pool.
         solutions_.insert(solution);
-        if (new_best) {
-            info.output->number_of_solutions++;
-            double t = info.elapsed_time();
-            std::string sol_str = "Solution" + std::to_string(info.output->number_of_solutions);
-            info.add_to_json(sol_str, "Value", to_string(scheme_, scheme_.global_cost(solution)));
-            info.add_to_json(sol_str, "Time", t);
-            info.add_to_json(sol_str, "Comment", ss.str());
-            if (!info.output->only_write_at_the_end) {
-                info.write_json_output();
-                scheme_.write(*solutions_.begin(), info.output->certificate_path);
-            }
-        }
         // If the pool size is now above its maximum allowed size, remove worst
         // solutions from it.
         if ((Counter)solutions_.size() > size_max_)
             solutions_.erase(std::prev(solutions_.end()));
         best_ = *solutions_.begin();
         worst_ = *std::prev(solutions_.end());
-        info.output->mutex.unlock();
         return (new_best)? 2: 1;
-    }
-
-    void display_init(optimizationtools::Info& info)
-    {
-        info.os()
-            << std::setw(10) << "Time"
-            << std::setw(40) << "Value"
-            << std::setw(40) << "Comment" << std::endl
-            << std::setw(10) << "----"
-            << std::setw(40) << "-----"
-            << std::setw(40) << "-------" << std::endl;
-    }
-
-    void display(const std::stringstream& ss, optimizationtools::Info& info)
-    {
-        double t = info.elapsed_time();
-        std::streamsize precision = std::cout.precision();
-        info.os()
-            << std::setw(10) << std::fixed << std::setprecision(3) << t << std::defaultfloat << std::setprecision(precision)
-            << std::setw(40) << to_string(scheme_, scheme_.global_cost(best()))
-            << std::setw(40) << ss.str()
-            << std::endl;
-    }
-
-    void display_end(optimizationtools::Info& info)
-    {
-        double t = info.elapsed_time();
-        info.os()
-            << std::endl
-            << "Final statistics" << std::endl
-            << "----------------" << std::endl
-            << "Value:                      " << to_string(scheme_, scheme_.global_cost(best())) << std::endl
-            << "Time:                       " << t << std::endl;
-
-        std::string sol_str = "Solution";
-        info.add_to_json(sol_str, "Time", t);
-        info.add_to_json(sol_str, "Value", to_string(scheme_, scheme_.global_cost(*solutions_.begin())));
-        info.write_json_output();
-        scheme_.write(best_, info.output->certificate_path);
     }
 
 private:
 
-    const Scheme& scheme_;
+    /** Local scheme. */
+    const LocalScheme& local_scheme_;
+
+    /** Maximum number of solutions in the solution pool. */
     Counter size_max_;
-    SolutionPoolComparator<Scheme> solution_pool_comparator_;
-    std::multiset<Solution, SolutionPoolComparator<Scheme>> solutions_;
+
+    /** Solution comparator. */
+    SolutionPoolComparator<LocalScheme> solution_pool_comparator_;
+
+    /** Solutions. */
+    std::multiset<Solution, SolutionPoolComparator<LocalScheme>> solutions_;
+
+    /** Worst solution of the pool. */
     Solution worst_;
+
+    /** Best solution of the pool. */
     Solution best_;
 
 };
 
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Output structure.
+ */
+template <typename LocalScheme>
+struct Output: optimizationtools::Output
+{
+    /** Constructor. */
+    Output(
+            const LocalScheme& local_scheme,
+            Counter maximum_size_of_the_solution_pool):
+        solution_pool(local_scheme, maximum_size_of_the_solution_pool) { }
+
+
+    /** Solution. */
+    SolutionPool<LocalScheme> solution_pool;
+
+    /** Elapsed time. */
+    double time = 0.0;
+
+
+    virtual nlohmann::json to_json() const
+    {
+        return nlohmann::json {
+            //{"Solution", to_json(local_scheme_, solution)},
+            {"Value", to_string(solution_pool.local_scheme(), solution_pool.local_scheme().global_cost(solution_pool.best()))},
+            {"Time", time}
+        };
+    }
+
+    virtual int format_width() const { return 11; }
+
+    virtual void format(std::ostream& os) const
+    {
+        int width = format_width();
+        os
+            << std::setw(width) << std::left << "Value: " << to_string(solution_pool.local_scheme(), solution_pool.local_scheme().global_cost(solution_pool.best())) << std::endl
+            << std::setw(width) << std::left << "Time (s): " << time << std::endl
+            ;
+    }
+};
+
+template <typename LocalScheme>
+using NewSolutionCallback = std::function<void(const Output<LocalScheme>&)>;
+
+template <typename LocalScheme>
+struct Parameters: optimizationtools::Parameters
+{
+    using Solution = typename LocalScheme::Solution;
+    using GlobalCost = typename LocalScheme::GlobalCost;
+
+    /** Callback function called when a new best solution is found. */
+    NewSolutionCallback<LocalScheme> new_solution_callback = [](const Output<LocalScheme>&) { };
+
+    /** Ids of generated initial solutions. */
+    std::vector<Counter> initial_solution_ids = {0};
+
+    /** User-provided initial solutions. */
+    std::vector<Solution> initial_solutions;
+
+    /** Maximum size of the solution pool. */
+    Counter maximum_size_of_the_solution_pool = 1;
+
+    /** Seed. */
+    Seed seed = 0;
+
+    /**
+     * Goal.
+     *
+     * The alglorithm stops as soon as a solution with a better global cost is
+     * found.
+     */
+    bool has_goal = false;
+
+    /** Goal. */
+    GlobalCost goal;
+
+
+    virtual nlohmann::json to_json(
+            const LocalScheme& local_scheme) const
+    {
+        nlohmann::json json = optimizationtools::Parameters::to_json();
+        json.merge_patch({
+            {"MaximumSizeOfTheSolutionPool", maximum_size_of_the_solution_pool},
+            {"Seed", seed},
+            {"Goal", ((has_goal)? to_string(local_scheme, goal): "")}});
+        return json;
+    }
+
+    virtual int format_width() const override { return 23; }
+
+    virtual void format(
+            std::ostream& os,
+            const LocalScheme& local_scheme) const
+    {
+        optimizationtools::Parameters::format(os);
+        int width = format_width();
+        os
+            << std::setw(width) << std::left << "Solution pool size: " << maximum_size_of_the_solution_pool << std::endl
+            << std::setw(width) << std::left << "Seed: " << seed << std::endl
+            << std::setw(width) << std::left << "Goal: " << ((has_goal)? to_string(local_scheme, goal): "") << std::endl
+            ;
+    }
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// global_cost_goal ///////////////////////////////
@@ -570,13 +646,12 @@ typename LocalScheme::GlobalCost global_cost_goal(
                 GlobalCost(double)>::value>());
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
-//////////////////////// print_local_scheme_parameters /////////////////////////
+//////////////////////////////// solution_write ////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename, typename T>
-struct HasPrintParametersMethod
+struct HasSolutionWriteMethod
 {
     static_assert(
         std::integral_constant<T, false>::value,
@@ -584,13 +659,13 @@ struct HasPrintParametersMethod
 };
 
 template<typename C, typename Ret, typename... Args>
-struct HasPrintParametersMethod<C, Ret(Args...)>
+struct HasSolutionWriteMethod<C, Ret(Args...)>
 {
 
 private:
 
     template<typename T>
-    static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().print_parameters(std::declval<Args>()...)), Ret>::type;
+    static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().solution_write(std::declval<Args>()...)), Ret>::type;
 
     template<typename>
     static constexpr std::false_type check(...);
@@ -604,107 +679,40 @@ public:
 };
 
 template<typename LocalScheme>
-void print_local_scheme_parameters(
-        LocalScheme&,
-        optimizationtools::Info&,
+void solution_write(
+        const LocalScheme&,
+        const typename LocalScheme::Solution&,
+        const std::string&,
         std::false_type)
 {
 }
 
 template<typename LocalScheme>
-void print_local_scheme_parameters(
-        LocalScheme& local_scheme,
-        optimizationtools::Info& info,
+void solution_write(
+        const LocalScheme& local_scheme,
+        const typename LocalScheme::Solution& solution,
+        const std::string certificate_path,
         std::true_type)
 {
-    info.os()
-       <<  std::endl
-       << "Local scheme parameters" << std::endl
-       << "-----------------------" << std::endl;
-    local_scheme.print_parameters(info);
+    return local_scheme.solution_write(solution, certificate_path);
 }
 
 template<typename LocalScheme>
-void print_local_scheme_parameters(
-        LocalScheme& local_scheme,
-        optimizationtools::Info& info)
+void solution_write(
+        const LocalScheme& local_scheme,
+        const typename LocalScheme::Solution& solution,
+        const std::string certificate_path)
 {
-    print_local_scheme_parameters(
+    using Solution = typename LocalScheme::Solution;
+
+    return solution_write(
             local_scheme,
-            info,
+            solution,
+            certificate_path,
             std::integral_constant<
                 bool,
-                HasPrintParametersMethod<LocalScheme,
-                void(optimizationtools::Info&)>::value>());
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
-//////////////////////// print_local_scheme_statistics /////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
-template<typename, typename T>
-struct HasPrintStatisticsMethod
-{
-    static_assert(
-        std::integral_constant<T, false>::value,
-        "Second template parameter needs to be of function type.");
-};
-
-template<typename C, typename Ret, typename... Args>
-struct HasPrintStatisticsMethod<C, Ret(Args...)>
-{
-
-private:
-
-    template<typename T>
-    static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>().print_statistics(std::declval<Args>()...)), Ret>::type;
-
-    template<typename>
-    static constexpr std::false_type check(...);
-
-    typedef decltype(check<C>(0)) type;
-
-public:
-
-    static constexpr bool value = type::value;
-
-};
-
-template<typename LocalScheme>
-void print_local_scheme_statistics(
-        LocalScheme&,
-        optimizationtools::Info&,
-        std::false_type)
-{
-}
-
-template<typename LocalScheme>
-void print_local_scheme_statistics(
-        LocalScheme& local_scheme,
-        optimizationtools::Info& info,
-        std::true_type)
-{
-    info.os()
-       << std::endl
-       << "Local scheme statistics" << std::endl
-       << "-----------------------" << std::endl;
-    local_scheme.print_statistics(info);
-}
-
-template<typename LocalScheme>
-void print_local_scheme_statistics(
-        LocalScheme& local_scheme,
-        optimizationtools::Info& info)
-{
-    print_local_scheme_statistics(
-            local_scheme,
-            info,
-            std::integral_constant<
-                bool,
-                HasPrintStatisticsMethod<LocalScheme,
-                void(optimizationtools::Info&)>::value>());
+                HasSolutionWriteMethod<LocalScheme,
+                void(const Solution&, const std::string&)>::value>());
 }
 
 }
-

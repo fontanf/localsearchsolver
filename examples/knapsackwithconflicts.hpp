@@ -34,7 +34,6 @@
 
 namespace localsearchsolver
 {
-
 namespace knapsackwithconflicts
 {
 
@@ -45,10 +44,6 @@ class LocalScheme
 
 public:
 
-    /*
-     * Constructors and destructor.
-     */
-
     struct Parameters
     {
         /** Enable Swap neighborhood. */
@@ -57,6 +52,10 @@ public:
         bool swap_2_1 = true;
         bool shuffle_neighborhood_order = true;
     };
+
+    /*
+     * Constructors and destructor
+     */
 
     LocalScheme(
             const Instance& instance,
@@ -74,7 +73,7 @@ public:
     }
 
     /*
-     * Global cost.
+     * Global cost
      */
 
     /** Global cost: <Overweight, Profit, Weight>; */
@@ -101,7 +100,7 @@ public:
     }
 
     /*
-     * Solutions.
+     * Solutions
      */
 
     struct SolutionItem
@@ -359,7 +358,7 @@ public:
     }
 
     /*
-     * Genetic local search.
+     * Genetic local search
      */
 
     inline Solution crossover(
@@ -405,7 +404,7 @@ public:
     }
 
     /*
-     * Iterated local search.
+     * Iterated local search
      */
 
     struct Perturbation
@@ -453,7 +452,7 @@ public:
     }
 
     /*
-     * Best first local search.
+     * Best first local search
      */
 
     using CompactSolution = std::vector<bool>;
@@ -529,11 +528,19 @@ public:
     inline PerturbationHasher perturbation_hasher() const { return PerturbationHasher(); }
 
     /*
-     * Outputs.
+     * Outputs
      */
 
-    std::ostream& print(
-            std::ostream &os,
+    void instance_format(
+            std::ostream& os,
+            int verbosity_level) const
+    {
+        os << "Knapsack problem with conflicts" << std::endl;
+        instance_.format(os, verbosity_level);
+    }
+
+    void solution_format(
+            std::ostream& os,
             const Solution& solution,
             int verbosity_level)
     {
@@ -545,9 +552,11 @@ public:
                 if (contains(solution, item_id))
                     number_of_items++;
             }
-            os << "Profit:            " << solution.profit << std::endl;
-            os << "Weight:            " << solution.weight << " / " << instance_.capacity() << std::endl;
-            os << "Number of items:   " << number_of_items << " / " << instance_.number_of_items() << std::endl;
+            os
+                << "Profit:           " << solution.profit << std::endl
+                << "Weight:           " << solution.weight << " / " << instance_.capacity() << std::endl
+                << "Number of items:  " << number_of_items << " / " << instance_.number_of_items() << std::endl
+                ;
         }
         if (verbosity_level >= 2) {
             os << std::endl
@@ -577,17 +586,16 @@ public:
                     << std::endl;
             }
         }
-        return os;
     }
 
-    inline void write(
+    void solution_write(
             const Solution& solution,
-            std::string certificate_path) const
+            const std::string& certificate_path) const
     {
         if (certificate_path.empty())
             return;
-        std::ofstream cert(certificate_path);
-        if (!cert.good()) {
+        std::ofstream file(certificate_path);
+        if (!file.good()) {
             throw std::runtime_error(
                     "Unable to open file \"" + certificate_path + "\".");
         }
@@ -596,61 +604,51 @@ public:
                 item_id < instance_.number_of_items();
                 ++item_id) {
             if (contains(solution, item_id))
-                cert << item_id << " ";
+                file << item_id << " ";
         }
     }
 
-    void print_parameters(
-            optimizationtools::Info& info) const
+    void parameters_format(
+            std::ostream& os) const
     {
-        info.os() << ""
-                << "Swap:                        " << parameters_.swap << std::endl
-                << "(2,1)-swap:                  " << parameters_.swap_2_1 << std::endl;
+        os
+            << "Swap:                        " << parameters_.swap << std::endl
+            << "(2,1)-swap:                  " << parameters_.swap_2_1 << std::endl;
     }
 
-    void print_statistics(
-            optimizationtools::Info& info) const
+    void statistics_format(
+            std::ostream& os,
+            int verbosity_level) const
     {
-        info.os()
+        (void)verbosity_level;
+        os
             << "Toggle:            "
             << toggle_number_of_explorations_
             << " / " << toggle_number_of_sucesses_
             << " / " << (double)toggle_number_of_sucesses_ / toggle_number_of_explorations_ * 100 << "%"
             << std::endl;
-        info.output->json["Algorithm"]["ToggleNumberOfExplorations"]
-            = toggle_number_of_explorations_;
-        info.output->json["Algorithm"]["ToggleNumberOfSuccesses"]
-            = toggle_number_of_explorations_;
         if (parameters_.swap) {
-            info.os()
+            os
                 << "Swap:              "
                 << swap_number_of_explorations_
                 << " / " << swap_number_of_sucesses_
                 << " / " << (double)swap_number_of_sucesses_ / swap_number_of_explorations_ * 100 << "%"
                 << std::endl;
-            info.output->json["Algorithm"]["SwapNumberOfExplorations"]
-                = swap_number_of_explorations_;
-            info.output->json["Algorithm"]["SwapNumberOfSuccesses"]
-                = swap_number_of_explorations_;
         }
         if (parameters_.swap_2_1) {
-            info.os()
+            os
                 << "(2-1)-swap:        "
                 << swap_2_1_number_of_explorations_
                 << " / " << swap_2_1_number_of_sucesses_
                 << " / " << (double)swap_2_1_number_of_sucesses_ / swap_2_1_number_of_explorations_ * 100 << "%"
                 << std::endl;
-            info.output->json["Algorithm"]["Swap2,1NumberOfExplorations"]
-                = swap_2_1_number_of_explorations_;
-            info.output->json["Algorithm"]["Swap2,1NumberOfSuccesses"]
-                = swap_2_1_number_of_explorations_;
         }
     }
 
 private:
 
     /*
-     * Manipulate solutions.
+     * Manipulate solutions
      */
 
     inline bool contains(
@@ -696,7 +694,7 @@ private:
     }
 
     /*
-     * Evaluate moves.
+     * Evaluate moves
      */
 
     inline GlobalCost cost_remove(
@@ -739,7 +737,7 @@ private:
     }
 
     /*
-     * Private attributes.
+     * Private attributes
      */
 
     /** Instance. */
@@ -763,7 +761,7 @@ private:
     optimizationtools::IndexedSet free_items_2_;
 
     /*
-     * Statistics.
+     * Statistics
      */
 
     Counter toggle_number_of_explorations_ = 0;
@@ -781,6 +779,5 @@ private:
 };
 
 }
-
 }
 

@@ -136,8 +136,17 @@ public:
         sequence_data.element_id_last = element_id;
     }
 
+    void instance_format(
+            std::ostream& os,
+            int verbosity_level) const
+    {
+        os << "Single machine order acceptance and scheduling problem with time windows and sequence_data-dependent setup times, total weighted tardiness" << std::endl;
+        instance_.format(os, verbosity_level);
+    }
+
 private:
 
+    /** Instdance. */
     const Instance& instance_;
 
 };

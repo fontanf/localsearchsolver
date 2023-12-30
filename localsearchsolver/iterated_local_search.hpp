@@ -1,6 +1,6 @@
 #pragma once
 
-#include "localsearchsolver/common.hpp"
+#include "localsearchsolver/algorithm_formatter.hpp"
 
 #include <unordered_set>
 #include <thread>
@@ -9,10 +9,7 @@ namespace localsearchsolver
 {
 
 template <typename LocalScheme>
-using IteratedLocalSearchCallback = std::function<void(const typename LocalScheme::Solution&)>;
-
-template <typename LocalScheme>
-struct IteratedLocalSearchOptionalParameters
+struct IteratedLocalSearchParameters: Parameters<LocalScheme>
 {
     using Solution = typename LocalScheme::Solution;
     using GlobalCost = typename LocalScheme::GlobalCost;
@@ -35,104 +32,101 @@ struct IteratedLocalSearchOptionalParameters
      */
     Counter minimum_number_of_perturbations = 1;
 
-    /** Ids of generated initial solutions. */
-    std::vector<Counter> initial_solution_ids = {0};
 
-    /** User-provided initial solutions. */
-    std::vector<Solution> initial_solutions;
+    virtual nlohmann::json to_json(
+            const LocalScheme& local_scheme) const override
+    {
+        nlohmann::json json = Parameters<LocalScheme>::to_json(local_scheme);
+        json.merge_patch({
+            {"MaximumNumberOfIterations", maximum_number_of_iterations},
+            {"MaximumNumberOfRestarts", maximum_number_of_restarts},
+            {"MinimumNumberOfPerturbations", minimum_number_of_perturbations}});
+        return json;
+    }
 
-    /** Maximum size of the solution pool. */
-    Counter maximum_size_of_the_solution_pool = 1;
+    virtual int format_width() const { return 30; }
 
-    /** Seed. */
-    Seed seed = 0;
-
-    /**
-     * Goal.
-     *
-     * The alglorithm stops as soon as a solution with a better global cost is
-     * found.
-     */
-    bool has_goal = false;
-
-    /** Goal. */
-    GlobalCost goal;
-
-    /** Callback function called when a new best solution is found. */
-    IteratedLocalSearchCallback<LocalScheme> new_solution_callback
-        = [](const Solution& solution) { (void)solution; };
-
-    /** Info structure. */
-    optimizationtools::Info info;
+    virtual void format(
+            std::ostream& os,
+            const LocalScheme& local_scheme) const override
+    {
+        Parameters<LocalScheme>::format(os, local_scheme);
+        int width = format_width();
+        os
+            << std::setw(width) << std::left << "Maximum number of iterations: " << maximum_number_of_iterations << std::endl
+            << std::setw(width) << std::left << "Maximum number of restarts: " << maximum_number_of_restarts << std::endl
+            << std::setw(width) << std::left << "Minimum number of perturbations: " << minimum_number_of_perturbations << std::endl
+            ;
+    }
 };
 
 template <typename LocalScheme>
-struct IteratedLocalSearchOutput
+struct IteratedLocalSearchOutput: Output<LocalScheme>
 {
     /** Constructor. */
     IteratedLocalSearchOutput(
             const LocalScheme& local_scheme,
             Counter maximum_size_of_the_solution_pool):
-        solution_pool(local_scheme, maximum_size_of_the_solution_pool) { }
+        Output<LocalScheme>(local_scheme, maximum_size_of_the_solution_pool) { }
 
-    /** Solution pool. */
-    SolutionPool<LocalScheme> solution_pool;
 
     /** Number of iterations. */
     Counter number_of_iterations = 0;
 
     /** Number of restarts. */
     Counter number_of_restarts = 0;
+
+
+    virtual nlohmann::json to_json() const override
+    {
+        nlohmann::json json = Output<LocalScheme>::to_json();
+        json.merge_patch({
+            {"NumberOfIterations", number_of_iterations},
+            {"NumberOfRestarts", number_of_restarts}});
+        return json;
+    }
+
+    virtual int format_width() const { return 30; }
+
+    virtual void format(std::ostream& os) const override
+    {
+        Output<LocalScheme>::format(os);
+        int width = format_width();
+        os
+            << std::setw(width) << std::left << "Number of iterations: " << number_of_iterations << std::endl
+            << std::setw(width) << std::left << "Number of restarts: " << number_of_restarts << std::endl
+            ;
+    }
 };
 
 template <typename LocalScheme>
-inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
+inline const IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
         LocalScheme& local_scheme,
-        IteratedLocalSearchOptionalParameters<LocalScheme> parameters = {});
+        const IteratedLocalSearchParameters<LocalScheme>& parameters = {});
 
 ///////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Template implementations //////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 template <typename LocalScheme>
-inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
+inline const IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
         LocalScheme& local_scheme,
-        IteratedLocalSearchOptionalParameters<LocalScheme> parameters)
+        const IteratedLocalSearchParameters<LocalScheme>& parameters)
 {
     using Solution = typename LocalScheme::Solution;
     using Perturbation = typename LocalScheme::Perturbation;
 
-    // Initial display.
-    parameters.info.os()
-        << "=======================================" << std::endl
-        << "           LocalSearchSolver           " << std::endl
-        << "=======================================" << std::endl
-        << std::endl
-        << "Algorithm" << std::endl
-        << "---------" << std::endl
-        << "Iterated local search" << std::endl
-        << std::endl
-        << "Parameters" << std::endl
-        << "----------" << std::endl
-        << "Maximum number of iterations:     " << parameters.maximum_number_of_iterations << std::endl
-        << "Maximum number of restarts:       " << parameters.maximum_number_of_restarts << std::endl
-        << "Minimum number of perturbations:  " << parameters.minimum_number_of_perturbations << std::endl
-        << "Seed:                             " << parameters.seed << std::endl
-        << "Maximum size of the pool:         " << parameters.maximum_size_of_the_solution_pool << std::endl
-        << "Time limit:                       " << parameters.info.time_limit << std::endl;
-    print_local_scheme_parameters(local_scheme, parameters.info);
-    parameters.info.os() << std::endl;
+    IteratedLocalSearchOutput<LocalScheme> output(
+            local_scheme,
+            parameters.maximum_size_of_the_solution_pool);
+    AlgorithmFormatter<LocalScheme> algorithm_formatter(local_scheme, parameters, output);
+    algorithm_formatter.start("Iterated local search");
+    algorithm_formatter.print_header();
 
     auto move_compare = [](const Perturbation& move_1, const Perturbation& move_2) -> bool
     {
         return move_1.global_cost < move_2.global_cost;
     };
-
-    //std::cout << "iterated_local_search start" << std::endl;
-    IteratedLocalSearchOutput<LocalScheme> output(
-            local_scheme,
-            parameters.maximum_size_of_the_solution_pool);
-    output.solution_pool.display_init(parameters.info);
 
     std::mt19937_64 generator(parameters.seed);
 
@@ -147,7 +141,7 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
             break;
 
         // Check time.
-        if (parameters.info.needs_to_end())
+        if (parameters.timer.needs_to_end())
             break;
 
         // Check goal.
@@ -178,9 +172,7 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
                             local_scheme.global_cost(output.solution_pool.worst()))) {
                     std::stringstream ss;
                     ss << "s" << output.number_of_restarts;
-                    output.solution_pool.add(solution_tmp, ss, parameters.info);
-                    output.solution_pool.display(ss, parameters.info);
-                    parameters.new_solution_callback(solution_tmp);
+                    algorithm_formatter.update_solution(solution_tmp, ss);
                 }
 
                 initial_solutions.push_back(solution_tmp);
@@ -208,7 +200,7 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
         for (;; ++output.number_of_iterations) {
 
             // Check end.
-            if (parameters.info.needs_to_end())
+            if (parameters.timer.needs_to_end())
                 break;
 
             // Check goal.
@@ -251,9 +243,7 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
                     << " d" << depth
                     << " c" << perturbation_id << "/" << perturbations.size()
                     << " i" << output.number_of_iterations;
-                output.solution_pool.add(solution_tmp, ss, parameters.info);
-                output.solution_pool.display(ss, parameters.info);
-                parameters.new_solution_callback(solution_tmp);
+                algorithm_formatter.update_solution(solution_tmp, ss);
             }
 
             if (local_scheme.global_cost(solution_next)
@@ -266,12 +256,7 @@ inline IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
         }
     }
 
-    output.solution_pool.display_end(parameters.info);
-    parameters.info.os() << "Number of restarts:         " << output.number_of_restarts << std::endl;
-    parameters.info.os() << "Number of iterations:       " << output.number_of_iterations << std::endl;
-    parameters.info.add_to_json("Algorithm", "NumberOfRestarts", output.number_of_restarts);
-    parameters.info.add_to_json("Algorithm", "NumberOfIterations", output.number_of_iterations);
-    print_local_scheme_statistics(local_scheme, parameters.info);
+    algorithm_formatter.end();
     return output;
 }
 

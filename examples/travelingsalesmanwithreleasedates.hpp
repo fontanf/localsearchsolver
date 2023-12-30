@@ -115,8 +115,17 @@ public:
         sequence_data.location_id_last = element_id;
     }
 
+    void instance_format(
+            std::ostream& os,
+            int verbosity_level) const
+    {
+        os << "Traveling salesman problem with release dates" << std::endl;
+        instance_.format(os, verbosity_level);
+    }
+
 private:
 
+    /** Instance. */
     const Instance& instance_;
 
 };

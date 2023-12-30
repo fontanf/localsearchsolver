@@ -6,56 +6,56 @@ using namespace distributedpfsstct;
 
 int main(int argc, char *argv[])
 {
-    MainArgs main_args;
-    main_args.algorithm = "best-first-local-search";
-    read_args(argc, argv, main_args);
-    auto& os = main_args.info.os();
+    // Create command line options.
+    boost::program_options::options_description desc = setup_args();
+    boost::program_options::variables_map vm;
+    boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
+    if (vm.count("help")) {
+        std::cout << desc << std::endl;;
+        throw "";
+    }
+    try {
+        boost::program_options::notify(vm);
+    } catch (const boost::program_options::required_option& e) {
+        std::cout << desc << std::endl;;
+        throw "";
+    }
 
     // Create instance.
-    Instance instance(main_args.instance_path, main_args.format);
-    if (main_args.print_instance > 0) {
-        os
-            << "Instance" << std::endl
-            << "--------" << std::endl;
-        instance.print(os, main_args.print_instance);
-        os << std::endl;
-    }
+    InstanceBuilder instance_builder;
+    instance_builder.read(
+            vm["input"].as<std::string>(),
+            vm["format"].as<std::string>());
+    Instance instance = instance_builder.build();
 
     // Create local scheme.
     SequencingScheme sequencing_scheme(instance);
-    auto sequencing_parameters = read_sequencing_args<SequencingScheme>(main_args.sequencing_argv);
-    sequencing::LocalScheme<SequencingScheme> local_scheme(sequencing_scheme, sequencing_parameters);
+    auto sequencing_parameters = read_sequencing_args<SequencingScheme>(vm);
+    sequencing::LocalScheme<SequencingScheme> local_scheme(
+            sequencing_scheme,
+            sequencing_parameters);
 
     // Run algorithm.
-    auto solution_pool =
-        (strcmp(main_args.algorithm_argv[0], "multi-start-local-search") == 0)?
-        run_multi_start_local_search(main_args, local_scheme, main_args.info):
-        (strcmp(main_args.algorithm_argv[0], "iterated-local-search") == 0)?
-        run_iterated_local_search(main_args, local_scheme, main_args.info):
-        (strcmp(main_args.algorithm_argv[0], "best-first-local-search") == 0)?
-        run_best_first_local_search(main_args, local_scheme, main_args.info):
-        run_genetic_local_search(main_args, local_scheme, main_args.info);
-
-    // Write solution.
-    std::string certificate_path = main_args.info.output->certificate_path;
-    local_scheme.write(solution_pool.best(), certificate_path);
-    if (main_args.print_solution) {
-        std::cout << std::endl
-            << "Solution" << std::endl
-            << "--------" << std::endl;
-        local_scheme.print(std::cout, solution_pool.best());
-    }
+    std::string algorithm = vm["algorithm"].as<std::string>();
+    auto output =
+        (algorithm == "multi-start-local-search")?
+        run_multi_start_local_search(local_scheme, vm):
+        (algorithm == "iterated-local-search")?
+        run_iterated_local_search(local_scheme, vm):
+        (algorithm == "best-first-local-search")?
+        run_best_first_local_search(local_scheme, vm):
+        run_genetic_local_search(local_scheme, vm);
 
     // Run checker.
-    if (main_args.print_checker > 0
-            && certificate_path != "") {
-        os << std::endl
+    if (vm["print-checker"].as<int>() > 0
+            && vm["certificate"].as<std::string>() != "") {
+        std::cout << std::endl
             << "Checker" << std::endl
             << "-------" << std::endl;
         instance.check(
-                certificate_path,
-                os,
-                main_args.print_checker);
+                vm["certificate"].as<std::string>(),
+                std::cout,
+                vm["print-checker"].as<int>());
     }
 
     return 0;
