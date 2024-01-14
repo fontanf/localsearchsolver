@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     InstanceBuilder instance_builder;
     instance_builder.read(
             instance_path);
-    Instance instance = instance_builder.build();
+    const Instance instance = instance_builder.build();
 
     // Create local scheme.
     SequencingScheme sequencing_scheme(instance);

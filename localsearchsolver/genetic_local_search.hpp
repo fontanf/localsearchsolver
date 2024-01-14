@@ -2,6 +2,8 @@
 
 #include "localsearchsolver/algorithm_formatter.hpp"
 
+#include "optimizationtools//utils//utils.hpp"
+
 #include <thread>
 
 namespace localsearchsolver

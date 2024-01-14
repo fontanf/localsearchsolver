@@ -1,11 +1,9 @@
 #pragma once
 
 #include "optimizationtools/utils/output.hpp"
-#include "optimizationtools/utils/utils.hpp"
 
 #include <cstdint>
 #include <set>
-#include <mutex>
 #include <iomanip>
 
 namespace localsearchsolver

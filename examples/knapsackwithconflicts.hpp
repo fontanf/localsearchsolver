@@ -32,6 +32,8 @@
 
 #include "orproblems/knapsackwithconflicts.hpp"
 
+#include "optimizationtools//utils//utils.hpp"
+
 namespace localsearchsolver
 {
 namespace knapsackwithconflicts

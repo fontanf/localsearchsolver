@@ -7,6 +7,7 @@
 #include "localsearchsolver/common.hpp"
 
 #include "optimizationtools/containers/indexed_set.hpp"
+#include "optimizationtools/utils//utils.hpp"
 
 namespace localsearchsolver
 {

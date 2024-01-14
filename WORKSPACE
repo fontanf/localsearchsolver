@@ -45,7 +45,7 @@ local_repository(
 git_repository(
     name = "orproblems",
     remote = "https://github.com/fontanf/orproblems.git",
-    commit = "d7ca80aa3ade89ace994a7db8ce4f941e8075a99",
+    commit = "82d9e15fd9b178a45cd64e78e9b22364e41a7e1d",
 )
 
 local_repository(

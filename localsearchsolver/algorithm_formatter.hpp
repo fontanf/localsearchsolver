@@ -2,8 +2,7 @@
 
 #include "localsearchsolver/common.hpp"
 
-#include <iomanip>
-#include <memory>
+#include <mutex>
 
 namespace localsearchsolver
 {
@@ -347,6 +346,8 @@ void AlgorithmFormatter<LocalScheme>::start(
 template <typename LocalScheme>
 void AlgorithmFormatter<LocalScheme>::print_header()
 {
+    if (parameters_.verbosity_level == 0)
+        return;
     *os_
         << std::right
         << std::endl
