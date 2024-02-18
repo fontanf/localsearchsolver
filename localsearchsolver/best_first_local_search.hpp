@@ -321,10 +321,17 @@ inline void best_first_local_search_worker(
                 && !strictly_better(
                     local_scheme,
                     data.parameters.goal,
-                    local_scheme.global_cost(data.output.solution_pool.best())))
+                    local_scheme.global_cost(data.output.solution_pool.best()))) {
             break;
+        }
 
         data.mutex.lock();
+
+        // Check for algorithm end.
+        if (data.q.empty() && data.number_of_working_threads == 0) {
+            data.mutex.unlock();
+            break;
+        }
 
         if (data.q.empty()) {
             data.mutex.unlock();
@@ -356,12 +363,6 @@ inline void best_first_local_search_worker(
             for (auto node: data.tabu_nodes[node_id])
                 data.q.insert(node);
             data.tabu_nodes.erase(node_id);
-        }
-
-        // Check for algorithm end.
-        if (data.q.empty() && data.number_of_working_threads == 0) {
-            data.mutex.unlock();
-            break;
         }
 
         // Check goal.
