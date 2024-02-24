@@ -82,60 +82,60 @@ In case the `GlobalCost global_cost_concatenate(SequenceData&, const SequenceDat
 
 #### Single sequence
 
-[Sequential ordering problem](examples/sequentialordering.hpp)
+[Sequential ordering problem](examples/sequential_ordering.hpp)
 
-[Single machine scheduling problem with sequence-dependent setup times, total weighted tardiness](examples/schedulingwithsdsttwt.hpp)
+[Single machine scheduling problem with sequence-dependent setup times, total weighted tardiness](examples/scheduling_with_sdst_twt.hpp)
 
-[Permutation flow shop scheduling problem, total completion time](examples/permutationflowshopschedulingtct.hpp)
+[Permutation flow shop scheduling problem, total completion time](examples/permutation_flowshop_scheduling_tct.hpp)
 
-[Permutation flow shop scheduling problem, total tardiness](examples/permutationflowshopschedulingtt.hpp)
+[Permutation flow shop scheduling problem, total tardiness](examples/permutation_flowshop_scheduling_tt.hpp)
 
 #### Single sub-sequence
 
-[Single machine order acceptance and scheduling problem with time windows and sequence-dependent setup times, total weighted tardiness](examples/orderacceptanceandscheduling.hpp)
+[Single machine order acceptance and scheduling problem with time windows and sequence-dependent setup times, total weighted tardiness](examples/order_acceptance_and_scheduling.hpp)
 
-[Time-dependent orienteering problem](examples/timedependentorienteering.hpp)
+[Time-dependent orienteering problem](examples/time_dependent_orienteering.hpp)
 
 #### Multiple sequences
 
-[Distributed permutation flow shop scheduling problem, total completion time](examples/distributedpfsstct.hpp)
+[Distributed permutation flow shop scheduling problem, total completion time](examples/distributed_pfss_tct.hpp)
 
 #### Single sequence, modes
 
-[Traveling salesman problem with release dates](examples/travelingsalesmanwithreleasedates.hpp)
+[Traveling salesman problem with release dates](examples/traveling_salesman_with_release_dates.hpp)
 
-[Single machine batch scheduling problem, total weighted tardiness](examples/batchschedulingtotalweightedtardiness.hpp)
+[Single machine batch scheduling problem, total weighted tardiness](examples/batch_scheduling_total_weighted_tardiness.hpp)
 
 #### Single sequence, `sequence_data_init/concatenate`
 
-[Traveling repairman problem](examples/travelingrepairman.hpp)
+[Traveling repairman problem](examples/traveling_repairman.hpp)
 
 #### Multiple sequences, `sequence_data_init/concatenate`
 
-[Capacitated vehicle routing problem](examples/capacitatedvehiclerouting.hpp)
+[Capacitated vehicle routing problem](examples/capacitated_vehicle_routing.hpp)
 
-[Vehicle routing problem with time windows](examples/vehicleroutingwithtimewindows.hpp)
+[Vehicle routing problem with time windows](examples/vehicle_routing_with_time_windows.hpp)
 
 
 ## Other examples
 
 Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orproblems)
 
-[Multidimensional multiple-choice knapsack problem](examples/multidimensionalmultiplechoiceknapsack.hpp)
+[Multidimensional multiple-choice knapsack problem](examples/multidimensional_multiple_choice_knapsack.hpp)
 * Straightforward example for a genetic local search: single neighborhood, basic operators
 * Algorithm:
   * Local search neighborhoods:
     * Add item `j` in the knapsack
   * Crossover algorithm
 
-[Quadratic assignment problem](examples/quadraticassignment.hpp)
+[Quadratic assignment problem](examples/quadratic_assignment.hpp)
 * Example which implements a problem specific acceleration strategy to compute the move costs
 * Algorithm:
   * Local search neighborhood: swap two assignments
   * Perturbation: ejection chain
   * Crossover algorithm: UX crossover
 
-[Knapsack problem with conflicts](examples/knapsackwithconflicts.hpp)
+[Knapsack problem with conflicts](examples/knapsack_with_conflicts.hpp)
 * Example with multiple neigborhoods
 * Algorithm:
   * Local search neighborhoods:
@@ -151,7 +151,7 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
   * Local search neighborhoods: shift item `j` to agent `i`
   * Perturbation: shift 8 random jobs
 
-[Permutation flow shop scheduling problem, makespan](examples/permutationflowshopschedulingmakespan.hpp)
+[Permutation flow shop scheduling problem, makespan](examples/permutation_flowshop_scheduling_makespan.hpp)
 * This one is not considered as a sequencing problem since the dedicated acceleration strategy makes it possible to explore the neighborhoods more efficiently
 * Algorithm:
   * Local search neighborhood: move a block of `k` consecutive jobs, `k = 1..4`
@@ -173,7 +173,7 @@ bazel build -- //...
 
 Then, examples can be executed as follows:
 ```shell
-./bazel-bin/examples/sequentialordering_main -v 1 -i ../ordata/sequentialordering/soplib/R.200.100.1.sop -f soplib -a best-first-local-search --maximum-number-of-nodes 100 -c sol.txt
+./bazel-bin/examples/sequential_ordering_main -v 1 -i ../ordata/scheduling/sequential_ordering/soplib/R.200.100.1.sop -f soplib -a best-first-local-search --maximum-number-of-nodes 100 -c sol.txt
 ```
 ```
 =======================================
@@ -299,7 +299,7 @@ Total distance:                   194
 ```
 
 ```shell
-./bazel-bin/examples/knapsackwithconflicts_main -v 1 -i ../ordata/knapsackwithconflicts/bettinelli2017/sparse_corr/test_1000_1000_r0.001-0.dat -f bettinelli2017 -t 5 -c sol.txt
+./bazel-bin/examples/knapsack_with_conflicts_main -v 1 -i ../ordata/packing/knapsack_with_conflicts/bettinelli2017/sparse_corr/test_1000_1000_r0.001-0.dat -f bettinelli2017 -t 5 -c sol.txt
 ```
 ```
 =======================================

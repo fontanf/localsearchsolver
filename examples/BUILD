@@ -6,20 +6,20 @@ load("//examples:variables.bzl",
          "GUROBI_COPTS", "GUROBI_DEP")
 
 cc_library(
-        name = "knapsackwithconflicts",
-        hdrs = ["knapsackwithconflicts.hpp"],
+        name = "knapsack_with_conflicts",
+        hdrs = ["knapsack_with_conflicts.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@orproblems//orproblems:knapsackwithconflicts",
+                "@orproblems//orproblems:knapsack_with_conflicts",
         ],
         visibility = ["//visibility:public"],
 )
 
 cc_binary(
-        name = "knapsackwithconflicts_main",
-        srcs = ["knapsackwithconflicts_main.cpp"],
+        name = "knapsack_with_conflicts_main",
+        srcs = ["knapsack_with_conflicts_main.cpp"],
         deps = [
-                ":knapsackwithconflicts",
+                ":knapsack_with_conflicts",
                 "//localsearchsolver:read_args",
         ],
         linkopts = select({
@@ -30,20 +30,20 @@ cc_binary(
 
 
 cc_library(
-        name = "multidimensionalmultiplechoiceknapsack",
-        hdrs = ["multidimensionalmultiplechoiceknapsack.hpp"],
+        name = "multidimensional_multiple_choice_knapsack",
+        hdrs = ["multidimensional_multiple_choice_knapsack.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@orproblems//orproblems:multidimensionalmultiplechoiceknapsack",
+                "@orproblems//orproblems:multidimensional_multiple_choice_knapsack",
         ],
         visibility = ["//visibility:public"],
 )
 
 cc_binary(
-        name = "multidimensionalmultiplechoiceknapsack_main",
-        srcs = ["multidimensionalmultiplechoiceknapsack_main.cpp"],
+        name = "multidimensional_multiple_choice_knapsack_main",
+        srcs = ["multidimensional_multiple_choice_knapsack_main.cpp"],
         deps = [
-                ":multidimensionalmultiplechoiceknapsack",
+                ":multidimensional_multiple_choice_knapsack",
                 "//localsearchsolver:read_args",
         ],
         linkopts = select({
@@ -54,20 +54,20 @@ cc_binary(
 
 
 cc_library(
-        name = "quadraticassignment",
-        hdrs = ["quadraticassignment.hpp"],
+        name = "quadratic_assignment",
+        hdrs = ["quadratic_assignment.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@orproblems//orproblems:quadraticassignment",
+                "@orproblems//orproblems:quadratic_assignment",
         ],
         visibility = ["//visibility:public"],
 )
 
 cc_binary(
-        name = "quadraticassignment_main",
-        srcs = ["quadraticassignment_main.cpp"],
+        name = "quadratic_assignment_main",
+        srcs = ["quadratic_assignment_main.cpp"],
         deps = [
-                ":quadraticassignment",
+                ":quadratic_assignment",
                 "//localsearchsolver:read_args",
         ],
         linkopts = select({
@@ -78,20 +78,20 @@ cc_binary(
 
 
 cc_library(
-        name = "sequentialordering",
-        hdrs = ["sequentialordering.hpp"],
+        name = "sequential_ordering",
+        hdrs = ["sequential_ordering.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@orproblems//orproblems:sequentialordering",
+                "@orproblems//orproblems:sequential_ordering",
         ],
         visibility = ["//visibility:public"],
 )
 
 cc_binary(
-        name = "sequentialordering_main",
-        srcs = ["sequentialordering_main.cpp"],
+        name = "sequential_ordering_main",
+        srcs = ["sequential_ordering_main.cpp"],
         deps = [
-                ":sequentialordering",
+                ":sequential_ordering",
                 "//localsearchsolver:read_args",
         ],
         linkopts = select({
@@ -102,20 +102,20 @@ cc_binary(
 
 
 cc_library(
-        name = "schedulingwithsdsttwt",
-        hdrs = ["schedulingwithsdsttwt.hpp"],
+        name = "scheduling_with_sdst_twt",
+        hdrs = ["scheduling_with_sdst_twt.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@orproblems//orproblems:schedulingwithsdsttwt",
+                "@orproblems//orproblems:scheduling_with_sdst_twt",
         ],
         visibility = ["//visibility:public"],
 )
 
 cc_binary(
-        name = "schedulingwithsdsttwt_main",
-        srcs = ["schedulingwithsdsttwt_main.cpp"],
+        name = "scheduling_with_sdst_twt_main",
+        srcs = ["scheduling_with_sdst_twt_main.cpp"],
         deps = [
-                ":schedulingwithsdsttwt",
+                ":scheduling_with_sdst_twt",
                 "//localsearchsolver:read_args",
         ],
         linkopts = select({
@@ -126,20 +126,20 @@ cc_binary(
 
 
 cc_library(
-        name = "orderacceptanceandscheduling",
-        hdrs = ["orderacceptanceandscheduling.hpp"],
+        name = "order_acceptance_and_scheduling",
+        hdrs = ["order_acceptance_and_scheduling.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@orproblems//orproblems:orderacceptanceandscheduling",
+                "@orproblems//orproblems:order_acceptance_and_scheduling",
         ],
         visibility = ["//visibility:public"],
 )
 
 cc_binary(
-        name = "orderacceptanceandscheduling_main",
-        srcs = ["orderacceptanceandscheduling_main.cpp"],
+        name = "order_acceptance_and_scheduling_main",
+        srcs = ["order_acceptance_and_scheduling_main.cpp"],
         deps = [
-                ":orderacceptanceandscheduling",
+                ":order_acceptance_and_scheduling",
                 "//localsearchsolver:read_args",
         ],
         linkopts = select({
@@ -150,20 +150,20 @@ cc_binary(
 
 
 cc_library(
-        name = "timedependentorienteering",
-        hdrs = ["timedependentorienteering.hpp"],
+        name = "time_dependent_orienteering",
+        hdrs = ["time_dependent_orienteering.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@orproblems//orproblems:timedependentorienteering",
+                "@orproblems//orproblems:time_dependent_orienteering",
         ],
         visibility = ["//visibility:public"],
 )
 
 cc_binary(
-        name = "timedependentorienteering_main",
-        srcs = ["timedependentorienteering_main.cpp"],
+        name = "time_dependent_orienteering_main",
+        srcs = ["time_dependent_orienteering_main.cpp"],
         deps = [
-                ":timedependentorienteering",
+                ":time_dependent_orienteering",
                 "//localsearchsolver:read_args",
         ],
         linkopts = select({
@@ -174,20 +174,20 @@ cc_binary(
 
 
 cc_library(
-        name = "permutationflowshopschedulingmakespan",
-        hdrs = ["permutationflowshopschedulingmakespan.hpp"],
+        name = "permutation_flowshop_scheduling_makespan",
+        hdrs = ["permutation_flowshop_scheduling_makespan.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@orproblems//orproblems:permutationflowshopschedulingmakespan",
+                "@orproblems//orproblems:permutation_flowshop_scheduling_makespan",
         ],
         visibility = ["//visibility:public"],
 )
 
 cc_binary(
-        name = "permutationflowshopschedulingmakespan_main",
-        srcs = ["permutationflowshopschedulingmakespan_main.cpp"],
+        name = "permutation_flowshop_scheduling_makespan_main",
+        srcs = ["permutation_flowshop_scheduling_makespan_main.cpp"],
         deps = [
-                ":permutationflowshopschedulingmakespan",
+                ":permutation_flowshop_scheduling_makespan",
                 "//localsearchsolver:read_args",
         ],
         linkopts = select({
@@ -198,20 +198,20 @@ cc_binary(
 
 
 cc_library(
-        name = "permutationflowshopschedulingtct",
-        hdrs = ["permutationflowshopschedulingtct.hpp"],
+        name = "permutation_flowshop_scheduling_tct",
+        hdrs = ["permutation_flowshop_scheduling_tct.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@orproblems//orproblems:permutationflowshopschedulingtct",
+                "@orproblems//orproblems:permutation_flowshop_scheduling_tct",
         ],
         visibility = ["//visibility:public"],
 )
 
 cc_binary(
-        name = "permutationflowshopschedulingtct_main",
-        srcs = ["permutationflowshopschedulingtct_main.cpp"],
+        name = "permutation_flowshop_scheduling_tct_main",
+        srcs = ["permutation_flowshop_scheduling_tct_main.cpp"],
         deps = [
-                ":permutationflowshopschedulingtct",
+                ":permutation_flowshop_scheduling_tct",
                 "//localsearchsolver:read_args",
         ],
         linkopts = select({
@@ -222,20 +222,20 @@ cc_binary(
 
 
 cc_library(
-        name = "permutationflowshopschedulingtt",
-        hdrs = ["permutationflowshopschedulingtt.hpp"],
+        name = "permutation_flowshop_scheduling_tt",
+        hdrs = ["permutation_flowshop_scheduling_tt.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@orproblems//orproblems:permutationflowshopschedulingtt",
+                "@orproblems//orproblems:permutation_flowshop_scheduling_tt",
         ],
         visibility = ["//visibility:public"],
 )
 
 cc_binary(
-        name = "permutationflowshopschedulingtt_main",
-        srcs = ["permutationflowshopschedulingtt_main.cpp"],
+        name = "permutation_flowshop_scheduling_tt_main",
+        srcs = ["permutation_flowshop_scheduling_tt_main.cpp"],
         deps = [
-                ":permutationflowshopschedulingtt",
+                ":permutation_flowshop_scheduling_tt",
                 "//localsearchsolver:read_args",
         ],
         linkopts = select({
@@ -246,20 +246,20 @@ cc_binary(
 
 
 cc_library(
-        name = "distributedpfsstct",
-        hdrs = ["distributedpfsstct.hpp"],
+        name = "distributed_pfss_tct",
+        hdrs = ["distributed_pfss_tct.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@orproblems//orproblems:distributedpfsstct",
+                "@orproblems//orproblems:distributed_pfss_tct",
         ],
         visibility = ["//visibility:public"],
 )
 
 cc_binary(
-        name = "distributedpfsstct_main",
-        srcs = ["distributedpfsstct_main.cpp"],
+        name = "distributed_pfss_tct_main",
+        srcs = ["distributed_pfss_tct_main.cpp"],
         deps = [
-                ":distributedpfsstct",
+                ":distributed_pfss_tct",
                 "//localsearchsolver:read_args",
         ],
         linkopts = select({
@@ -270,20 +270,20 @@ cc_binary(
 
 
 cc_library(
-        name = "travelingrepairman",
-        hdrs = ["travelingrepairman.hpp"],
+        name = "traveling_repairman",
+        hdrs = ["traveling_repairman.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@orproblems//orproblems:travelingrepairman",
+                "@orproblems//orproblems:traveling_repairman",
         ],
         visibility = ["//visibility:public"],
 )
 
 cc_binary(
-        name = "travelingrepairman_main",
-        srcs = ["travelingrepairman_main.cpp"],
+        name = "traveling_repairman_main",
+        srcs = ["traveling_repairman_main.cpp"],
         deps = [
-                ":travelingrepairman",
+                ":traveling_repairman",
                 "//localsearchsolver:read_args",
         ],
         linkopts = select({
@@ -294,20 +294,20 @@ cc_binary(
 
 
 cc_library(
-        name = "capacitatedvehiclerouting",
-        hdrs = ["capacitatedvehiclerouting.hpp"],
+        name = "capacitated_vehicle_routing",
+        hdrs = ["capacitated_vehicle_routing.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@orproblems//orproblems:capacitatedvehiclerouting",
+                "@orproblems//orproblems:capacitated_vehicle_routing",
         ],
         visibility = ["//visibility:public"],
 )
 
 cc_binary(
-        name = "capacitatedvehiclerouting_main",
-        srcs = ["capacitatedvehiclerouting_main.cpp"],
+        name = "capacitated_vehicle_routing_main",
+        srcs = ["capacitated_vehicle_routing_main.cpp"],
         deps = [
-                ":capacitatedvehiclerouting",
+                ":capacitated_vehicle_routing",
                 "//localsearchsolver:read_args",
         ],
         linkopts = select({
@@ -317,10 +317,10 @@ cc_binary(
 )
 
 cc_binary(
-        name = "capacitatedvehiclerouting_dimacs_main",
-        srcs = ["capacitatedvehiclerouting_dimacs_main.cpp"],
+        name = "capacitated_vehicle_routing_dimacs_main",
+        srcs = ["capacitated_vehicle_routing_dimacs_main.cpp"],
         deps = [
-                ":capacitatedvehiclerouting",
+                ":capacitated_vehicle_routing",
                 "//localsearchsolver:read_args",
         ],
         linkopts = select({
@@ -331,20 +331,20 @@ cc_binary(
 
 
 cc_library(
-        name = "vehicleroutingwithtimewindows",
-        hdrs = ["vehicleroutingwithtimewindows.hpp"],
+        name = "vehicle_routing_with_time_windows",
+        hdrs = ["vehicle_routing_with_time_windows.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@orproblems//orproblems:vehicleroutingwithtimewindows",
+                "@orproblems//orproblems:vehicle_routing_with_time_windows",
         ],
         visibility = ["//visibility:public"],
 )
 
 cc_binary(
-        name = "vehicleroutingwithtimewindows_main",
-        srcs = ["vehicleroutingwithtimewindows_main.cpp"],
+        name = "vehicle_routing_with_time_windows_main",
+        srcs = ["vehicle_routing_with_time_windows_main.cpp"],
         deps = [
-                ":vehicleroutingwithtimewindows",
+                ":vehicle_routing_with_time_windows",
                 "//localsearchsolver:read_args",
         ],
         linkopts = select({
@@ -354,34 +354,10 @@ cc_binary(
 )
 
 cc_binary(
-        name = "vehicleroutingwithtimewindows_dimacs_main",
-        srcs = ["vehicleroutingwithtimewindows_dimacs_main.cpp"],
+        name = "vehicle_routing_with_time_windows_dimacs_main",
+        srcs = ["vehicle_routing_with_time_windows_dimacs_main.cpp"],
         deps = [
-                ":vehicleroutingwithtimewindows",
-                "//localsearchsolver:read_args",
-        ],
-        linkopts = select({
-                "@bazel_tools//src/conditions:windows": [],
-                "//conditions:default":                 ["-lpthread"],
-        }),
-)
-
-
-cc_library(
-        name = "travelingsalesmanwithreleasedates",
-        hdrs = ["travelingsalesmanwithreleasedates.hpp"],
-        deps = [
-                "//localsearchsolver:localsearchsolver",
-                "@orproblems//orproblems:travelingsalesmanwithreleasedates",
-        ],
-        visibility = ["//visibility:public"],
-)
-
-cc_binary(
-        name = "travelingsalesmanwithreleasedates_main",
-        srcs = ["travelingsalesmanwithreleasedates_main.cpp"],
-        deps = [
-                ":travelingsalesmanwithreleasedates",
+                ":vehicle_routing_with_time_windows",
                 "//localsearchsolver:read_args",
         ],
         linkopts = select({
@@ -392,20 +368,44 @@ cc_binary(
 
 
 cc_library(
-        name = "batchschedulingtotalweightedtardiness",
-        hdrs = ["batchschedulingtotalweightedtardiness.hpp"],
+        name = "traveling_salesman_with_release_dates",
+        hdrs = ["traveling_salesman_with_release_dates.hpp"],
         deps = [
                 "//localsearchsolver:localsearchsolver",
-                "@orproblems//orproblems:batchschedulingtotalweightedtardiness",
+                "@orproblems//orproblems:traveling_salesman_with_release_dates",
         ],
         visibility = ["//visibility:public"],
 )
 
 cc_binary(
-        name = "batchschedulingtotalweightedtardiness_main",
-        srcs = ["batchschedulingtotalweightedtardiness_main.cpp"],
+        name = "traveling_salesman_with_release_dates_main",
+        srcs = ["traveling_salesman_with_release_dates_main.cpp"],
         deps = [
-                ":batchschedulingtotalweightedtardiness",
+                ":traveling_salesman_with_release_dates",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
+
+cc_library(
+        name = "batch_scheduling_total_weighted_tardiness",
+        hdrs = ["batch_scheduling_total_weighted_tardiness.hpp"],
+        deps = [
+                "//localsearchsolver:localsearchsolver",
+                "@orproblems//orproblems:batch_scheduling_total_weighted_tardiness",
+        ],
+        visibility = ["//visibility:public"],
+)
+
+cc_binary(
+        name = "batch_scheduling_total_weighted_tardiness_main",
+        srcs = ["batch_scheduling_total_weighted_tardiness_main.cpp"],
+        deps = [
+                ":batch_scheduling_total_weighted_tardiness",
                 "//localsearchsolver:read_args",
         ],
         linkopts = select({
