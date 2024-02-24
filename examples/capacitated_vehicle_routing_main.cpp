@@ -27,6 +27,7 @@ int main(int argc, char *argv[])
             vm["input"].as<std::string>(),
             vm["format"].as<std::string>());
     const Instance instance = instance_builder.build();
+    instance.distances().compute_distances();
 
     // Create local scheme.
     SequencingScheme sequencing_scheme(instance);

@@ -12,6 +12,7 @@ int main(int argc, char *argv[])
     instance_builder.read(
             instance_path);
     const Instance instance = instance_builder.build();
+    instance.distances().compute_distances();
 
     // Create local scheme.
     SequencingScheme sequencing_scheme(instance);

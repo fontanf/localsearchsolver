@@ -44,7 +44,7 @@ struct GeneticLocalSearchParameters: Parameters<LocalScheme>
         return json;
     }
 
-    virtual int format_width() const { return 32; }
+    virtual int format_width() const { return 33; }
 
     virtual void format(
             std::ostream& os,

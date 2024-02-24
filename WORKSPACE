@@ -45,12 +45,23 @@ local_repository(
 git_repository(
     name = "orproblems",
     remote = "https://github.com/fontanf/orproblems.git",
-    commit = "060c50ed46a3131cf0575b0612f8aedef9a0d434",
+    commit = "7fd98ce12d2d80e445bbd7699259fb7a871acb7c",
 )
 
 local_repository(
     name = "orproblems_",
     path = "../orproblems/",
+)
+
+git_repository(
+    name = "travelingsalesmansolver",
+    remote = "https://github.com/fontanf/travelingsalesmansolver.git",
+    commit = "97a12111e2d8dcdb2072570b09667ec9073f6000",
+)
+
+local_repository(
+    name = "travelingsalesmansolver_",
+    path = "../travelingsalesmansolver/",
 )
 
 http_archive(

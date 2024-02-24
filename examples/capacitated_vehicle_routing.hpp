@@ -84,7 +84,9 @@ public:
             sequencing::ElementId element_id_1,
             sequencing::ElementId element_id_2) const
     {
-        return instance_.distance(element_id_1 + 1, element_id_2 + 1);
+        return instance_.distances().distance(
+                element_id_1 + 1,
+                element_id_2 + 1);
     }
 
     inline GlobalCost global_cost(const SequenceData& sequence_data) const
@@ -93,9 +95,9 @@ public:
             return {0, 0};
         return {
             std::max((Demand)0, sequence_data.demand - instance_.capacity()),
-            instance_.distance(0, sequence_data.element_id_first + 1)
+            instance_.distances().distance(0, sequence_data.element_id_first + 1)
                 + sequence_data.total_distance
-                + instance_.distance(sequence_data.element_id_last + 1, 0),
+                + instance_.distances().distance(sequence_data.element_id_last + 1, 0),
         };
     }
 
@@ -112,7 +114,7 @@ public:
         return {
             std::max((Demand)0, sequence_data.demand - instance_.capacity()),
             sequence_data.total_distance
-                + instance_.distance(0, sequence_data.element_id_first + 1),
+                + instance_.distances().distance(0, sequence_data.element_id_first + 1),
         };
     }
 
@@ -135,7 +137,7 @@ public:
     {
         // Update total_completion_time.
         sequence_data.total_distance
-            += instance_.distance(
+            += instance_.distances().distance(
                     sequence_data.element_id_last + 1,
                     sequence_data_2.element_id_first + 1)
             + sequence_data_2.total_distance;
@@ -154,6 +156,27 @@ public:
         instance_.format(os, verbosity_level);
     }
 
+    void solution_write(
+            const sequencing::LocalScheme<SequencingScheme>::Solution& solution,
+            std::string certificate_path) const
+    {
+        if (certificate_path.empty())
+            return;
+        std::ofstream file(certificate_path);
+        if (!file.good()) {
+            throw std::runtime_error(
+                    "Unable to open file \"" + certificate_path + "\".");
+        }
+
+        file << solution.sequences.size() << std::endl;
+        for (const auto& sequence: solution.sequences) {
+            file << sequence.elements.size() << std::endl;
+            for (const auto& se: sequence.elements)
+                file << se.element_id + 1 << " ";
+            file << std::endl;
+        }
+    }
+
 private:
 
     /** Instance. */
@@ -163,4 +186,3 @@ private:
 
 }
 }
-
