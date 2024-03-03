@@ -107,7 +107,8 @@ inline sequencing::Parameters read_sequencing_args(
         parameters.shift_block_maximum_length = vm["shift-block-maximum-length"].as<sequencing::ElementPos>();
     if (vm.count("swap-block-maximum-length"))
         parameters.swap_block_maximum_length = vm["swap-block-maximum-length"].as<sequencing::ElementPos>();
-    parameters.reverse = vm.count("reverse");
+    if (vm.count("reverse"))
+        parameters.reverse = vm["reverse"].as<bool>();
     if (vm.count("shift-reverse-block-maximum-length"))
         parameters.shift_reverse_block_maximum_length = vm["shift-reverse-block-maximum-length"].as<sequencing::ElementPos>();
 
