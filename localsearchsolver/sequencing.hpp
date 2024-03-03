@@ -2475,7 +2475,7 @@ public:
             //std::cout << "it " << it
             //    << " c " << to_string(global_cost(solution))
             //    << std::endl;
-            //print(std::cout, solution);
+            //solution_format(solution, std::cout, 1);
 
             GlobalCost gc_old = global_cost(solution);
 

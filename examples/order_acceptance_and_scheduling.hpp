@@ -15,7 +15,6 @@
 
 namespace localsearchsolver
 {
-
 namespace order_acceptance_and_scheduling
 {
 
@@ -152,6 +151,4 @@ private:
 };
 
 }
-
 }
-

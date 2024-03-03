@@ -14,7 +14,6 @@
 
 namespace localsearchsolver
 {
-
 namespace batch_scheduling_total_weighted_tardiness
 {
 
@@ -193,6 +192,4 @@ private:
 };
 
 }
-
 }
-

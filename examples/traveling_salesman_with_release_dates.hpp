@@ -14,7 +14,6 @@
 
 namespace localsearchsolver
 {
-
 namespace traveling_salesman_with_release_dates
 {
 
@@ -131,6 +130,4 @@ private:
 };
 
 }
-
 }
-

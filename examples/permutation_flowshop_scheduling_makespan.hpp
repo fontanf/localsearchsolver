@@ -13,6 +13,8 @@
 
 #include "orproblems/scheduling/permutation_flowshop_scheduling_makespan.hpp"
 
+#include "optimizationtools/utils/utils.hpp"
+
 namespace localsearchsolver
 {
 namespace permutation_flowshop_scheduling_makespan
@@ -517,4 +519,3 @@ private:
 
 }
 }
-

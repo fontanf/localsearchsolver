@@ -13,7 +13,6 @@
 
 namespace localsearchsolver
 {
-
 namespace multidimensional_multiple_choice_knapsack
 {
 
@@ -301,6 +300,4 @@ private:
 };
 
 }
-
 }
-

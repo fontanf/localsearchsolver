@@ -14,7 +14,6 @@
 
 namespace localsearchsolver
 {
-
 namespace time_dependent_orienteering
 {
 
@@ -131,6 +130,4 @@ private:
 };
 
 }
-
 }
-

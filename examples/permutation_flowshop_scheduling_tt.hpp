@@ -14,7 +14,6 @@
 
 namespace localsearchsolver
 {
-
 namespace permutation_flowshop_scheduling_tt
 {
 
@@ -118,6 +117,4 @@ private:
 };
 
 }
-
 }
-

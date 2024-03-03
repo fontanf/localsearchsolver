@@ -19,7 +19,6 @@
 
 namespace localsearchsolver
 {
-
 namespace quadratic_assignment
 {
 
@@ -611,6 +610,4 @@ private:
 };
 
 }
-
 }
-

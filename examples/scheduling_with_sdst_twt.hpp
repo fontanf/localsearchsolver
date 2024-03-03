@@ -15,7 +15,6 @@
 
 namespace localsearchsolver
 {
-
 namespace scheduling_with_sdst_twt
 {
 
@@ -106,6 +105,4 @@ private:
 };
 
 }
-
 }
-
