@@ -150,6 +150,30 @@ cc_binary(
 
 
 cc_library(
+        name = "job_sequencing_and_tool_switching",
+        hdrs = ["job_sequencing_and_tool_switching.hpp"],
+        deps = [
+                "//localsearchsolver:localsearchsolver",
+                "@orproblems//orproblems:job_sequencing_and_tool_switching",
+        ],
+        visibility = ["//visibility:public"],
+)
+
+cc_binary(
+        name = "job_sequencing_and_tool_switching_main",
+        srcs = ["job_sequencing_and_tool_switching_main.cpp"],
+        deps = [
+                ":job_sequencing_and_tool_switching",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
+
+cc_library(
         name = "time_dependent_orienteering",
         hdrs = ["time_dependent_orienteering.hpp"],
         deps = [
