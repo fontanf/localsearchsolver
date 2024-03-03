@@ -3942,6 +3942,45 @@ private:
      * Explore neighborhoods.
      */
 
+    inline std::vector<ElementPos> compute_positions(
+            const Solution& solution,
+            SequenceId sequence_id,
+            ElementId element_id,
+            bool intra = true)
+    {
+        ElementPos granularity = 25 + number_of_local_search_calls_ / 256;
+        if (!sorted_predecessors_.empty()
+                && granularity < number_of_elements_) {
+            std::vector<ElementPos> positions_new = {0};
+            for (auto it = sorted_predecessors_[element_id].begin();
+                    it != sorted_predecessors_[element_id].begin() + granularity;
+                    ++it) {
+                ElementId element_id_2 = *it;
+                SequenceId sequence_id_2 = elements_cur_[element_id_2].sequence_id;
+                ElementPos pos_new = elements_cur_[element_id_2].pos + 1;
+                if (element_id_2 == element_id)
+                    continue;
+                if (intra) {
+                    if (sequence_id_2 != sequence_id)
+                        continue;
+                } else {
+                    if (sequence_id_2 == sequence_id)
+                        continue;
+                }
+                positions_new.push_back(pos_new);
+            }
+            return positions_new;
+        } else {
+            const auto& sequence = solution.sequences[sequence_id];
+            SequencePos seq_size = sequence.elements.size();
+            std::vector<ElementPos> positions_new;
+            for (ElementPos pos = 0; pos < seq_size; ++pos)
+                positions_new.push_back(pos);
+            return positions_new;
+        }
+        return {};
+    }
+
     inline void explore_shift(
             const Solution& solution,
             ElementPos block_size,
@@ -3965,16 +4004,28 @@ private:
             for (ElementPos block_pos = 0;
                     block_pos <= seq_size - block_size;
                     ++block_pos) {
-                // Loop through all new positions.
+
                 ElementPos pos_min = std::max(
                         (ElementPos)0,
                         block_pos - parameters_.shift_maximum_distance);
                 ElementPos pos_max = std::min(
                         seq_size - block_size,
                         block_pos + parameters_.shift_maximum_distance);
-                for (ElementPos pos_new = pos_min;
-                        pos_new <= pos_max;
-                        ++pos_new) {
+
+                ElementId element_id = (!reverse)?
+                        sequence.elements[block_pos].element_id:
+                        sequence.elements[block_pos + block_size - 1].element_id;
+                std::vector<ElementPos> positions_new = compute_positions(
+                        solution,
+                        sequence_id,
+                        element_id);
+
+                for (ElementPos pos_new: positions_new) {
+                    if (pos_new < pos_min)
+                        continue;
+                    if (pos_new > pos_max)
+                        continue;
+
                     if (pos_new == block_pos)
                         continue;
 
@@ -4072,12 +4123,22 @@ private:
 
                 // block 1 is at [pos, pos + block_size_1[.
                 ElementPos pos_1 = pos;
+                ElementPos pos_2_min = pos + block_size_1;
                 ElementPos pos_2_max = std::min(
                         seq_size - block_size_2,
                         pos + block_size_1 + parameters_.swap_maximum_distance);
-                for (ElementPos pos_2 = pos + block_size_1;
-                        pos_2 <= pos_2_max;
-                        ++pos_2) {
+
+                ElementId element_id = sequence.elements[pos].element_id;
+                std::vector<ElementPos> positions_new = compute_positions(
+                        solution,
+                        sequence_id,
+                        element_id);
+
+                for (ElementPos pos_2: positions_new) {
+                    if (pos_2 < pos_2_min)
+                        continue;
+                    if (pos_2 > pos_2_max)
+                        continue;
 
                     GlobalCost* gcm = (parameters_.linking_constraints && number_of_sequences_ > 1)?
                         &partial_global_costs_cur_1_[sequence_id]: nullptr;
@@ -4133,12 +4194,16 @@ private:
 
                 // block 2 is at [pos, pos + block_size_2[.
                 ElementPos pos_2 = pos;
+                ElementPos pos_1_min = pos + block_size_2;
                 ElementPos pos_1_max = std::min(
                         seq_size - block_size_1,
                         pos + block_size_2 + parameters_.swap_maximum_distance);
-                for (ElementPos pos_1 = pos + block_size_2;
-                        pos_1 <= pos_1_max;
-                        ++pos_1) {
+
+                for (ElementPos pos_1: positions_new) {
+                    if (pos_1 < pos_1_min)
+                        continue;
+                    if (pos_1 > pos_1_max)
+                        continue;
 
                     GlobalCost* gcm = (parameters_.linking_constraints && number_of_sequences_ > 1)?
                         &partial_global_costs_cur_1_[sequence_id]: nullptr;

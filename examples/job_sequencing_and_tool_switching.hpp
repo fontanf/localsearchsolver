@@ -31,7 +31,7 @@ public:
         parameters.shift_block_maximum_length = 4;
         parameters.swap_block_maximum_length = 3;
         parameters.reverse = true;
-        parameters.shift_reverse_block_maximum_length = 3;
+        parameters.shift_reverse_block_maximum_length = 4;
 
         parameters.ruin_and_recreate_number_of_perturbations = 4;
         parameters.ruin_number_of_elements_removed = 4;
@@ -67,9 +67,41 @@ public:
         JobPos job_pos = 0;
     };
 
-    SequencingScheme(const Instance& instance): instance_(instance) { }
+    SequencingScheme(const Instance& instance):
+        instance_(instance)
+    {
+        // Compute the distances between jobs.
+        distances_ = std::vector<std::vector<ToolId>>(
+                instance.number_of_jobs(),
+                std::vector<ToolId>(instance.number_of_jobs()));
+        optimizationtools::IndexedSet tools_tmp(instance.number_of_tools());
+        for (JobId job_id = 0;
+                job_id < instance.number_of_jobs();
+                ++job_id) {
+            tools_tmp.clear();
+            for (ToolId tool_id: instance.tools(job_id))
+                tools_tmp.add(tool_id);
+            for (JobId job_id_2 = 0;
+                    job_id_2 < instance.number_of_jobs();
+                    ++job_id_2) {
+                for (ToolId tool_id: instance.tools(job_id_2)) {
+                    if (!tools_tmp.contains(tool_id)) {
+                        distances_[job_id][job_id_2]++;
+                        distances_[job_id_2][job_id]++;
+                    }
+                }
+            }
+        }
+    }
 
     inline sequencing::ElementPos number_of_elements() const { return instance_.number_of_jobs(); }
+
+    inline double distance(
+            sequencing::ElementId element_id_1,
+            sequencing::ElementId element_id_2) const
+    {
+        return distances_[element_id_1][element_id_2];
+    }
 
     inline SequenceData empty_sequence_data(
             sequencing::SequenceId) const
@@ -176,6 +208,8 @@ private:
 
     /** Instance. */
     const Instance& instance_;
+
+    std::vector<std::vector<ToolId>> distances_;
 
 };
 

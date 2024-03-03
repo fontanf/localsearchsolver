@@ -37,6 +37,8 @@ boost::program_options::options_description setup_args()
         ("number-of-threads-1", boost::program_options::value<Seed>(), "")
         ("number-of-threads-2", boost::program_options::value<Seed>(), "")
         ("maximum-size-of-the-population", boost::program_options::value<Counter>(), "")
+
+        ("reverse", boost::program_options::value<bool>(), "")
         ;
     return desc;
 }
