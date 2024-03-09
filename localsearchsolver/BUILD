@@ -10,6 +10,9 @@ cc_library(
                 "sequencing.hpp",
                 "read_args.hpp",
         ],
+        srcs = [
+                "common.cpp",
+        ],
         deps = [
                 "@optimizationtools//optimizationtools/utils:utils",
                 "@optimizationtools//optimizationtools/containers:containers",

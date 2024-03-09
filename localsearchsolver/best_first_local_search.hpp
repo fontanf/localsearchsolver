@@ -4,6 +4,7 @@
 
 #include <unordered_set>
 #include <thread>
+#include <random>
 
 namespace localsearchsolver
 {
@@ -189,9 +190,6 @@ struct BestFirstLocalSearchData
      */
     std::unordered_map<Counter, std::vector<std::shared_ptr<BestFirstLocalSearchNode<LocalScheme>>>> tabu_nodes;
 
-    /** Number of nodes explored. */
-    Counter number_of_nodes = 0;
-
     std::mutex mutex;
 };
 
@@ -340,13 +338,13 @@ inline void best_first_local_search_worker(
 
         // Check node limit.
         if (data.parameters.maximum_number_of_nodes != -1
-                && data.number_of_nodes >= data.parameters.maximum_number_of_nodes) {
+                && data.output.number_of_nodes >= data.parameters.maximum_number_of_nodes) {
             data.mutex.unlock();
             return;
         }
 
-        Counter node_id = data.number_of_nodes;
-        data.number_of_nodes++;
+        Counter node_id = data.output.number_of_nodes;
+        data.output.number_of_nodes++;
 
         // Compute tabu tenure.
         Counter tabu_tenure = -1;
@@ -526,12 +524,8 @@ inline const BestFirstLocalSearchOutput<LocalScheme> best_first_local_search(
     for (Counter thread_id = 0; thread_id < (Counter)threads.size(); ++thread_id)
         threads[thread_id].join();
 
-    for (Counter thread_id = 0; thread_id < (Counter)threads.size(); ++thread_id)
-        output.number_of_nodes += datas[thread_id]->number_of_nodes;
-
     algorithm_formatter.end();
     return output;
 }
 
 }
-

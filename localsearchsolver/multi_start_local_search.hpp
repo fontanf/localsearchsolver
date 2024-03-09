@@ -2,8 +2,7 @@
 
 #include "localsearchsolver/algorithm_formatter.hpp"
 
-#include <unordered_set>
-#include <thread>
+#include <random>
 
 namespace localsearchsolver
 {
@@ -13,6 +12,7 @@ struct MultiStartLocalSearchParameters: Parameters<LocalScheme>
 {
     using Solution = typename LocalScheme::Solution;
     using GlobalCost = typename LocalScheme::GlobalCost;
+
 
     /** Maximum number of restarts. */
     Counter maximum_number_of_restarts = -1;
@@ -49,6 +49,7 @@ struct MultiStartLocalSearchOutput: Output<LocalScheme>
             const LocalScheme& local_scheme,
             Counter maximum_size_of_the_solution_pool):
         Output<LocalScheme>(local_scheme, maximum_size_of_the_solution_pool) { }
+
 
     /** Number of restarts. */
     Counter number_of_restarts = 0;
@@ -145,4 +146,3 @@ inline const MultiStartLocalSearchOutput<LocalScheme> multi_start_local_search(
 }
 
 }
-

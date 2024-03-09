@@ -2,9 +2,6 @@
 
 #include "localsearchsolver/algorithm_formatter.hpp"
 
-#include <unordered_set>
-#include <thread>
-
 namespace localsearchsolver
 {
 
@@ -261,4 +258,3 @@ inline const IteratedLocalSearchOutput<LocalScheme> iterated_local_search(
 }
 
 }
-
