@@ -4,22 +4,17 @@
 using namespace localsearchsolver;
 using namespace capacitated_vehicle_routing;
 
-int main(int argc, char *argv[])
+template <typename Distances>
+void run(
+        const Distances& distances,
+        const Instance& instance)
 {
-    (void)argc;
-    std::string instance_path = argv[1];
-    InstanceBuilder instance_builder;
-    instance_builder.read(
-            instance_path);
-    const Instance instance = instance_builder.build();
-    instance.distances().compute_distances();
-
     // Create local scheme.
-    SequencingScheme sequencing_scheme(instance);
-    auto sequencing_parameters = SequencingScheme::sequencing_parameters();;
-    sequencing::LocalScheme<SequencingScheme> local_scheme(sequencing_scheme, sequencing_parameters);
+    SequencingScheme<Distances> sequencing_scheme(instance, distances);
+    auto sequencing_parameters = SequencingScheme<Distances>::sequencing_parameters();;
+    sequencing::LocalScheme<SequencingScheme<Distances>> local_scheme(sequencing_scheme, sequencing_parameters);
 
-    using LocalScheme = sequencing::LocalScheme<SequencingScheme>;
+    using LocalScheme = sequencing::LocalScheme<SequencingScheme<Distances>>;
     BestFirstLocalSearchParameters<LocalScheme> bfls_parameters;
     bfls_parameters.verbosity_level = 0;
     bfls_parameters.initial_solution_ids = {3};
@@ -27,7 +22,7 @@ int main(int argc, char *argv[])
         = [&sequencing_scheme](
                 const Output<LocalScheme>& output)
         {
-            const LocalScheme::Solution& solution = output.solution_pool.best();
+            const typename LocalScheme::Solution& solution = output.solution_pool.best();
             sequencing::SequenceId route_id = 0;
             for (sequencing::SequenceId sequence_id = 0;
                     sequence_id < sequencing_scheme.number_of_sequences();
@@ -43,7 +38,23 @@ int main(int argc, char *argv[])
             Distance obj = std::get<1>(solution.global_cost);
             std::cout << "Cost " << (double)obj * 2 << std::endl;
         };
-    const BestFirstLocalSearchOutput<LocalScheme> output = best_first_local_search(local_scheme, bfls_parameters);
+    best_first_local_search(local_scheme, bfls_parameters);
+}
+
+int main(int argc, char *argv[])
+{
+    (void)argc;
+    std::string instance_path = argv[1];
+    InstanceBuilder instance_builder;
+    instance_builder.read(
+            instance_path);
+    const Instance instance = instance_builder.build();
+    instance.distances().compute_distances_explicit();
+
+    FUNCTION_WITH_DISTANCES(
+            run,
+            instance.distances(),
+            instance);
 
     return 0;
 }

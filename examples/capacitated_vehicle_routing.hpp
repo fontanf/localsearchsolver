@@ -19,6 +19,7 @@ namespace capacitated_vehicle_routing
 
 using namespace orproblems::capacitated_vehicle_routing;
 
+template <typename Distances>
 class SequencingScheme
 {
 
@@ -66,7 +67,11 @@ public:
         Distance total_distance = 0;  // Without depot -> element_id_first.
     };
 
-    SequencingScheme(const Instance& instance): instance_(instance) { }
+    SequencingScheme(
+            const Instance& instance,
+            const Distances& distances):
+        instance_(instance),
+        distances_(distances) { }
 
     inline sequencing::SequencePos number_of_sequences() const
     {
@@ -84,7 +89,7 @@ public:
             sequencing::ElementId element_id_1,
             sequencing::ElementId element_id_2) const
     {
-        return instance_.distances().distance(
+        return distances_.distance(
                 element_id_1 + 1,
                 element_id_2 + 1);
     }
@@ -95,9 +100,9 @@ public:
             return {0, 0};
         return {
             std::max((Demand)0, sequence_data.demand - instance_.capacity()),
-            instance_.distances().distance(0, sequence_data.element_id_first + 1)
+            distances_.distance(0, sequence_data.element_id_first + 1)
                 + sequence_data.total_distance
-                + instance_.distances().distance(sequence_data.element_id_last + 1, 0),
+                + distances_.distance(sequence_data.element_id_last + 1, 0),
         };
     }
 
@@ -114,7 +119,7 @@ public:
         return {
             std::max((Demand)0, sequence_data.demand - instance_.capacity()),
             sequence_data.total_distance
-                + instance_.distances().distance(0, sequence_data.element_id_first + 1),
+                + distances_.distance(0, sequence_data.element_id_first + 1),
         };
     }
 
@@ -137,7 +142,7 @@ public:
     {
         // Update total_completion_time.
         sequence_data.total_distance
-            += instance_.distances().distance(
+            += distances_.distance(
                     sequence_data.element_id_last + 1,
                     sequence_data_2.element_id_first + 1)
             + sequence_data_2.total_distance;
@@ -157,7 +162,7 @@ public:
     }
 
     void solution_write(
-            const sequencing::LocalScheme<SequencingScheme>::Solution& solution,
+            const typename sequencing::LocalScheme<SequencingScheme<Distances>>::Solution& solution,
             std::string certificate_path) const
     {
         if (certificate_path.empty())
@@ -181,6 +186,9 @@ private:
 
     /** Instance. */
     const Instance& instance_;
+
+    /** Distances. */
+    const Distances& distances_;
 
 };
 

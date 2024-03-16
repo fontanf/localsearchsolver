@@ -4,6 +4,32 @@
 using namespace localsearchsolver;
 using namespace capacitated_vehicle_routing;
 
+template <typename Distances>
+void run(
+        const Distances& distances,
+        const boost::program_options::variables_map& vm,
+        const Instance& instance)
+{
+    // Create local scheme.
+    SequencingScheme<Distances> sequencing_scheme(instance, distances);
+    auto sequencing_parameters = read_sequencing_args<SequencingScheme<Distances>>(vm);
+    sequencing::LocalScheme<SequencingScheme<Distances>> local_scheme(
+            sequencing_scheme,
+            sequencing_parameters);
+
+    // Run algorithm.
+    std::string algorithm = vm["algorithm"].as<std::string>();
+    if (algorithm == "multi-start-local-search") {
+        run_multi_start_local_search(local_scheme, vm);
+    } else if (algorithm == "iterated-local-search") {
+        run_iterated_local_search(local_scheme, vm);
+    } else if (algorithm == "best-first-local-search") {
+        run_best_first_local_search(local_scheme, vm);
+    } else {
+        run_genetic_local_search(local_scheme, vm);
+    }
+}
+
 int main(int argc, char *argv[])
 {
     // Create command line options.
@@ -27,25 +53,13 @@ int main(int argc, char *argv[])
             vm["input"].as<std::string>(),
             vm["format"].as<std::string>());
     const Instance instance = instance_builder.build();
-    instance.distances().compute_distances();
+    instance.distances().compute_distances_explicit();
 
-    // Create local scheme.
-    SequencingScheme sequencing_scheme(instance);
-    auto sequencing_parameters = read_sequencing_args<SequencingScheme>(vm);
-    sequencing::LocalScheme<SequencingScheme> local_scheme(
-            sequencing_scheme,
-            sequencing_parameters);
-
-    // Run algorithm.
-    std::string algorithm = vm["algorithm"].as<std::string>();
-    auto output =
-        (algorithm == "multi-start-local-search")?
-        run_multi_start_local_search(local_scheme, vm):
-        (algorithm == "iterated-local-search")?
-        run_iterated_local_search(local_scheme, vm):
-        (algorithm == "best-first-local-search")?
-        run_best_first_local_search(local_scheme, vm):
-        run_genetic_local_search(local_scheme, vm);
+    FUNCTION_WITH_DISTANCES(
+            run,
+            instance.distances(),
+            vm,
+            instance);
 
     // Run checker.
     if (vm["print-checker"].as<int>() > 0
