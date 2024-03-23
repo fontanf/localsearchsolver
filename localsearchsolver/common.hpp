@@ -551,6 +551,7 @@ struct Parameters: optimizationtools::Parameters
     GlobalCost goal;
 
 
+    using optimizationtools::Parameters::to_json;
     virtual nlohmann::json to_json(
             const LocalScheme& local_scheme) const
     {
@@ -564,6 +565,7 @@ struct Parameters: optimizationtools::Parameters
 
     virtual int format_width() const override { return 23; }
 
+    using optimizationtools::Parameters::format;
     virtual void format(
             std::ostream& os,
             const LocalScheme& local_scheme) const
