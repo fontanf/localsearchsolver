@@ -34,7 +34,7 @@ struct BestFirstLocalSearchParameters: Parameters<LocalScheme>
         return json;
     }
 
-    virtual int format_width() const { return 26; }
+    virtual int format_width() const override { return 26; }
 
     virtual void format(
             std::ostream& os,
@@ -70,7 +70,7 @@ struct BestFirstLocalSearchOutput: Output<LocalScheme>
         return json;
     }
 
-    virtual int format_width() const { return 18; }
+    virtual int format_width() const override { return 18; }
 
     virtual void format(std::ostream& os) const override
     {

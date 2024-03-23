@@ -41,7 +41,7 @@ struct IteratedLocalSearchParameters: Parameters<LocalScheme>
         return json;
     }
 
-    virtual int format_width() const { return 30; }
+    virtual int format_width() const override { return 30; }
 
     virtual void format(
             std::ostream& os,
@@ -83,7 +83,7 @@ struct IteratedLocalSearchOutput: Output<LocalScheme>
         return json;
     }
 
-    virtual int format_width() const { return 30; }
+    virtual int format_width() const override { return 30; }
 
     virtual void format(std::ostream& os) const override
     {
