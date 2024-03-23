@@ -3851,7 +3851,7 @@ private:
                 }
 
                 std::vector<GlobalCost> back(number_of_sequences_);
-                back[0] = global_costs_cur_[number_of_sequences_ - 1];
+                back[number_of_sequences_ - 1] = global_costs_cur_[number_of_sequences_ - 1];
                 for (SequenceId sequence_id = number_of_sequences_ - 2;
                         sequence_id >= 0;
                         --sequence_id) {
