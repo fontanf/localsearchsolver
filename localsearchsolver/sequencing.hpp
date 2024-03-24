@@ -609,6 +609,8 @@ public:
                 sequence_id < number_of_sequences_;
                 ++sequence_id) {
             for (ElementPos pos_1 = 0; pos_1 < seq_size; ++pos_1) {
+                if (sequence_id == 0 && pos_1 != 0)
+                    continue;
                 for (ElementPos pos_2 = pos_1 + 1; pos_2 <= seq_size; ++pos_2) {
                     GlobalCost d = merge(
                             distance[sequence_id][pos_1],
