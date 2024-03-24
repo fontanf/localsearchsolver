@@ -116,6 +116,10 @@ In case the `GlobalCost global_cost_concatenate(SequenceData&, const SequenceDat
 
 [Vehicle routing problem with time windows](examples/vehicle_routing_with_time_windows.hpp)
 
+#### Multiple sub-sequences, `sequence_data_init/concatenate`
+
+[Team orienteering problem](examples/team_orienteering.hpp)
+
 
 ## Other examples
 

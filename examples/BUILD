@@ -392,6 +392,30 @@ cc_binary(
 
 
 cc_library(
+        name = "team_orienteering",
+        hdrs = ["team_orienteering.hpp"],
+        deps = [
+                "//localsearchsolver:localsearchsolver",
+                "@orproblems//orproblems:team_orienteering",
+        ],
+        visibility = ["//visibility:public"],
+)
+
+cc_binary(
+        name = "team_orienteering_main",
+        srcs = ["team_orienteering_main.cpp"],
+        deps = [
+                ":team_orienteering",
+                "//localsearchsolver:read_args",
+        ],
+        linkopts = select({
+                "@bazel_tools//src/conditions:windows": [],
+                "//conditions:default":                 ["-lpthread"],
+        }),
+)
+
+
+cc_library(
         name = "traveling_salesman_with_release_dates",
         hdrs = ["traveling_salesman_with_release_dates.hpp"],
         deps = [
