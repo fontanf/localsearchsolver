@@ -6701,7 +6701,7 @@ private:
             std::false_type) const
     {
         os
-            << "Sequencing problem"
+            << "Sequencing problem" << std::endl
             << "Number of sequences:                           " << number_of_sequences_ << std::endl
             << "Number of elements:                            " << number_of_elements_ << std::endl
             << "Maximum number of modes:                       " << maximum_number_of_modes_ << std::endl
