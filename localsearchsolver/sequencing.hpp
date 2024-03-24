@@ -105,6 +105,14 @@ struct Parameters
 
     bool linking_constraints = false;
 
+    /**
+     * Enable move cost check after applying a move.
+     *
+     * The check doesn't work and should be disable when there are "soft"
+     * linking constraints. For example, if the objective contains a makespan.
+     */
+    bool check_move_cost = true;
+
     /*
      * Neighborhoods - Intra
      */
@@ -2592,7 +2600,8 @@ public:
                             move_best = move;
                     apply_move(solution, move_best);
                     // Check new current solution cost.
-                    if (!equals(
+                    if (parameters_.check_move_cost
+                            && !equals(
                                 diff(global_cost(solution), gc_old),
                                 move_best.global_cost)) {
                         std::cout
