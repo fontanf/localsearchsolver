@@ -4401,6 +4401,8 @@ private:
                 continue;
             const auto& sequence = solution.sequences[sequence_id];
             SequencePos seq_size = sequence.elements.size();
+            if (!(parameters_.linking_constraints && number_of_sequences_ > 1))
+                gc = global_costs_cur_[sequence_id];
             GlobalCost* gcm = (parameters_.linking_constraints && number_of_sequences_ > 1)?
                 &partial_global_costs_cur_1_[sequence_id]: nullptr;
 
