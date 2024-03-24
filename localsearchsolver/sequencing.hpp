@@ -430,7 +430,9 @@ public:
         sequencing_scheme_(sequencing_scheme),
         parameters_(parameters),
         number_of_sequences_(number_of_sequences()),
-        number_of_elements_(sequencing_scheme.number_of_elements())
+        number_of_elements_(sequencing_scheme.number_of_elements()),
+        neighborhood_add_new_unsequenced_elements_(0),
+        neighborhood_replace_new_unsequenced_elements_(0)
     {
         // Initialize temporary structures.
         sequence_datas_cur_1_ = std::vector<std::vector<SequenceData>>(number_of_sequences_);
@@ -539,6 +541,11 @@ public:
                             number_of_elements_,
                             std::vector<ElementPos>(3, -2)));
         }
+
+        neighborhood_add_new_unsequenced_elements_
+            = optimizationtools::IndexedSet(number_of_elements_);
+        neighborhood_replace_new_unsequenced_elements_
+            = optimizationtools::IndexedSet(number_of_elements_);
     }
 
     LocalScheme(const LocalScheme& sequencing_scheme):
@@ -929,6 +936,7 @@ public:
             solution = solution_1;
         }
 
+        // Update solution.modified_sequences.
         solution.modified_sequences = std::vector<bool>(number_of_sequences_, true);
         SequencePos number_of_non_empty_sequences = 0;
         SequencePos number_of_modified_sequences = number_of_sequences_;
@@ -937,6 +945,10 @@ public:
                 ++sequence_id_1) {
             if (solution.sequences[sequence_id_1].elements.size() > 0)
                 number_of_non_empty_sequences++;
+            // TODO
+            // Add a parameter to indicate if the sub-sequences are position
+            // independent. Currently, the next check is only valid in this
+            // case.
             for (SequenceId sequence_id_2 = 0;
                     sequence_id_2 < number_of_sequences_;
                     ++sequence_id_2) {
@@ -2346,7 +2358,7 @@ public:
         //if (tabu.element_id != -1)
         //    std::cout << "j " << tabu.element_id << " j_prev " << tabu.j_prev
         //        << std::endl;
-        //print(std::cout, solution);
+        //solution_format(solution, std::cout, 1);
         //std::cout << to_string(global_cost(solution)) << std::endl;
 
         auto local_search_begin = std::chrono::steady_clock::now();
@@ -2431,6 +2443,9 @@ public:
                 neighborhoods.push_back({Neighborhoods::IncrementDecrementModes, 0, 0});
         }
 
+        compute_temporary_structures(solution);
+
+        // Initialize modified_sequences.
         for (int a = 0; a < (int)neighborhoods_.size(); ++a) {
             for (int k1 = 0; k1 < (int)neighborhoods_[a].size(); ++k1) {
                 for (int k2 = 0; k2 < (int)neighborhoods_[a][k1].size(); ++k2) {
@@ -2452,7 +2467,19 @@ public:
             }
         }
 
-        compute_temporary_structures(solution);
+        // Initialize neighborhood_add_new_unsequenced_elements_ and
+        // neighborhood_replace_new_unsequenced_elements_.
+        neighborhood_add_new_unsequenced_elements_.clear();
+        neighborhood_replace_new_unsequenced_elements_.clear();
+        for (ElementId element_id = 0;
+                element_id < number_of_elements_;
+                ++element_id) {
+            // Skip elements which are already sequenced.
+            if (elements_cur_[element_id].mode != -1)
+                continue;
+            neighborhood_add_new_unsequenced_elements_.add(element_id);
+            neighborhood_replace_new_unsequenced_elements_.add(element_id);
+        }
 
         if (parameters_.inter_shift_block_maximum_length >= 1) {
             for (SequenceId sequence_id = 0;
@@ -2515,6 +2542,20 @@ public:
                         neighborhood.improving_moves.pop_back();
                     } else {
                         it++;
+                    }
+                }
+                // Remove moves from "add" and "replace" neighborhoods involving
+                // inserting an element which is not unsequenced anymore.
+                if (std::get<0>(neighborhood_id) == Neighborhoods::Add
+                        || std::get<0>(neighborhood_id) == Neighborhoods::Replace) {
+                    for (auto it = neighborhood.improving_moves.begin();
+                            it != neighborhood.improving_moves.end();) {
+                        if (elements_cur_[it->element_id].mode != -1) {
+                            *it = neighborhood.improving_moves.back();
+                            neighborhood.improving_moves.pop_back();
+                        } else {
+                            it++;
+                        }
                     }
                 }
 
@@ -2584,6 +2625,13 @@ public:
                         false);
                 neighborhood.number_of_explorations++;
 
+                // Update neighborhood_*_new_unsequenced_elements_.
+                if (std::get<0>(neighborhood_id) == Neighborhoods::Add)
+                    neighborhood_add_new_unsequenced_elements_.clear();
+                if (std::get<0>(neighborhood_id) == Neighborhoods::Replace)
+                    neighborhood_replace_new_unsequenced_elements_.clear();
+
+                // If the neighborhood contains an improving move, apply one.
                 if (!neighborhood.improving_moves.empty()) {
                     //std::cout << neighborhood2string(type, k1, k2) << std::endl;
                     improved = true;
@@ -2598,7 +2646,18 @@ public:
                                     move.global_cost,
                                     move_best.global_cost))
                             move_best = move;
+
+                    // Update neighborhood_*_new_unsequenced_elements_.
+                    if (std::get<0>(neighborhood_id) == Neighborhoods::Remove
+                            || std::get<0>(neighborhood_id) == Neighborhoods::Replace) {
+                        ElementId element_id = solution.sequences[move_best.sequence_id_1].elements[move_best.pos_1].element_id;
+                        neighborhood_add_new_unsequenced_elements_.add(element_id);
+                        neighborhood_add_new_unsequenced_elements_.add(element_id);
+                    }
+
+                    // Apply selected move.
                     apply_move(solution, move_best);
+
                     // Check new current solution cost.
                     if (parameters_.check_move_cost
                             && !equals(
@@ -4331,21 +4390,28 @@ private:
         for (SequenceId sequence_id = 0;
                 sequence_id < number_of_sequences_;
                 ++sequence_id) {
-            if (!neighborhood.modified_sequences[sequence_id])
-                continue;
             const auto& sequence = solution.sequences[sequence_id];
             SequencePos seq_size = sequence.elements.size();
             if (!(parameters_.linking_constraints && number_of_sequences_ > 1))
                 gc = global_costs_cur_[sequence_id];
 
-            // Loop through all new positions.
-            for (ElementPos pos = 0; pos <= seq_size; ++pos) {
+            // Loop over elements.
+            for (ElementId element_id = 0;
+                    element_id < number_of_elements_;
+                    ++element_id) {
+                // Skip elements which are already sequenced.
+                if (elements_cur_[element_id].mode != -1)
+                    continue;
+                // If the sequence has not been modified since the last
+                // neighborhood exploration, only consider new unsequenced
+                // elements.
+                if (!neighborhood.modified_sequences[sequence_id]
+                        && !neighborhood_add_new_unsequenced_elements_.contains(element_id)) {
+                    continue;
+                }
 
-                for (ElementId element_id = 0;
-                        element_id < number_of_elements_;
-                        ++element_id) {
-                    if (elements_cur_[element_id].mode != -1)
-                        continue;
+                // Loop through all new positions.
+                for (ElementPos pos = 0; pos <= seq_size; ++pos) {
 
                     for (Mode mode = 0;
                             mode < number_of_modes(element_id);
@@ -4410,9 +4476,13 @@ private:
             for (ElementPos pos = 0; pos < seq_size; ++pos) {
 
                 ElementId element_id = sequence.elements[pos].element_id;
+
+                // Don't remove an element added through the "ForceAdd"
+                // perturbation.
                 if (perturbation.type == Perturbations::ForceAdd
-                        && element_id == perturbation.force_add_element_id)
+                        && element_id == perturbation.force_add_element_id) {
                     continue;
+                }
 
                 SequenceData sequence_data = sequence_datas_cur_1_[sequence_id][pos];
                 bool ok = concatenate(
@@ -4456,18 +4526,31 @@ private:
             if (!(parameters_.linking_constraints && number_of_sequences_ > 1))
                 gc = global_costs_cur_[sequence_id];
 
-            // Loop through all new positions.
-            for (ElementPos pos = 0; pos < seq_size; ++pos) {
-
-                if (perturbation.type == Perturbations::ForceAdd
-                        && sequence.elements[pos].element_id == perturbation.force_add_element_id)
+            // Loop over elements.
+            for (ElementId element_id = 0;
+                    element_id < number_of_elements_;
+                    ++element_id) {
+                // Skip elements which are already sequenced.
+                if (elements_cur_[element_id].mode != -1)
                     continue;
+                // If the sequence has not been modified since the last
+                // neighborhood exploration, only consider new unsequenced
+                // elements.
+                if (!neighborhood.modified_sequences[sequence_id]
+                        && !neighborhood_add_new_unsequenced_elements_.contains(element_id)) {
+                    continue;
+                }
 
-                for (ElementId element_id = 0;
-                        element_id < number_of_elements_;
-                        ++element_id) {
-                    if (elements_cur_[element_id].mode != -1)
+                // Loop through all new positions.
+                for (ElementPos pos = 0; pos < seq_size; ++pos) {
+
+                    // Don't remove an element added through the "ForceAdd"
+                    // perturbation.
+                    if (perturbation.type == Perturbations::ForceAdd
+                            && sequence.elements[pos].element_id
+                            == perturbation.force_add_element_id) {
                         continue;
+                    }
 
                     for (Mode mode = 0;
                             mode < number_of_modes(element_id);
@@ -6713,6 +6796,18 @@ private:
     /** Structure storing neighborhood related information. */
     std::vector<std::vector<std::vector<Neighborhood>>> neighborhoods_
         = std::vector<std::vector<std::vector<Neighborhood>>>(17);
+
+    /**
+     * List of new unsequenced elements since the last exploration of the "add"
+     * neighborhood.
+     */
+    optimizationtools::IndexedSet neighborhood_add_new_unsequenced_elements_;
+
+    /**
+     * List of new unsequenced elements since the last exploration of the
+     * "replace" neighborhood.
+     */
+    optimizationtools::IndexedSet neighborhood_replace_new_unsequenced_elements_;
 
     /** inter_shift_1_best_positions_[i][j] = {pos, GlobalCost}. */
     std::vector<std::vector<std::pair<ElementPos, GlobalCost>>> inter_shift_1_best_positions_;
