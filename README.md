@@ -175,9 +175,14 @@ Compile:
 bazel build -- //...
 ```
 
+Download data:
+```shell
+python3 scripts/download_data.py
+```
+
 Then, examples can be executed as follows:
 ```shell
-./bazel-bin/examples/sequential_ordering_main -v 1 -i ../ordata/scheduling/sequential_ordering/soplib/R.200.100.1.sop -f soplib -a best-first-local-search --maximum-number-of-nodes 100 -c sol.txt
+./bazel-bin/examples/sequential_ordering_main -v 1 -i ./data/sequential_ordering/soplib/R.200.100.1.sop -f soplib -a best-first-local-search --maximum-number-of-nodes 100 -c sol.txt
 ```
 ```
 =======================================
