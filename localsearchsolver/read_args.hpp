@@ -200,6 +200,8 @@ const Output<LocalScheme> run_genetic_local_search(
     read_args(local_scheme, parameters, vm);
     if (vm.count("number-of-threads"))
         parameters.number_of_threads = vm["number-of-threads"].as<Counter>();
+    if (vm.count("maximum-number-of-iterations"))
+        parameters.maximum_number_of_iterations = vm["maximum-number-of-iterations"].as<Counter>();
     if (vm.count("maximum-size-of-the-population"))
         parameters.maximum_size_of_the_population = vm["maximum-size-of-the-population"].as<Counter>();
     const Output<LocalScheme> output = genetic_local_search(local_scheme, parameters);

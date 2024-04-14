@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <set>
 #include <iomanip>
-#include <sstream>
 
 namespace localsearchsolver
 {
