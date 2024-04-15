@@ -1,5 +1,5 @@
-#include "examples/quadratic_assignment.hpp"
-#include "localsearchsolver/read_args.hpp"
+#include "localsearchsolver/examples/quadratic_assignment.hpp"
+#include "read_args.hpp"
 
 using namespace localsearchsolver;
 using namespace quadratic_assignment;

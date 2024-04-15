@@ -1,8 +1,8 @@
-#include "examples/batch_scheduling_total_weighted_tardiness.hpp"
-#include "localsearchsolver/read_args.hpp"
+#include "localsearchsolver/examples/order_acceptance_and_scheduling.hpp"
+#include "read_args.hpp"
 
 using namespace localsearchsolver;
-using namespace batch_scheduling_total_weighted_tardiness;
+using namespace order_acceptance_and_scheduling;
 
 int main(int argc, char *argv[])
 {

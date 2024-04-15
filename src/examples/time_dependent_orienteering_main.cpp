@@ -1,8 +1,8 @@
-#include "examples/team_orienteering.hpp"
-#include "localsearchsolver/read_args.hpp"
+#include "localsearchsolver/examples/time_dependent_orienteering.hpp"
+#include "read_args.hpp"
 
 using namespace localsearchsolver;
-using namespace team_orienteering;
+using namespace time_dependent_orienteering;
 
 int main(int argc, char *argv[])
 {

@@ -18,7 +18,8 @@ if args.tests is None or "capacitated-vehicle-routing" in args.tests:
     print("-----------------------------------")
     print()
 
-    capacitated_vehicle_routing_data = [
+    data_dir = os.environ['CAPACITATED_VEHICLE_ROUTING_DATA']
+    data = [
             (os.path.join("uchoa2014", "X", "X-n101-k25.vrp"), "cvrplib"),
             (os.path.join("uchoa2014", "X", "X-n106-k14.vrp"), "cvrplib"),
             (os.path.join("uchoa2014", "X", "X-n110-k13.vrp"), "cvrplib"),
@@ -29,14 +30,13 @@ if args.tests is None or "capacitated-vehicle-routing" in args.tests:
             (os.path.join("uchoa2014", "X", "X-n134-k13.vrp"), "cvrplib"),
             (os.path.join("uchoa2014", "X", "X-n139-k10.vrp"), "cvrplib"),
             (os.path.join("uchoa2014", "X", "X-n143-k7.vrp"), "cvrplib")]
-    capacitated_vehicle_routing_main = os.path.join(
-            "bazel-bin",
-            "examples",
-            "capacitated_vehicle_routing_main")
-    for instance, instance_format in capacitated_vehicle_routing_data:
+    main = os.path.join(
+            "install",
+            "bin",
+            "localsearchsolver_capacitated_vehicle_routing")
+    for instance, instance_format in data:
         instance_path = os.path.join(
-                "data",
-                "capacitated_vehicle_routing",
+                data_dir,
                 instance)
         json_output_path = os.path.join(
                 args.directory,
@@ -45,7 +45,7 @@ if args.tests is None or "capacitated-vehicle-routing" in args.tests:
         if not os.path.exists(os.path.dirname(json_output_path)):
             os.makedirs(os.path.dirname(json_output_path))
         command = (
-                capacitated_vehicle_routing_main
+                main
                 + "  --verbosity-level 1"
                 + "  --input \"" + instance_path + "\""
                 + " --format \"" + instance_format + "\""
@@ -66,7 +66,8 @@ if args.tests is None or "knapsack-with-conflicts" in args.tests:
     print("-------------------------------")
     print()
 
-    knapsack_with_conflicts_data = [
+    data_dir = os.environ['KNAPSACK_WITH_CONFLICTS_DATA']
+    data = [
             (os.path.join("hifi2006", "I1 - I10", "1I1"), "hifi2006"),
             (os.path.join("hifi2006", "I1 - I10", "2I2"), "hifi2006"),
             (os.path.join("hifi2006", "I1 - I10", "3I3"), "hifi2006"),
@@ -77,14 +78,13 @@ if args.tests is None or "knapsack-with-conflicts" in args.tests:
             (os.path.join("hifi2006", "I1 - I10", "8I3"), "hifi2006"),
             (os.path.join("hifi2006", "I1 - I10", "9I4"), "hifi2006"),
             (os.path.join("hifi2006", "I1 - I10", "10I5"), "hifi2006")]
-    knapsack_with_conflicts_main = os.path.join(
-            "bazel-bin",
-            "examples",
-            "knapsack_with_conflicts_main")
-    for instance, instance_format in knapsack_with_conflicts_data:
+    main = os.path.join(
+            "install",
+            "bin",
+            "localsearchsolver_knapsack_with_conflicts")
+    for instance, instance_format in data:
         instance_path = os.path.join(
-                "data",
-                "knapsack_with_conflicts",
+                data_dir,
                 instance)
         json_output_path = os.path.join(
                 args.directory,
@@ -93,7 +93,7 @@ if args.tests is None or "knapsack-with-conflicts" in args.tests:
         if not os.path.exists(os.path.dirname(json_output_path)):
             os.makedirs(os.path.dirname(json_output_path))
         command = (
-                knapsack_with_conflicts_main
+                main
                 + "  --verbosity-level 1"
                 + "  --input \"" + instance_path + "\""
                 + " --format \"" + instance_format + "\""
@@ -114,7 +114,8 @@ if args.tests is None or "job-sequencing-and-tool-switching" in args.tests:
     print("---------------------------------")
     print()
 
-    job_sequencing_and_tool_switching_data = [
+    data_dir = os.environ['JOB_SEQUENCING_AND_TOOL_SWITCHING_DATA']
+    data = [
             (os.path.join("crama1994", "Tabela1", "s1n001.txt"), ""),
             (os.path.join("crama1994", "Tabela1", "s2n001.txt"), ""),
             (os.path.join("crama1994", "Tabela1", "s3n001.txt"), ""),
@@ -127,14 +128,13 @@ if args.tests is None or "job-sequencing-and-tool-switching" in args.tests:
             (os.path.join("crama1994", "Tabela4", "s1n001.txt"), ""),
             (os.path.join("crama1994", "Tabela4", "s2n001.txt"), ""),
             (os.path.join("crama1994", "Tabela4", "s3n001.txt"), "")]
-    job_sequencing_and_tool_switching_main = os.path.join(
-            "bazel-bin",
-            "examples",
-            "job_sequencing_and_tool_switching_main")
-    for instance, instance_format in job_sequencing_and_tool_switching_data:
+    main = os.path.join(
+            "install",
+            "bin",
+            "localsearchsolver_job_sequencing_and_tool_switching")
+    for instance, instance_format in data:
         instance_path = os.path.join(
-                "data",
-                "job_sequencing_and_tool_switching",
+                data_dir,
                 instance)
         json_output_path = os.path.join(
                 args.directory,
@@ -143,7 +143,7 @@ if args.tests is None or "job-sequencing-and-tool-switching" in args.tests:
         if not os.path.exists(os.path.dirname(json_output_path)):
             os.makedirs(os.path.dirname(json_output_path))
         command = (
-                job_sequencing_and_tool_switching_main
+                main
                 + "  --verbosity-level 1"
                 + "  --input \"" + instance_path + "\""
                 + " --format \"" + instance_format + "\""
@@ -164,7 +164,8 @@ if args.tests is None or "permutation-flowshop-scheduling-tct" in args.tests:
     print("--------------------------------------------------------------")
     print()
 
-    permutation_flowshop_scheduling_tct_data = [
+    data_dir = os.environ['FLOWSHOP_SCHEDULING_DATA']
+    data = [
             (os.path.join("taillard1993", "tai20_5_0.txt"), "default"),
             (os.path.join("taillard1993", "tai20_5_1.txt"), "default"),
             (os.path.join("taillard1993", "tai20_5_2.txt"), "default"),
@@ -175,14 +176,13 @@ if args.tests is None or "permutation-flowshop-scheduling-tct" in args.tests:
             (os.path.join("taillard1993", "tai20_5_7.txt"), "default"),
             (os.path.join("taillard1993", "tai20_5_8.txt"), "default"),
             (os.path.join("taillard1993", "tai20_5_9.txt"), "default")]
-    permutation_flowshop_scheduling_tct_main = os.path.join(
-            "bazel-bin",
-            "examples",
-            "permutation_flowshop_scheduling_tct_main")
-    for instance, instance_format in permutation_flowshop_scheduling_tct_data:
+    main = os.path.join(
+            "install",
+            "bin",
+            "localsearchsolver_permutation_flowshop_scheduling_tct")
+    for instance, instance_format in data:
         instance_path = os.path.join(
-                "data",
-                "flowshop_scheduling",
+                data_dir,
                 instance)
         json_output_path = os.path.join(
                 args.directory,
@@ -191,7 +191,7 @@ if args.tests is None or "permutation-flowshop-scheduling-tct" in args.tests:
         if not os.path.exists(os.path.dirname(json_output_path)):
             os.makedirs(os.path.dirname(json_output_path))
         command = (
-                permutation_flowshop_scheduling_tct_main
+                main
                 + "  --verbosity-level 1"
                 + "  --input \"" + instance_path + "\""
                 + " --format \"" + instance_format + "\""
@@ -212,7 +212,8 @@ if args.tests is None or "permutation-flowshop-scheduling-makespan" in args.test
     print("-------------------------------------------------")
     print()
 
-    permutation_flowshop_scheduling_makespan_data = [
+    data_dir = os.environ['FLOWSHOP_SCHEDULING_DATA']
+    data = [
             (os.path.join("vallada2015", "Small", "VFR10_5_1_Gap.txt"), "default"),
             (os.path.join("vallada2015", "Small", "VFR10_5_2_Gap.txt"), "default"),
             (os.path.join("vallada2015", "Small", "VFR10_5_3_Gap.txt"), "default"),
@@ -223,14 +224,13 @@ if args.tests is None or "permutation-flowshop-scheduling-makespan" in args.test
             (os.path.join("vallada2015", "Small", "VFR10_5_8_Gap.txt"), "default"),
             (os.path.join("vallada2015", "Small", "VFR10_5_9_Gap.txt"), "default"),
             (os.path.join("vallada2015", "Small", "VFR10_5_10_Gap.txt"), "default")]
-    permutation_flowshop_scheduling_makespan_main = os.path.join(
-            "bazel-bin",
-            "examples",
-            "permutation_flowshop_scheduling_makespan_main")
-    for instance, instance_format in permutation_flowshop_scheduling_makespan_data:
+    main = os.path.join(
+            "install",
+            "bin",
+            "localsearchsolver_permutation_flowshop_scheduling_makespan")
+    for instance, instance_format in data:
         instance_path = os.path.join(
-                "data",
-                "flowshop_scheduling",
+                data_dir,
                 instance)
         json_output_path = os.path.join(
                 args.directory,
@@ -239,7 +239,7 @@ if args.tests is None or "permutation-flowshop-scheduling-makespan" in args.test
         if not os.path.exists(os.path.dirname(json_output_path)):
             os.makedirs(os.path.dirname(json_output_path))
         command = (
-                permutation_flowshop_scheduling_makespan_main
+                main
                 + "  --verbosity-level 1"
                 + "  --input \"" + instance_path + "\""
                 + " --format \"" + instance_format + "\""
@@ -260,7 +260,8 @@ if args.tests is None or "scheduling-with-sdst-twt" in args.tests:
     print("-----------------------------------------------------------------------------------------------")
     print()
 
-    scheduling_with_sdst_twt_data = [
+    data_dir = os.environ['SCHEDULING_WITH_SDST_TWT_DATA']
+    data = [
             (os.path.join("cicirello2005", "wt_sds_10.instance"), ""),
             (os.path.join("cicirello2005", "wt_sds_20.instance"), ""),
             (os.path.join("cicirello2005", "wt_sds_30.instance"), ""),
@@ -273,14 +274,13 @@ if args.tests is None or "scheduling-with-sdst-twt" in args.tests:
             (os.path.join("cicirello2005", "wt_sds_100.instance"), ""),
             (os.path.join("cicirello2005", "wt_sds_110.instance"), ""),
             (os.path.join("cicirello2005", "wt_sds_120.instance"), "")]
-    scheduling_with_sdst_twt_main = os.path.join(
-            "bazel-bin",
-            "examples",
-            "scheduling_with_sdst_twt_main")
-    for instance, instance_format in scheduling_with_sdst_twt_data:
+    main = os.path.join(
+            "install",
+            "bin",
+            "localsearchsolver_scheduling_with_sdst_twt")
+    for instance, instance_format in data:
         instance_path = os.path.join(
-                "data",
-                "scheduling_with_sdst_twt",
+                data_dir,
                 instance)
         json_output_path = os.path.join(
                 args.directory,
@@ -289,7 +289,7 @@ if args.tests is None or "scheduling-with-sdst-twt" in args.tests:
         if not os.path.exists(os.path.dirname(json_output_path)):
             os.makedirs(os.path.dirname(json_output_path))
         command = (
-                scheduling_with_sdst_twt_main
+                main
                 + "  --verbosity-level 1"
                 + "  --input \"" + instance_path + "\""
                 + " --format \"" + instance_format + "\""
@@ -310,7 +310,8 @@ if args.tests is None or "sequential-ordering" in args.tests:
     print("---------------------------")
     print()
 
-    sequential_ordering_data = [
+    data_dir = os.environ['SEQUENTIAL_ORDERING_DATA']
+    data = [
             (os.path.join("soplib", "R.200.100.1.sop"), "soplib"),
             (os.path.join("soplib", "R.200.100.15.sop"), "soplib"),
             (os.path.join("soplib", "R.200.100.30.sop"), "soplib"),
@@ -319,14 +320,13 @@ if args.tests is None or "sequential-ordering" in args.tests:
             (os.path.join("soplib", "R.200.1000.15.sop"), "soplib"),
             (os.path.join("soplib", "R.200.1000.30.sop"), "soplib"),
             (os.path.join("soplib", "R.200.1000.60.sop"), "soplib")]
-    sequential_ordering_main = os.path.join(
-            "bazel-bin",
-            "examples",
-            "sequential_ordering_main")
-    for instance, instance_format in sequential_ordering_data:
+    main = os.path.join(
+            "install",
+            "bin",
+            "localsearchsolver_sequential_ordering")
+    for instance, instance_format in data:
         instance_path = os.path.join(
-                "data",
-                "sequential_ordering",
+                data_dir,
                 instance)
         json_output_path = os.path.join(
                 args.directory,
@@ -335,7 +335,7 @@ if args.tests is None or "sequential-ordering" in args.tests:
         if not os.path.exists(os.path.dirname(json_output_path)):
             os.makedirs(os.path.dirname(json_output_path))
         command = (
-                sequential_ordering_main
+                main
                 + "  --verbosity-level 1"
                 + "  --input \"" + instance_path + "\""
                 + " --format \"" + instance_format + "\""
@@ -356,7 +356,8 @@ if args.tests is None or "team-orienteering" in args.tests:
     print("-------------------------")
     print()
 
-    team_orienteering_data = [
+    data_dir = os.environ['TEAM_ORIENTEERING_DATA']
+    data = [
             (os.path.join("chao1996", "Set_102_234", "p7.2.a.txt"), ""),
             (os.path.join("chao1996", "Set_102_234", "p7.2.b.txt"), ""),
             (os.path.join("chao1996", "Set_102_234", "p7.2.c.txt"), ""),
@@ -366,14 +367,13 @@ if args.tests is None or "team-orienteering" in args.tests:
             (os.path.join("chao1996", "Set_102_234", "p7.4.i.txt"), ""),
             (os.path.join("chao1996", "Set_102_234", "p7.4.j.txt"), ""),
             (os.path.join("chao1996", "Set_102_234", "p7.4.k.txt"), "")]
-    team_orienteering_main = os.path.join(
-            "bazel-bin",
-            "examples",
-            "team_orienteering_main")
-    for instance, instance_format in team_orienteering_data:
+    main = os.path.join(
+            "install",
+            "bin",
+            "localsearchsolver_team_orienteering")
+    for instance, instance_format in data:
         instance_path = os.path.join(
-                "data",
-                "team_orienteering",
+                data_dir,
                 instance)
         json_output_path = os.path.join(
                 args.directory,
@@ -382,7 +382,7 @@ if args.tests is None or "team-orienteering" in args.tests:
         if not os.path.exists(os.path.dirname(json_output_path)):
             os.makedirs(os.path.dirname(json_output_path))
         command = (
-                team_orienteering_main
+                main
                 + "  --verbosity-level 1"
                 + "  --input \"" + instance_path + "\""
                 + " --format \"" + instance_format + "\""
@@ -403,7 +403,8 @@ if args.tests is None or "time-dependent-orienteering" in args.tests:
     print("-----------------------------------")
     print()
 
-    time_dependent_orienteering_data = [
+    data_dir = os.environ['TIME_DEPENDENT_ORIENTEERING_DATA']
+    data = [
             (os.path.join("verbeeck2014", "dataset 1", "OP_instances", "p1.1.a.txt"), ""),
             (os.path.join("verbeeck2014", "dataset 2", "OP_instances", "p2.1.a.txt"), ""),
             (os.path.join("verbeeck2014", "dataset 3", "OP_instances", "p3.1.a.txt"), ""),
@@ -411,14 +412,13 @@ if args.tests is None or "time-dependent-orienteering" in args.tests:
             (os.path.join("verbeeck2014", "dataset 5", "OP_instances", "p5.1.a.txt"), ""),
             (os.path.join("verbeeck2014", "dataset 6", "OP_instances", "p6.1.a.txt"), ""),
             (os.path.join("verbeeck2014", "dataset 7", "OP_instances", "p7.1.a.txt"), "")]
-    time_dependent_orienteering_main = os.path.join(
-            "bazel-bin",
-            "examples",
-            "time_dependent_orienteering_main")
-    for instance, instance_format in time_dependent_orienteering_data:
+    main = os.path.join(
+            "install",
+            "bin",
+            "localsearchsolver_time_dependent_orienteering")
+    for instance, instance_format in data:
         instance_path = os.path.join(
-                "data",
-                "time_dependent_orienteering",
+                data_dir,
                 instance)
         json_output_path = os.path.join(
                 args.directory,
@@ -427,7 +427,7 @@ if args.tests is None or "time-dependent-orienteering" in args.tests:
         if not os.path.exists(os.path.dirname(json_output_path)):
             os.makedirs(os.path.dirname(json_output_path))
         command = (
-                time_dependent_orienteering_main
+                main
                 + "  --verbosity-level 1"
                 + "  --input \"" + instance_path + "\""
                 + " --format \"" + instance_format + "\""
@@ -448,7 +448,8 @@ if args.tests is None or "vehicle-routing-with-time-windows" in args.tests:
     print("-----------------------------------------")
     print()
 
-    vehicle_routing_with_time_windows_data = [
+    data_dir = os.environ['VEHICLE_ROUTING_WITH_TIME_WINDOWS_DATA']
+    data = [
             (os.path.join("solomon1987", "C101.txt"), ""),
             (os.path.join("solomon1987", "C102.txt"), ""),
             (os.path.join("solomon1987", "C103.txt"), ""),
@@ -458,14 +459,13 @@ if args.tests is None or "vehicle-routing-with-time-windows" in args.tests:
             (os.path.join("solomon1987", "RC101.txt"), ""),
             (os.path.join("solomon1987", "RC102.txt"), ""),
             (os.path.join("solomon1987", "RC103.txt"), "")]
-    vehicle_routing_with_time_windows_main = os.path.join(
-            "bazel-bin",
-            "examples",
-            "vehicle_routing_with_time_windows_main")
-    for instance, instance_format in vehicle_routing_with_time_windows_data:
+    main = os.path.join(
+            "install",
+            "bin",
+            "localsearchsolver_vehicle_routing_with_time_windows")
+    for instance, instance_format in data:
         instance_path = os.path.join(
-                "data",
-                "vehicle_routing_with_time_windows",
+                data_dir,
                 instance)
         json_output_path = os.path.join(
                 args.directory,
@@ -474,7 +474,7 @@ if args.tests is None or "vehicle-routing-with-time-windows" in args.tests:
         if not os.path.exists(os.path.dirname(json_output_path)):
             os.makedirs(os.path.dirname(json_output_path))
         command = (
-                vehicle_routing_with_time_windows_main
+                main
                 + "  --verbosity-level 1"
                 + "  --input \"" + instance_path + "\""
                 + " --format \"" + instance_format + "\""

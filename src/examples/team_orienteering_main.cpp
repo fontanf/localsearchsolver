@@ -1,9 +1,8 @@
-#include "examples/multidimensional_multiple_choice_knapsack.hpp"
-#include "localsearchsolver/read_args.hpp"
+#include "localsearchsolver/examples/team_orienteering.hpp"
+#include "read_args.hpp"
 
 using namespace localsearchsolver;
-using namespace multidimensional_multiple_choice_knapsack;
-
+using namespace team_orienteering;
 
 int main(int argc, char *argv[])
 {
@@ -30,17 +29,21 @@ int main(int argc, char *argv[])
     const Instance instance = instance_builder.build();
 
     // Create local scheme.
-    LocalScheme local_scheme(instance);
+    SequencingScheme sequencing_scheme(instance);
+    auto sequencing_parameters = read_sequencing_args<SequencingScheme>(vm);
+    sequencing::LocalScheme<SequencingScheme> local_scheme(
+            sequencing_scheme,
+            sequencing_parameters);
 
     // Run algorithm.
     std::string algorithm = vm["algorithm"].as<std::string>();
     auto output =
         (algorithm == "multi-start-local-search")?
         run_multi_start_local_search(local_scheme, vm):
-        //(algorithm == "iterated-local-search")?
-        //run_iterated_local_search(local_scheme, vm):
-        //(algorithm == "best-first-local-search")?
-        //run_best_first_local_search(local_scheme, vm):
+        (algorithm == "iterated-local-search")?
+        run_iterated_local_search(local_scheme, vm):
+        (algorithm == "best-first-local-search")?
+        run_best_first_local_search(local_scheme, vm):
         run_genetic_local_search(local_scheme, vm);
 
     // Run checker.

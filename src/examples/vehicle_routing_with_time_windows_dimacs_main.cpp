@@ -1,4 +1,4 @@
-#include "examples/vehicle_routing_with_time_windows.hpp"
+#include "localsearchsolver/examples/vehicle_routing_with_time_windows.hpp"
 #include "localsearchsolver/best_first_local_search.hpp"
 
 using namespace localsearchsolver;

@@ -1,8 +1,8 @@
-#include "examples/traveling_salesman_with_release_dates.hpp"
-#include "localsearchsolver/read_args.hpp"
+#include "localsearchsolver/examples/batch_scheduling_total_weighted_tardiness.hpp"
+#include "read_args.hpp"
 
 using namespace localsearchsolver;
-using namespace traveling_salesman_with_release_dates;
+using namespace batch_scheduling_total_weighted_tardiness;
 
 int main(int argc, char *argv[])
 {

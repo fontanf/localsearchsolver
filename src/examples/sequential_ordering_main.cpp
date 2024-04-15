@@ -1,8 +1,9 @@
-#include "examples/order_acceptance_and_scheduling.hpp"
-#include "localsearchsolver/read_args.hpp"
+#include "localsearchsolver/examples/sequential_ordering.hpp"
+#include "read_args.hpp"
 
 using namespace localsearchsolver;
-using namespace order_acceptance_and_scheduling;
+using namespace sequential_ordering;
+
 
 int main(int argc, char *argv[])
 {

@@ -1,9 +1,8 @@
-#include "examples/sequential_ordering.hpp"
-#include "localsearchsolver/read_args.hpp"
+#include "localsearchsolver/examples/traveling_salesman_with_release_dates.hpp"
+#include "read_args.hpp"
 
 using namespace localsearchsolver;
-using namespace sequential_ordering;
-
+using namespace traveling_salesman_with_release_dates;
 
 int main(int argc, char *argv[])
 {
