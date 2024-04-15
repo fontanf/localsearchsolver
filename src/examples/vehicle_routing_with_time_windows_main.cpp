@@ -1,5 +1,5 @@
-#include "examples/vehicle_routing_with_time_windows.hpp"
-#include "localsearchsolver/read_args.hpp"
+#include "localsearchsolver/examples/vehicle_routing_with_time_windows.hpp"
+#include "read_args.hpp"
 
 using namespace localsearchsolver;
 using namespace vehicle_routing_with_time_windows;

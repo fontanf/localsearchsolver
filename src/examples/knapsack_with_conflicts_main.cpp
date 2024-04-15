@@ -1,8 +1,8 @@
-#include "examples/time_dependent_orienteering.hpp"
-#include "localsearchsolver/read_args.hpp"
+#include "localsearchsolver/examples/knapsack_with_conflicts.hpp"
+#include "read_args.hpp"
 
 using namespace localsearchsolver;
-using namespace time_dependent_orienteering;
+using namespace knapsack_with_conflicts;
 
 int main(int argc, char *argv[])
 {
@@ -29,14 +29,13 @@ int main(int argc, char *argv[])
     const Instance instance = instance_builder.build();
 
     // Create local scheme.
-    SequencingScheme sequencing_scheme(instance);
-    auto sequencing_parameters = read_sequencing_args<SequencingScheme>(vm);
-    sequencing::LocalScheme<SequencingScheme> local_scheme(
-            sequencing_scheme,
-            sequencing_parameters);
+    LocalScheme::Parameters parameters;
+    LocalScheme local_scheme(instance, parameters);
 
     // Run algorithm.
-    std::string algorithm = vm["algorithm"].as<std::string>();
+    std::string algorithm = "best-first-local-search";
+    if (vm.count("algorithm"))
+        algorithm = vm["algorithm"].as<std::string>();
     auto output =
         (algorithm == "multi-start-local-search")?
         run_multi_start_local_search(local_scheme, vm):

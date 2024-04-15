@@ -1,8 +1,9 @@
-#include "examples/permutation_flowshop_scheduling_tt.hpp"
-#include "localsearchsolver/read_args.hpp"
+#include "localsearchsolver/examples/multidimensional_multiple_choice_knapsack.hpp"
+#include "read_args.hpp"
 
 using namespace localsearchsolver;
-using namespace permutation_flowshop_scheduling_tt;
+using namespace multidimensional_multiple_choice_knapsack;
+
 
 int main(int argc, char *argv[])
 {
@@ -29,21 +30,17 @@ int main(int argc, char *argv[])
     const Instance instance = instance_builder.build();
 
     // Create local scheme.
-    SequencingScheme sequencing_scheme(instance);
-    auto sequencing_parameters = read_sequencing_args<SequencingScheme>(vm);
-    sequencing::LocalScheme<SequencingScheme> local_scheme(
-            sequencing_scheme,
-            sequencing_parameters);
+    LocalScheme local_scheme(instance);
 
     // Run algorithm.
     std::string algorithm = vm["algorithm"].as<std::string>();
     auto output =
         (algorithm == "multi-start-local-search")?
         run_multi_start_local_search(local_scheme, vm):
-        (algorithm == "iterated-local-search")?
-        run_iterated_local_search(local_scheme, vm):
-        (algorithm == "best-first-local-search")?
-        run_best_first_local_search(local_scheme, vm):
+        //(algorithm == "iterated-local-search")?
+        //run_iterated_local_search(local_scheme, vm):
+        //(algorithm == "best-first-local-search")?
+        //run_best_first_local_search(local_scheme, vm):
         run_genetic_local_search(local_scheme, vm);
 
     // Run checker.

@@ -1,8 +1,8 @@
-#include "examples/scheduling_with_sdst_twt.hpp"
-#include "localsearchsolver/read_args.hpp"
+#include "localsearchsolver/examples/permutation_flowshop_scheduling_tt.hpp"
+#include "read_args.hpp"
 
 using namespace localsearchsolver;
-using namespace scheduling_with_sdst_twt;
+using namespace permutation_flowshop_scheduling_tt;
 
 int main(int argc, char *argv[])
 {

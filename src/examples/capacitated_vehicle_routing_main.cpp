@@ -1,5 +1,5 @@
-#include "examples/capacitated_vehicle_routing.hpp"
-#include "localsearchsolver/read_args.hpp"
+#include "localsearchsolver/examples/capacitated_vehicle_routing.hpp"
+#include "read_args.hpp"
 
 using namespace localsearchsolver;
 using namespace capacitated_vehicle_routing;

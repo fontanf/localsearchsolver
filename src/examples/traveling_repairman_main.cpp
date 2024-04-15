@@ -1,5 +1,5 @@
-#include "examples/traveling_repairman.hpp"
-#include "localsearchsolver/read_args.hpp"
+#include "localsearchsolver/examples/traveling_repairman.hpp"
+#include "read_args.hpp"
 
 using namespace localsearchsolver;
 using namespace traveling_repairman;

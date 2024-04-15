@@ -1,16 +1,13 @@
-#include "examples/permutation_flowshop_scheduling_makespan.hpp"
-#include "localsearchsolver/read_args.hpp"
+#include "localsearchsolver/examples/permutation_flowshop_scheduling_tct.hpp"
+#include "read_args.hpp"
 
 using namespace localsearchsolver;
-using namespace permutation_flowshop_scheduling_makespan;
+using namespace permutation_flowshop_scheduling_tct;
 
 int main(int argc, char *argv[])
 {
     // Create command line options.
     boost::program_options::options_description desc = setup_args();
-    desc.add_options()
-        ("block-size-max", boost::program_options::value<JobPos>(), "")
-        ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
     if (vm.count("help")) {
@@ -32,10 +29,11 @@ int main(int argc, char *argv[])
     const Instance instance = instance_builder.build();
 
     // Create local scheme.
-    LocalScheme::Parameters parameters;
-    if (vm.count("block-size-max"))
-        parameters.block_size_max = vm["block-size-max"].as<Counter>();
-    LocalScheme local_scheme(instance, parameters);
+    SequencingScheme sequencing_scheme(instance);
+    auto sequencing_parameters = read_sequencing_args<SequencingScheme>(vm);
+    sequencing::LocalScheme<SequencingScheme> local_scheme(
+            sequencing_scheme,
+            sequencing_parameters);
 
     // Run algorithm.
     std::string algorithm = vm["algorithm"].as<std::string>();
@@ -44,7 +42,9 @@ int main(int argc, char *argv[])
         run_multi_start_local_search(local_scheme, vm):
         (algorithm == "iterated-local-search")?
         run_iterated_local_search(local_scheme, vm):
-        run_best_first_local_search(local_scheme, vm);
+        (algorithm == "best-first-local-search")?
+        run_best_first_local_search(local_scheme, vm):
+        run_genetic_local_search(local_scheme, vm);
 
     // Run checker.
     if (vm["print-checker"].as<int>() > 0

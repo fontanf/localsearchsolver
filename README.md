@@ -172,7 +172,9 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
 
 Compile:
 ```shell
-bazel build -- //...
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release --parallel
+cmake --install build --config Release --prefix install
 ```
 
 Download data:
@@ -182,7 +184,7 @@ python3 scripts/download_data.py
 
 Then, examples can be executed as follows:
 ```shell
-./bazel-bin/examples/sequential_ordering_main -v 1 -i ./data/sequential_ordering/soplib/R.200.100.1.sop -f soplib -a best-first-local-search --maximum-number-of-nodes 100 -c sol.txt
+./install/bin/localsearchsolver_sequential_ordering  --verbosity-level 1  --input ./data/sequential_ordering/soplib/R.200.100.1.sop  --format soplib  --algorithm best-first-local-search --maximum-number-of-nodes 100  --certificate solution.txt
 ```
 ```
 =======================================
@@ -308,7 +310,7 @@ Total distance:                   194
 ```
 
 ```shell
-./bazel-bin/examples/knapsack_with_conflicts_main -v 1 -i ../ordata/packing/knapsack_with_conflicts/bettinelli2017/sparse_corr/test_1000_1000_r0.001-0.dat -f bettinelli2017 -t 5 -c sol.txt
+./install/bin/localsearchsolver_knapsack_with_conflicts  --verbosity-level 1  --input ./data/packing/knapsack_with_conflicts/bettinelli2017/sparse_corr/test_1000_1000_r0.001-0.dat --format bettinelli2017  --time-limit 5  --certificate solution.txt
 ```
 ```
 =======================================

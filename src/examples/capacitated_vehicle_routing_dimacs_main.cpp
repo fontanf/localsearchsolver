@@ -1,4 +1,4 @@
-#include "examples/capacitated_vehicle_routing.hpp"
+#include "localsearchsolver/examples/capacitated_vehicle_routing.hpp"
 #include "localsearchsolver/best_first_local_search.hpp"
 
 using namespace localsearchsolver;

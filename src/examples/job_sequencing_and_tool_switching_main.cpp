@@ -1,8 +1,8 @@
-#include "examples/distributed_pfss_tct.hpp"
-#include "localsearchsolver/read_args.hpp"
+#include "localsearchsolver/examples/job_sequencing_and_tool_switching.hpp"
+#include "read_args.hpp"
 
 using namespace localsearchsolver;
-using namespace distributed_pfss_tct;
+using namespace job_sequencing_and_tool_switching;
 
 int main(int argc, char *argv[])
 {
