@@ -82,64 +82,64 @@ In case the `GlobalCost global_cost_concatenate(SequenceData&, const SequenceDat
 
 #### Single sequence
 
-[Sequential ordering problem](include/examples/sequential_ordering.hpp)
+[Sequential ordering problem](include/localsearchsolver/examples/sequential_ordering.hpp)
 
-[Single machine scheduling problem with sequence-dependent setup times, total weighted tardiness](include/examples/scheduling_with_sdst_twt.hpp)
+[Single machine scheduling problem with sequence-dependent setup times, total weighted tardiness](include/localsearchsolver/examples/scheduling_with_sdst_twt.hpp)
 
-[Permutation flow shop scheduling problem, total completion time](include/examples/permutation_flowshop_scheduling_tct.hpp)
+[Permutation flow shop scheduling problem, total completion time](include/localsearchsolver/examples/permutation_flowshop_scheduling_tct.hpp)
 
-[Permutation flow shop scheduling problem, total tardiness](include/examples/permutation_flowshop_scheduling_tt.hpp)
+[Permutation flow shop scheduling problem, total tardiness](include/localsearchsolver/examples/permutation_flowshop_scheduling_tt.hpp)
 
 #### Single sub-sequence
 
-[Single machine order acceptance and scheduling problem with time windows and sequence-dependent setup times, total weighted tardiness](include/examples/order_acceptance_and_scheduling.hpp)
+[Single machine order acceptance and scheduling problem with time windows and sequence-dependent setup times, total weighted tardiness](include/localsearchsolver/examples/order_acceptance_and_scheduling.hpp)
 
-[Time-dependent orienteering problem](include/examples/time_dependent_orienteering.hpp)
+[Time-dependent orienteering problem](include/localsearchsolver/examples/time_dependent_orienteering.hpp)
 
 #### Multiple sequences
 
-[Distributed permutation flow shop scheduling problem, total completion time](include/examples/distributed_pfss_tct.hpp)
+[Distributed permutation flow shop scheduling problem, total completion time](include/localsearchsolver/examples/distributed_pfss_tct.hpp)
 
 #### Single sequence, modes
 
-[Traveling salesman problem with release dates](include/examples/traveling_salesman_with_release_dates.hpp)
+[Traveling salesman problem with release dates](include/localsearchsolver/examples/traveling_salesman_with_release_dates.hpp)
 
-[Single machine batch scheduling problem, total weighted tardiness](include/examples/batch_scheduling_total_weighted_tardiness.hpp)
+[Single machine batch scheduling problem, total weighted tardiness](include/localsearchsolver/examples/batch_scheduling_total_weighted_tardiness.hpp)
 
 #### Single sequence, `sequence_data_init/concatenate`
 
-[Traveling repairman problem](include/examples/traveling_repairman.hpp)
+[Traveling repairman problem](include/localsearchsolver/examples/traveling_repairman.hpp)
 
 #### Multiple sequences, `sequence_data_init/concatenate`
 
-[Capacitated vehicle routing problem](include/examples/capacitated_vehicle_routing.hpp)
+[Capacitated vehicle routing problem](include/localsearchsolver/examples/capacitated_vehicle_routing.hpp)
 
-[Vehicle routing problem with time windows](include/examples/vehicle_routing_with_time_windows.hpp)
+[Vehicle routing problem with time windows](include/localsearchsolver/examples/vehicle_routing_with_time_windows.hpp)
 
 #### Multiple sub-sequences, `sequence_data_init/concatenate`
 
-[Team orienteering problem](include/examples/team_orienteering.hpp)
+[Team orienteering problem](include/localsearchsolver/examples/team_orienteering.hpp)
 
 
 ## Other examples
 
 Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orproblems)
 
-[Multidimensional multiple-choice knapsack problem](include/examples/multidimensional_multiple_choice_knapsack.hpp)
+[Multidimensional multiple-choice knapsack problem](include/localsearchsolver/examples/multidimensional_multiple_choice_knapsack.hpp)
 * Straightforward example for a genetic local search: single neighborhood, basic operators
 * Algorithm:
   * Local search neighborhoods:
     * Add item `j` in the knapsack
   * Crossover algorithm
 
-[Quadratic assignment problem](include/examples/quadratic_assignment.hpp)
+[Quadratic assignment problem](include/localsearchsolver/examples/quadratic_assignment.hpp)
 * Example which implements a problem specific acceleration strategy to compute the move costs
 * Algorithm:
   * Local search neighborhood: swap two assignments
   * Perturbation: ejection chain
   * Crossover algorithm: UX crossover
 
-[Knapsack problem with conflicts](include/examples/knapsack_with_conflicts.hpp)
+[Knapsack problem with conflicts](include/localsearchsolver/examples/knapsack_with_conflicts.hpp)
 * Example with multiple neigborhoods
 * Algorithm:
   * Local search neighborhoods:
@@ -155,7 +155,7 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
   * Local search neighborhoods: shift item `j` to agent `i`
   * Perturbation: shift 8 random jobs
 
-[Permutation flow shop scheduling problem, makespan](include/examples/permutation_flowshop_scheduling_makespan.hpp)
+[Permutation flow shop scheduling problem, makespan](include/localsearchsolver/examples/permutation_flowshop_scheduling_makespan.hpp)
 * This one is not considered as a sequencing problem since the dedicated acceleration strategy makes it possible to explore the neighborhoods more efficiently
 * Algorithm:
   * Local search neighborhood: move a block of `k` consecutive jobs, `k = 1..4`
