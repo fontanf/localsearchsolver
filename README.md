@@ -82,64 +82,64 @@ In case the `GlobalCost global_cost_concatenate(SequenceData&, const SequenceDat
 
 #### Single sequence
 
-[Sequential ordering problem](include/localsearchsolver/examples/sequential_ordering.hpp)
+[Sequential ordering problem](examples/sequencing/sequential_ordering_main.cpp)
 
-[Single machine scheduling problem with sequence-dependent setup times, total weighted tardiness](include/localsearchsolver/examples/scheduling_with_sdst_twt.hpp)
+[Single machine scheduling problem with sequence-dependent setup times, total weighted tardiness](examples/sequencing/scheduling_with_sdst_twt_main.cpp)
 
-[Permutation flow shop scheduling problem, total completion time](include/localsearchsolver/examples/permutation_flowshop_scheduling_tct.hpp)
+[Permutation flow shop scheduling problem, total completion time](examples/sequencing/permutation_flowshop_scheduling_tct_main.cpp)
 
-[Permutation flow shop scheduling problem, total tardiness](include/localsearchsolver/examples/permutation_flowshop_scheduling_tt.hpp)
+[Permutation flow shop scheduling problem, total tardiness](examples/sequencing/permutation_flowshop_scheduling_tt_main.cpp)
 
 #### Single sub-sequence
 
-[Single machine order acceptance and scheduling problem with time windows and sequence-dependent setup times, total weighted tardiness](include/localsearchsolver/examples/order_acceptance_and_scheduling.hpp)
+[Single machine order acceptance and scheduling problem with time windows and sequence-dependent setup times, total weighted tardiness](examples/sequencing/order_acceptance_and_scheduling_main.cpp)
 
-[Time-dependent orienteering problem](include/localsearchsolver/examples/time_dependent_orienteering.hpp)
+[Time-dependent orienteering problem](examples/sequencing/time_dependent_orienteering_main.cpp)
 
 #### Multiple sequences
 
-[Distributed permutation flow shop scheduling problem, total completion time](include/localsearchsolver/examples/distributed_pfss_tct.hpp)
+[Distributed permutation flow shop scheduling problem, total completion time](examples/sequencing/distributed_pfss_tct_main.cpp)
 
 #### Single sequence, modes
 
-[Traveling salesman problem with release dates](include/localsearchsolver/examples/traveling_salesman_with_release_dates.hpp)
+[Traveling salesman problem with release dates](examples/sequencing/traveling_salesman_with_release_dates_main.cpp)
 
-[Single machine batch scheduling problem, total weighted tardiness](include/localsearchsolver/examples/batch_scheduling_total_weighted_tardiness.hpp)
+[Single machine batch scheduling problem, total weighted tardiness](examples/sequencing/batch_scheduling_total_weighted_tardiness_main.cpp)
 
 #### Single sequence, `sequence_data_init/concatenate`
 
-[Traveling repairman problem](include/localsearchsolver/examples/traveling_repairman.hpp)
+[Traveling repairman problem](examples/sequencing/traveling_repairman_main.cpp)
 
 #### Multiple sequences, `sequence_data_init/concatenate`
 
-[Capacitated vehicle routing problem](include/localsearchsolver/examples/capacitated_vehicle_routing.hpp)
+[Capacitated vehicle routing problem](examples/sequencing/capacitated_vehicle_routing_main.cpp)
 
-[Vehicle routing problem with time windows](include/localsearchsolver/examples/vehicle_routing_with_time_windows.hpp)
+[Vehicle routing problem with time windows](examples/sequencing/vehicle_routing_with_time_windows_main.cpp)
 
 #### Multiple sub-sequences, `sequence_data_init/concatenate`
 
-[Team orienteering problem](include/localsearchsolver/examples/team_orienteering.hpp)
+[Team orienteering problem](examples/sequencing/team_orienteering_main.cpp)
 
 
 ## Other examples
 
 Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orproblems)
 
-[Multidimensional multiple-choice knapsack problem](include/localsearchsolver/examples/multidimensional_multiple_choice_knapsack.hpp)
+[Multidimensional multiple-choice knapsack problem](examples/multidimensional_multiple_choice_knapsack_main.cpp)
 * Straightforward example for a genetic local search: single neighborhood, basic operators
 * Algorithm:
   * Local search neighborhoods:
     * Add item `j` in the knapsack
   * Crossover algorithm
 
-[Quadratic assignment problem](include/localsearchsolver/examples/quadratic_assignment.hpp)
+[Quadratic assignment problem](examples/quadratic_assignment_main.cpp)
 * Example which implements a problem specific acceleration strategy to compute the move costs
 * Algorithm:
   * Local search neighborhood: swap two assignments
   * Perturbation: ejection chain
   * Crossover algorithm: UX crossover
 
-[Knapsack problem with conflicts](include/localsearchsolver/examples/knapsack_with_conflicts.hpp)
+[Knapsack problem with conflicts](examples/knapsack_with_conflicts_main.cpp)
 * Example with multiple neigborhoods
 * Algorithm:
   * Local search neighborhoods:
@@ -155,13 +155,13 @@ Data can be downloaded from [fontanf/orproblems](https://github.com/fontanf/orpr
   * Local search neighborhoods: shift item `j` to agent `i`
   * Perturbation: shift 8 random jobs
 
-[Permutation flow shop scheduling problem, makespan](include/localsearchsolver/examples/permutation_flowshop_scheduling_makespan.hpp)
+[Permutation flow shop scheduling problem, makespan](examples/permutation_flowshop_scheduling_makespan_main.cpp)
 * This one is not considered as a sequencing problem since the dedicated acceleration strategy makes it possible to explore the neighborhoods more efficiently
 * Algorithm:
   * Local search neighborhood: move a block of `k` consecutive jobs, `k = 1..4`
   * Perturbation: swap two blocks (double-bridge)
 
-[Maximum-weight independent set problem](https://github.com/fontanf/stablesolver/blob/master/stablesolver/stable/algorithms/local_search.cpp) and [maximum-weight clique problem](https://github.com/fontanf/stablesolver/blob/master/stablesolver/clique/algorithms/local_search.cpp) from [fontanf/stablesolver](https://github.com/fontanf/stablesolver)
+[Maximum-weight independent set problem](https://github.com/fontanf/stablesolver/blob/master/src/stable/algorithms/local_search.cpp) and [maximum-weight clique problem](https://github.com/fontanf/stablesolver/blob/master/src/clique/algorithms/local_search.cpp) from [fontanf/stablesolver](https://github.com/fontanf/stablesolver)
 * Algorithm:
   * Local search neighborhoods:
     * Move vertex `v` in/out of the solution (and remove conflicting vertices)
