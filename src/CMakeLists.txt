@@ -9,5 +9,3 @@ target_link_libraries(LocalSearchSolver_localsearchsolver PUBLIC
 add_library(LocalSearchSolver::localsearchsolver ALIAS LocalSearchSolver_localsearchsolver)
 set_target_properties(LocalSearchSolver_localsearchsolver PROPERTIES OUTPUT_NAME "localsearchsolver")
 install(TARGETS LocalSearchSolver_localsearchsolver)
-
-add_subdirectory(examples)
