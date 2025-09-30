@@ -102,6 +102,9 @@ inline const GeneticLocalSearchOutput<LocalScheme> genetic_local_search(
 /////////////////////////// Template implementations ///////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
+namespace
+{
+
 template <typename LocalScheme>
 class Population
 {
@@ -509,6 +512,8 @@ inline void genetic_local_search_worker(
         // Unlock mutex.
         data.mutex.unlock();
     }
+
+}
 
 }
 
