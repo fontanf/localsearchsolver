@@ -122,6 +122,10 @@ public:
     const Solution& binary_tournament_single(
         std::mt19937_64& generator);
 
+    /** Get the best solution of the population (lowest penalized cost). */
+    const Solution& best_solution() const;
+
+
 private:
 
     /*
@@ -367,4 +371,19 @@ const Solution& localsearchsolver::Population<Solution, Cost>::binary_tournament
     }
 
     return this->solutions_[solution_id_1].solution;
+}
+
+template <typename Solution, typename Cost>
+const Solution& localsearchsolver::Population<Solution, Cost>::best_solution() const
+{
+    Counter best_id = 0;
+    Cost best_cost = penalized_cost_callback_(this->solutions_[0].solution);
+    for (Counter solution_id = 1; solution_id < this->size(); ++solution_id) {
+        Cost cost = penalized_cost_callback_(this->solutions_[solution_id].solution);
+        if (cost < best_cost) {
+            best_cost = cost;
+            best_id = solution_id;
+        }
+    }
+    return this->solutions_[best_id].solution;
 }
