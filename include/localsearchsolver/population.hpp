@@ -89,8 +89,6 @@ public:
 
         /** Biased fitness. */
         double biased_fitness = 0;
-
-        bool to_remove = false;
     };
 
     /** Constructor. */
@@ -133,11 +131,14 @@ private:
      * Private methods
      */
 
-    /** Compute penalized costs, ranks, distances, diversity, and biased fitness. */
+    /** Compute penalized costs, ranks, diversity, and biased fitness. */
     void compute_fitness(std::mt19937_64& generator);
 
     void survivor_selection(
         std::mt19937_64& generator);
+
+    /** Remove the solution at index id, updating the distance matrix in O(N). */
+    void remove_solution(Counter id);
 
     /*
      * Private attributes
@@ -155,11 +156,8 @@ private:
     /** Solutions. */
     std::vector<PopulationSolution> solutions_;
 
-    /** Pairwise distances between solutions (valid when fitness_valid_ is true). */
+    /** Pairwise distances between solutions (always up to date). */
     std::vector<std::vector<Distance>> distances_;
-
-    /** Whether biased fitness values are up to date. */
-    bool fitness_valid_ = false;
 
 };
 
@@ -171,8 +169,19 @@ void localsearchsolver::Population<Solution, Cost>::add(
         std::mt19937_64& generator)
 {
     PopulationSolution population_solution(solution);
+
+    // Extend the distance matrix by one row/column in O(N).
+    Counter new_id = (Counter)solutions_.size();
+    for (auto& row : distances_)
+        row.push_back(0);
+    distances_.push_back(std::vector<Distance>(new_id + 1, 0));
+    for (Counter i = 0; i < new_id; ++i) {
+        Distance d = distance_callback_(population_solution.solution, solutions_[i].solution);
+        distances_[new_id][i] = d;
+        distances_[i][new_id] = d;
+    }
+
     this->solutions_.push_back(population_solution);
-    fitness_valid_ = false;
 
     if (this->size() > parameters_.maximum_size)
         this->survivor_selection(generator);
@@ -201,18 +210,6 @@ void localsearchsolver::Population<Solution, Cost>::compute_fitness(
             });
     for (Counter pos = 0; pos < this->size(); ++pos)
         this->solutions_[penalized_cost_order[pos]].penalized_cost_rank = pos;
-
-    // Compute the distances between each pair of solutions.
-    distances_.assign(this->size(), std::vector<Distance>(this->size(), 0));
-    for (Counter solution_1_id = 0; solution_1_id < this->size(); ++solution_1_id) {
-        for (Counter solution_2_id = 0; solution_2_id < solution_1_id; ++solution_2_id) {
-            Distance distance = distance_callback_(
-                    this->solutions_[solution_1_id].solution,
-                    this->solutions_[solution_2_id].solution);
-            distances_[solution_1_id][solution_2_id] = distance;
-            distances_[solution_2_id][solution_1_id] = distance;
-        }
-    }
 
     // Compute diversity contributions.
     for (Counter solution_id = 0; solution_id < this->size(); ++solution_id) {
@@ -252,15 +249,24 @@ void localsearchsolver::Population<Solution, Cost>::compute_fitness(
     for (Counter pos = 0; pos < this->size(); ++pos)
         this->solutions_[diversity_order[pos]].diversity_rank = pos;
 
-    // Compute the biased fitness of each solution.
-    for (Counter solution_id = 0; solution_id < this->size(); ++solution_id) {
+    // Compute the biased fitness of each solution (ranks normalized to [0,1] as in the paper).
+    Counter pop_size = this->size();
+    for (Counter solution_id = 0; solution_id < pop_size; ++solution_id) {
         PopulationSolution& solution = this->solutions_[solution_id];
-        solution.biased_fitness = solution.penalized_cost_rank
-            + (1.0 - (double)parameters_.number_of_elite_solutions / this->size())
-            * solution.diversity_rank;
+        if (pop_size == 1) {
+            solution.biased_fitness = 0.0;
+        } else {
+            double fit_rank = (double)solution.penalized_cost_rank / (double)(pop_size - 1);
+            double div_rank = (double)solution.diversity_rank / (double)(pop_size - 1);
+            if (pop_size <= parameters_.number_of_elite_solutions)
+                solution.biased_fitness = fit_rank;
+            else
+                solution.biased_fitness = fit_rank
+                    + (1.0 - (double)parameters_.number_of_elite_solutions / pop_size)
+                    * div_rank;
+        }
     }
 
-    fitness_valid_ = true;
 }
 
 template <typename Solution, typename Cost>
@@ -269,17 +275,29 @@ void localsearchsolver::Population<Solution, Cost>::survivor_selection(
 {
     compute_fitness(generator);
 
-    Counter number_of_solutions_removed = 0;
-    while ((Counter)this->solutions_.size() - number_of_solutions_removed > parameters_.minimum_size) {
-        // Recompute diversity contributions for the remaining (non-removed) solutions.
-        for (Counter solution_id = 0; solution_id < this->size(); ++solution_id) {
-            if (this->solutions_[solution_id].to_remove)
-                continue;
+    while (this->size() > parameters_.minimum_size) {
+        Counter pop_size = this->size();
+
+        // Recompute penalized cost rank.
+        std::vector<Counter> cost_order(pop_size);
+        std::iota(cost_order.begin(), cost_order.end(), 0);
+        std::shuffle(cost_order.begin(), cost_order.end(), generator);
+        std::sort(
+                cost_order.begin(), cost_order.end(),
+                [this](Counter id1, Counter id2) -> bool
+                {
+                    return this->solutions_[id1].penalized_cost
+                        < this->solutions_[id2].penalized_cost;
+                });
+        for (Counter pos = 0; pos < pop_size; ++pos)
+            this->solutions_[cost_order[pos]].penalized_cost_rank = pos;
+
+        // Recompute diversity contributions.
+        for (Counter solution_id = 0; solution_id < pop_size; ++solution_id) {
             std::vector<Distance> neighbor_distances;
-            for (Counter solution_2_id = 0; solution_2_id < this->size(); ++solution_2_id) {
+            neighbor_distances.reserve(pop_size - 1);
+            for (Counter solution_2_id = 0; solution_2_id < pop_size; ++solution_2_id) {
                 if (solution_2_id == solution_id)
-                    continue;
-                if (this->solutions_[solution_2_id].to_remove)
                     continue;
                 neighbor_distances.push_back(distances_[solution_id][solution_2_id]);
             }
@@ -298,8 +316,8 @@ void localsearchsolver::Population<Solution, Cost>::survivor_selection(
             }
         }
 
-        // Recompute the diversity rank of each solution.
-        std::vector<Counter> diversity_order(this->size());
+        // Recompute diversity rank.
+        std::vector<Counter> diversity_order(pop_size);
         std::iota(diversity_order.begin(), diversity_order.end(), 0);
         std::shuffle(diversity_order.begin(), diversity_order.end(), generator);
         std::sort(
@@ -309,32 +327,39 @@ void localsearchsolver::Population<Solution, Cost>::survivor_selection(
                     return this->solutions_[solution_id_1].diversity
                         > this->solutions_[solution_id_2].diversity;
                 });
-        for (Counter pos = 0; pos < this->size(); ++pos)
+        for (Counter pos = 0; pos < pop_size; ++pos)
             this->solutions_[diversity_order[pos]].diversity_rank = pos;
 
-        // Recompute the biased fitness of each solution.
-        for (Counter solution_id = 0; solution_id < this->size(); ++solution_id) {
+        // Recompute biased fitness (ranks normalized to [0,1], elite guard as in Vidal 2021).
+        for (Counter solution_id = 0; solution_id < pop_size; ++solution_id) {
             PopulationSolution& solution = this->solutions_[solution_id];
-            solution.biased_fitness = solution.penalized_cost_rank
-                + (1.0 - (double)parameters_.number_of_elite_solutions / this->size())
-                * solution.diversity_rank;
+            if (pop_size == 1) {
+                solution.biased_fitness = 0.0;
+            } else {
+                double fit_rank = (double)solution.penalized_cost_rank / (double)(pop_size - 1);
+                double div_rank = (double)solution.diversity_rank / (double)(pop_size - 1);
+                if (pop_size <= parameters_.number_of_elite_solutions)
+                    solution.biased_fitness = fit_rank;
+                else
+                    solution.biased_fitness = fit_rank
+                        + (1.0 - (double)parameters_.number_of_elite_solutions / pop_size)
+                        * div_rank;
+            }
         }
 
-        // Remove the solution with the worst biased fitness.
+        // Find the solution with the worst biased fitness.
         // Give priority to solutions which are at distance 0 from another solution (clone).
+        // Never remove the best solution (penalized_cost_rank == 0), matching Vidal (2021).
         Counter solution_worst_id = -1;
         bool is_worst_clone = false;
         double biased_fitness_worst = 0;
-        for (Counter solution_id = 0; solution_id < this->size(); ++solution_id) {
+        for (Counter solution_id = 0; solution_id < pop_size; ++solution_id) {
             const PopulationSolution& solution = this->solutions_[solution_id];
-            if (solution.to_remove)
+            if (solution.penalized_cost_rank == 0)
                 continue;
             bool is_clone = false;
-            for (Counter solution_2_id = 0; solution_2_id < this->size(); ++solution_2_id) {
+            for (Counter solution_2_id = 0; solution_2_id < pop_size; ++solution_2_id) {
                 if (solution_2_id == solution_id)
-                    continue;
-                const PopulationSolution& solution_2 = this->solutions_[solution_2_id];
-                if (solution_2.to_remove)
                     continue;
                 if (distances_[solution_id][solution_2_id] == 0) {
                     is_clone = true;
@@ -350,21 +375,30 @@ void localsearchsolver::Population<Solution, Cost>::survivor_selection(
                 biased_fitness_worst = solution.biased_fitness;
             }
         }
-        this->solutions_[solution_worst_id].to_remove = true;
-        number_of_solutions_removed++;
+        if (solution_worst_id == -1)
+            break;
+
+        remove_solution(solution_worst_id);
+    }
+}
+
+template <typename Solution, typename Cost>
+void localsearchsolver::Population<Solution, Cost>::remove_solution(
+        Counter id)
+{
+    Counter last = (Counter)solutions_.size() - 1;
+
+    if (id != last) {
+        std::swap(solutions_[id], solutions_[last]);
+        std::swap(distances_[id], distances_[last]);
+        for (auto& row : distances_)
+            std::swap(row[id], row[last]);
     }
 
-    // Remove solutions marked for removal.
-    for (Counter solution_id = 0; solution_id < this->size();) {
-        if (this->solutions_[solution_id].to_remove) {
-            this->solutions_[solution_id] = this->solutions_.back();
-            this->solutions_.pop_back();
-        } else {
-            solution_id++;
-        }
-    }
-
-    fitness_valid_ = false;
+    solutions_.pop_back();
+    distances_.pop_back();
+    for (auto& row : distances_)
+        row.pop_back();
 }
 
 template <typename Solution, typename Cost>
@@ -374,8 +408,7 @@ std::pair<Solution, Solution> localsearchsolver::Population<Solution, Cost>::bin
     if (this->size() < 4)
         throw std::logic_error("binary_tournament requires at least 4 solutions");
 
-    if (!fitness_valid_)
-        compute_fitness(generator);
+    compute_fitness(generator);
 
     // Draw 4 random solutions.
     auto solution_ids = optimizationtools::bob_floyd(
@@ -405,8 +438,7 @@ Solution localsearchsolver::Population<Solution, Cost>::binary_tournament_single
     if (this->size() == 1)
         return this->solutions_[0].solution;
 
-    if (!fitness_valid_)
-        compute_fitness(generator);
+    compute_fitness(generator);
 
     // Draw 2 random solutions.
     auto solution_ids = optimizationtools::bob_floyd(
