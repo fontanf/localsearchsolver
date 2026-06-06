@@ -1,10 +1,12 @@
 #pragma once
 
+#include <algorithm>
+#include <stdexcept>
 #include <cstdint>
-#include <limits>
-#include <vector>
 #include <functional>
-//#include <iostream>
+#include <limits>
+#include <numeric>
+#include <vector>
 
 #include "optimizationtools//utils//utils.hpp"
 
@@ -18,7 +20,7 @@ template <typename Solution, typename Cost>
 using PenalizedCostCallback = std::function<Cost(const Solution&)>;
 
 template <typename Solution>
-using DistanceCallback = std::function<int(const Solution&, const Solution& solution)>;
+using DistanceCallback = std::function<Distance(const Solution&, const Solution&)>;
 
 /*
  * Class to manage a population of solutions.
@@ -56,7 +58,7 @@ public:
          * solution.
          *
          * The diversity contribution of a solution is its average distance to
-         * its `n_close` closest neighbors.
+         * its `number_of_closest_neighbors` closest neighbors.
          */
         Counter number_of_closest_neighbors = 3;
 
@@ -74,7 +76,7 @@ public:
         /** Solution. */
         Solution solution;
 
-        Cost penalized_cost;
+        Cost penalized_cost = Cost{};
 
         /** Penalized cost rank. */
         Counter penalized_cost_rank = -1;
@@ -106,8 +108,8 @@ public:
     /** Get the size of the population. */
     Counter size() const { return solutions_.size(); }
 
-    /** Get of solution of the population. */
-    const PopulationSolution& solution(Counter solution_id) { return solutions_[solution_id]; }
+    /** Get a solution of the population. */
+    const PopulationSolution& solution(Counter solution_id) const { return solutions_[solution_id]; }
 
     /** Add a solution to the population. */
     void add(
@@ -115,22 +117,24 @@ public:
             std::mt19937_64& generator);
 
     /** Get two parent solutions from a binary tournament. */
-    std::pair<const Solution&, const Solution&> binary_tournament(
+    std::pair<Solution, Solution> binary_tournament(
         std::mt19937_64& generator);
 
-    /** Get one parent solutions from a binary tournament. */
-    const Solution& binary_tournament_single(
+    /** Get one parent solution from a binary tournament. */
+    Solution binary_tournament_single(
         std::mt19937_64& generator);
 
     /** Get the best solution of the population (lowest penalized cost). */
     const Solution& best_solution() const;
-
 
 private:
 
     /*
      * Private methods
      */
+
+    /** Compute penalized costs, ranks, distances, diversity, and biased fitness. */
+    void compute_fitness(std::mt19937_64& generator);
 
     void survivor_selection(
         std::mt19937_64& generator);
@@ -151,6 +155,12 @@ private:
     /** Solutions. */
     std::vector<PopulationSolution> solutions_;
 
+    /** Pairwise distances between solutions (valid when fitness_valid_ is true). */
+    std::vector<std::vector<Distance>> distances_;
+
+    /** Whether biased fitness values are up to date. */
+    bool fitness_valid_ = false;
+
 };
 
 }
@@ -160,126 +170,173 @@ void localsearchsolver::Population<Solution, Cost>::add(
         const Solution& solution,
         std::mt19937_64& generator)
 {
-    // Add the new solution to the population.
     PopulationSolution population_solution(solution);
     this->solutions_.push_back(population_solution);
+    fitness_valid_ = false;
 
-    // If the size of the population goes above the maximum size allowed,
-    // run the survivor selection.
     if (this->size() > parameters_.maximum_size)
         this->survivor_selection(generator);
 }
 
 template <typename Solution, typename Cost>
-void localsearchsolver::Population<Solution, Cost>::survivor_selection(
+void localsearchsolver::Population<Solution, Cost>::compute_fitness(
         std::mt19937_64& generator)
 {
     // Compute the penalized cost of each solution.
-    //std::cout << "compute penalized costs..." << std::endl;
     for (Counter solution_id = 0; solution_id < this->size(); ++solution_id) {
         PopulationSolution& solution = this->solutions_[solution_id];
         solution.penalized_cost = penalized_cost_callback_(solution.solution);
     }
 
     // Compute the penalized cost rank of each solution.
-    //std::cout << "compute penalized cost ranks..." << std::endl;
-    std::vector<Counter> penalized_cost_ranks(this->size());
-    std::iota(penalized_cost_ranks.begin(), penalized_cost_ranks.end(), 0);
-    std::shuffle(penalized_cost_ranks.begin(), penalized_cost_ranks.end(), generator);
-    sort(
-            penalized_cost_ranks.begin(), penalized_cost_ranks.end(),
+    std::vector<Counter> penalized_cost_order(this->size());
+    std::iota(penalized_cost_order.begin(), penalized_cost_order.end(), 0);
+    std::shuffle(penalized_cost_order.begin(), penalized_cost_order.end(), generator);
+    std::sort(
+            penalized_cost_order.begin(), penalized_cost_order.end(),
             [this](Counter solution_1_id, Counter solution_2_id) -> bool
             {
-                const PopulationSolution& solution_1 = this->solutions_[solution_1_id];
-                const PopulationSolution& solution_2 = this->solutions_[solution_2_id];
-                return solution_1.penalized_cost < solution_2.penalized_cost;
+                return this->solutions_[solution_1_id].penalized_cost
+                    < this->solutions_[solution_2_id].penalized_cost;
             });
     for (Counter pos = 0; pos < this->size(); ++pos)
-        this->solutions_[penalized_cost_ranks[pos]].penalized_cost_rank = pos;
+        this->solutions_[penalized_cost_order[pos]].penalized_cost_rank = pos;
 
     // Compute the distances between each pair of solutions.
-    //std::cout << "compute distances..." << std::endl;
-    std::vector<std::vector<Distance>> distances(
-            this->size(), std::vector<Distance>(this->size(), 0));
+    distances_.assign(this->size(), std::vector<Distance>(this->size(), 0));
     for (Counter solution_1_id = 0; solution_1_id < this->size(); ++solution_1_id) {
-        const PopulationSolution& solution_1 = this->solutions_[solution_1_id];
         for (Counter solution_2_id = 0; solution_2_id < solution_1_id; ++solution_2_id) {
-            const PopulationSolution& solution_2 = this->solutions_[solution_2_id];
-            Distance distance = distance_callback_(solution_1.solution, solution_2.solution);
-            distances[solution_1_id][solution_2_id] = distance;
-            distances[solution_2_id][solution_1_id] = distance;
+            Distance distance = distance_callback_(
+                    this->solutions_[solution_1_id].solution,
+                    this->solutions_[solution_2_id].solution);
+            distances_[solution_1_id][solution_2_id] = distance;
+            distances_[solution_2_id][solution_1_id] = distance;
         }
     }
 
+    // Compute diversity contributions.
+    for (Counter solution_id = 0; solution_id < this->size(); ++solution_id) {
+        std::vector<Distance> neighbor_distances;
+        neighbor_distances.reserve(this->size() - 1);
+        for (Counter solution_2_id = 0; solution_2_id < this->size(); ++solution_2_id) {
+            if (solution_2_id == solution_id)
+                continue;
+            neighbor_distances.push_back(distances_[solution_id][solution_2_id]);
+        }
+        Counter k = std::min(
+                parameters_.number_of_closest_neighbors,
+                (Counter)neighbor_distances.size());
+        this->solutions_[solution_id].diversity = 0;
+        if (k > 0) {
+            std::nth_element(
+                    neighbor_distances.begin(),
+                    neighbor_distances.begin() + k - 1,
+                    neighbor_distances.end());
+            for (Counter pos = 0; pos < k; ++pos)
+                this->solutions_[solution_id].diversity += neighbor_distances[pos];
+            this->solutions_[solution_id].diversity /= k;
+        }
+    }
+
+    // Compute the diversity rank of each solution.
+    std::vector<Counter> diversity_order(this->size());
+    std::iota(diversity_order.begin(), diversity_order.end(), 0);
+    std::shuffle(diversity_order.begin(), diversity_order.end(), generator);
+    std::sort(
+            diversity_order.begin(), diversity_order.end(),
+            [this](Counter solution_id_1, Counter solution_id_2) -> bool
+            {
+                return this->solutions_[solution_id_1].diversity
+                    > this->solutions_[solution_id_2].diversity;
+            });
+    for (Counter pos = 0; pos < this->size(); ++pos)
+        this->solutions_[diversity_order[pos]].diversity_rank = pos;
+
+    // Compute the biased fitness of each solution.
+    for (Counter solution_id = 0; solution_id < this->size(); ++solution_id) {
+        PopulationSolution& solution = this->solutions_[solution_id];
+        solution.biased_fitness = solution.penalized_cost_rank
+            + (1.0 - (double)parameters_.number_of_elite_solutions / this->size())
+            * solution.diversity_rank;
+    }
+
+    fitness_valid_ = true;
+}
+
+template <typename Solution, typename Cost>
+void localsearchsolver::Population<Solution, Cost>::survivor_selection(
+        std::mt19937_64& generator)
+{
+    compute_fitness(generator);
+
     Counter number_of_solutions_removed = 0;
-    while (this->solutions_.size() - number_of_solutions_removed > parameters_.minimum_size) {
-        // For each solution compute its closest neighbors and its diversity
-        // contribution.
-        //std::cout << "compute diversity contributions..." << std::endl;
+    while ((Counter)this->solutions_.size() - number_of_solutions_removed > parameters_.minimum_size) {
+        // Recompute diversity contributions for the remaining (non-removed) solutions.
         for (Counter solution_id = 0; solution_id < this->size(); ++solution_id) {
-            std::vector<Distance> solution_distances;
-            PopulationSolution& solution = this->solutions_[solution_id];
+            if (this->solutions_[solution_id].to_remove)
+                continue;
+            std::vector<Distance> neighbor_distances;
             for (Counter solution_2_id = 0; solution_2_id < this->size(); ++solution_2_id) {
                 if (solution_2_id == solution_id)
                     continue;
-                const PopulationSolution& solution_2 = this->solutions_[solution_2_id];
-                if (solution_2.to_remove)
+                if (this->solutions_[solution_2_id].to_remove)
                     continue;
-                Distance distance = distances[solution_id][solution_2_id];
-                solution_distances.push_back(distance);
+                neighbor_distances.push_back(distances_[solution_id][solution_2_id]);
             }
-            std::nth_element(
-                    solution_distances.begin(),
-                    solution_distances.begin() + parameters_.number_of_closest_neighbors - 1,
-                    solution_distances.end());
-            solution.diversity = 0;
-            for (Counter pos = 0; pos < parameters_.number_of_closest_neighbors; ++pos)
-                solution.diversity += solution_distances[pos];
-            solution.diversity /= parameters_.number_of_closest_neighbors;
-
+            Counter k = std::min(
+                    parameters_.number_of_closest_neighbors,
+                    (Counter)neighbor_distances.size());
+            this->solutions_[solution_id].diversity = 0;
+            if (k > 0) {
+                std::nth_element(
+                        neighbor_distances.begin(),
+                        neighbor_distances.begin() + k - 1,
+                        neighbor_distances.end());
+                for (Counter pos = 0; pos < k; ++pos)
+                    this->solutions_[solution_id].diversity += neighbor_distances[pos];
+                this->solutions_[solution_id].diversity /= k;
+            }
         }
 
-        // Compute the diversity rank of each solution.
-        //std::cout << "compute diversity contribution ranks..." << std::endl;
-        std::vector<Counter> diversity_ranks(this->size());
-        std::iota(diversity_ranks.begin(), diversity_ranks.end(), 0);
-        std::shuffle(diversity_ranks.begin(), diversity_ranks.end(), generator);
-        sort(
-                diversity_ranks.begin(), diversity_ranks.end(),
+        // Recompute the diversity rank of each solution.
+        std::vector<Counter> diversity_order(this->size());
+        std::iota(diversity_order.begin(), diversity_order.end(), 0);
+        std::shuffle(diversity_order.begin(), diversity_order.end(), generator);
+        std::sort(
+                diversity_order.begin(), diversity_order.end(),
                 [this](Counter solution_id_1, Counter solution_id_2) -> bool
                 {
                     return this->solutions_[solution_id_1].diversity
                         > this->solutions_[solution_id_2].diversity;
                 });
         for (Counter pos = 0; pos < this->size(); ++pos)
-            this->solutions_[diversity_ranks[pos]].diversity_rank = pos;
+            this->solutions_[diversity_order[pos]].diversity_rank = pos;
 
-        // Compute the biased fitness of each solution.
-        //std::cout << "compute biased fitnesses..." << std::endl;
+        // Recompute the biased fitness of each solution.
         for (Counter solution_id = 0; solution_id < this->size(); ++solution_id) {
             PopulationSolution& solution = this->solutions_[solution_id];
             solution.biased_fitness = solution.penalized_cost_rank
-                + (1 - (double)parameters_.number_of_elite_solutions / this->size())
+                + (1.0 - (double)parameters_.number_of_elite_solutions / this->size())
                 * solution.diversity_rank;
         }
 
         // Remove the solution with the worst biased fitness.
-        // Give priority to solutions which are at distance 0 from another
-        // solution of the population (clone).
-        //std::cout << "find solution to remove..." << std::endl;
+        // Give priority to solutions which are at distance 0 from another solution (clone).
         Counter solution_worst_id = -1;
         bool is_worst_clone = false;
         double biased_fitness_worst = 0;
-        for (Counter solution_id = 0; solution_id < this->size(); ++ solution_id) {
+        for (Counter solution_id = 0; solution_id < this->size(); ++solution_id) {
             const PopulationSolution& solution = this->solutions_[solution_id];
             if (solution.to_remove)
                 continue;
             bool is_clone = false;
             for (Counter solution_2_id = 0; solution_2_id < this->size(); ++solution_2_id) {
+                if (solution_2_id == solution_id)
+                    continue;
                 const PopulationSolution& solution_2 = this->solutions_[solution_2_id];
                 if (solution_2.to_remove)
                     continue;
-                if (distances[solution_id][solution_2_id] == 0) {
+                if (distances_[solution_id][solution_2_id] == 0) {
                     is_clone = true;
                     break;
                 }
@@ -293,56 +350,45 @@ void localsearchsolver::Population<Solution, Cost>::survivor_selection(
                 biased_fitness_worst = solution.biased_fitness;
             }
         }
-        //std::cout << "solution_worst_id " << solution_worst_id << std::endl;
-        //std::cout << "penalized_cost " << solutions_[solution_worst_id].penalized_cost
-        //    << " rank " << solutions_[solution_worst_id].penalized_cost_rank
-        //    << " diversity " << solutions_[solution_worst_id].diversity
-        //    << " rank " << solutions_[solution_worst_id].diversity_rank
-        //    << " biased_fitness " << solutions_[solution_worst_id].biased_fitness
-        //    << std::endl;
         this->solutions_[solution_worst_id].to_remove = true;
         number_of_solutions_removed++;
     }
 
-    // Remove solution marked to be removed.
-    //std::cout << "remove solutions..." << std::endl;
+    // Remove solutions marked for removal.
     for (Counter solution_id = 0; solution_id < this->size();) {
-        PopulationSolution& solution = this->solutions_[solution_id];
-        if (solution.to_remove) {
+        if (this->solutions_[solution_id].to_remove) {
             this->solutions_[solution_id] = this->solutions_.back();
             this->solutions_.pop_back();
         } else {
             solution_id++;
         }
     }
+
+    fitness_valid_ = false;
 }
 
 template <typename Solution, typename Cost>
-std::pair<const Solution&, const Solution&> localsearchsolver::Population<Solution, Cost>::binary_tournament(
+std::pair<Solution, Solution> localsearchsolver::Population<Solution, Cost>::binary_tournament(
         std::mt19937_64& generator)
 {
+    if (this->size() < 4)
+        throw std::logic_error("binary_tournament requires at least 4 solutions");
+
+    if (!fitness_valid_)
+        compute_fitness(generator);
+
     // Draw 4 random solutions.
     auto solution_ids = optimizationtools::bob_floyd(
             (Counter)4, this->size(), generator);
     std::shuffle(solution_ids.begin(), solution_ids.end(), generator);
 
-    // Compute solution_id_1.
-    Counter solution_id_1 = -1;
-    if (this->solutions_[solution_ids[0]].biased_fitness
-            < this->solutions_[solution_ids[1]].biased_fitness) {
-        solution_id_1 = solution_ids[0];
-    } else {
-        solution_id_1 = solution_ids[1];
-    }
+    Counter solution_id_1 = (this->solutions_[solution_ids[0]].biased_fitness
+            < this->solutions_[solution_ids[1]].biased_fitness)?
+        solution_ids[0]: solution_ids[1];
 
-    // Compute solution_id_2.
-    Counter solution_id_2 = -1;
-    if (this->solutions_[solution_ids[2]].biased_fitness
-            < this->solutions_[solution_ids[3]].biased_fitness) {
-        solution_id_2 = solution_ids[2];
-    } else {
-        solution_id_2 = solution_ids[3];
-    }
+    Counter solution_id_2 = (this->solutions_[solution_ids[2]].biased_fitness
+            < this->solutions_[solution_ids[3]].biased_fitness)?
+        solution_ids[2]: solution_ids[3];
 
     return {
         this->solutions_[solution_id_1].solution,
@@ -350,25 +396,26 @@ std::pair<const Solution&, const Solution&> localsearchsolver::Population<Soluti
 }
 
 template <typename Solution, typename Cost>
-const Solution& localsearchsolver::Population<Solution, Cost>::binary_tournament_single(
+Solution localsearchsolver::Population<Solution, Cost>::binary_tournament_single(
         std::mt19937_64& generator)
 {
+    if (solutions_.empty())
+        throw std::logic_error("binary_tournament_single requires at least 1 solution");
+
     if (this->size() == 1)
         return this->solutions_[0].solution;
 
-    // Draw 4 random solutions.
+    if (!fitness_valid_)
+        compute_fitness(generator);
+
+    // Draw 2 random solutions.
     auto solution_ids = optimizationtools::bob_floyd(
             (Counter)2, this->size(), generator);
     std::shuffle(solution_ids.begin(), solution_ids.end(), generator);
 
-    // Compute solution_id_1.
-    Counter solution_id_1 = -1;
-    if (this->solutions_[solution_ids[0]].biased_fitness
-            < this->solutions_[solution_ids[1]].biased_fitness) {
-        solution_id_1 = solution_ids[0];
-    } else {
-        solution_id_1 = solution_ids[1];
-    }
+    Counter solution_id_1 = (this->solutions_[solution_ids[0]].biased_fitness
+            < this->solutions_[solution_ids[1]].biased_fitness)?
+        solution_ids[0]: solution_ids[1];
 
     return this->solutions_[solution_id_1].solution;
 }
@@ -376,6 +423,9 @@ const Solution& localsearchsolver::Population<Solution, Cost>::binary_tournament
 template <typename Solution, typename Cost>
 const Solution& localsearchsolver::Population<Solution, Cost>::best_solution() const
 {
+    if (solutions_.empty())
+        throw std::logic_error("best_solution requires at least 1 solution");
+
     Counter best_id = 0;
     Cost best_cost = penalized_cost_callback_(this->solutions_[0].solution);
     for (Counter solution_id = 1; solution_id < this->size(); ++solution_id) {
